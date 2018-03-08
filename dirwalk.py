@@ -2,9 +2,7 @@
 
 import os
 import time
-
-# Set the directory you want to start from
-root_dir = './testdata/FTP'
+import subprocess
 
 
 def parse_datetime(root_dir, dir_name, fname):
@@ -56,32 +54,69 @@ def parse_datetime(root_dir, dir_name, fname):
         
         
     
+def cull_files_by_ext(root_dir='.', ext_list=['.avi','.idx']):
+    num_deleted = 0
+    for dir_name, subdir_list, file_list in os.walk(root_dir):
+        for fname in file_list:
+            full_fname = os.path.join(dir_name, fname)
+            (root, ext) = os.path.splitext(fname)  # split foo.bar into 'foo', '.bar'
+            if ext in ext_list:
+                print("found %s in delete list" % fname)
+                try:
+                    os.remove(full_fname)
+                    num_deleted += 1
+                except OSError:
+                    pass
+    return num_deleted
     
 
-def cull_files(baseline_time_epoch=None, cull_threshold_days=14, file_ext_list=None):
+def cull_files_by_age(baseline_time_epoch=None, cull_threshold_days=14, root_dir='.'):
+    """
+    given:
+    baseline_time_epoch = baseline time, specified in epoch seconds, see runtests.py::test_cull_files
+    cull_threshold_days = number of days allowed after baseline time
+    root_dir = starting directory
 
+    delete files (NOT directories)
+
+    returns:
+    number of files deleted 
+    """
     num_deleted = 0
     cull_threshold_sec = cull_threshold_days * 24 * 60 * 60
     if baseline_time_epoch==None:
         baseline_time_epoch = time.time()  # current time in epoch seconds
     for dir_name, subdir_list, file_list in os.walk(root_dir):
-        print('Found directory: %s' % dir_name)
         for fname in file_list:
             full_fname = os.path.join(dir_name, fname)
             filetime_epoch = os.path.getmtime(full_fname)
             localtime = time.localtime(filetime_epoch)
             # print("%s/%s mtime=%s" % (dir_name, fname, time.asctime(localtime)))
-            if (baseline_time_epoch - filetime_epoch) > cull_threshold_sec:
-                print("delete %s (mtime = %s" % (fname, time.asctime(localtime)))
-                num_deleted += 1
-                os.remove(full_fname)
+            diff_sec = baseline_time_epoch - filetime_epoch
+            if diff_sec > cull_threshold_sec:
+                print("delete %s (mtime = %s, %f sec > %f sec)" % (fname, time.asctime(localtime), diff_sec, cull_threshold_sec))
+                try:
+                    os.remove(full_fname)
+                    num_deleted += 1
+                except OSError:
+                    pass
     return num_deleted
 
-def cull_empty_dir():
+def cull_empty_dir(root_dir):
     """
-    find . -type d -empty
+    execute: 
+    find root_dir -type d -empty -exec rm {} ;
+
+    returns:
+    none
     """
-    pass
+    # print empty dirs
+    subprocess.call(['find',root_dir,'-type','d','-empty','-print'])
+
+    # delete empty dirs
+    subprocess.call(['find',root_dir,'-type','d','-empty','-exec','rm','-rf','{}',';'])
+
+
 
 if __name__=="__main__":
     baseline_time = time.strptime("26 feb 2018 00:00", "%d %b %Y %H:%M")
