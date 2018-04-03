@@ -38,7 +38,7 @@ class TestPano(unittest.TestCase):
         self.assertTrue(True)
 
     def test_cull_empty_dirs(self):
-        dirwalk.cull_empty_dir(self.test_data_dir)
+        dirwalk.cull_empty_dirs(self.test_data_dir)
 
         # FTP/cameras is an empty directory
         flag = os.path.exists(os.path.join(self.test_data_dir,'cameras'))
@@ -82,11 +82,84 @@ class TestPano(unittest.TestCase):
         self.assertTrue(len(all_rows)==1)
 
     def test_walk_dir_and_store(self):
+        #pu.db
+        db = datastore.Datastore()
+        dirwalk.walk_dir_and_load_db(db, 'testdata/FTP')
+
+        #
+        # how many entries did we enter?
+        cmd = "SELECT * FROM %s" % (db.tablename)
+        db.cursor.execute(cmd)
+        entries = db.cursor.fetchall()
+        db.close()
+        self.assertTrue(len(entries)==2642)
+
+    def test_age_delta(self):
+        #pu.db
+        db = datastore.Datastore()
+
+        #
+        # get 'now'
+        # db returns: [(u'1522438500',)]   
+        cmd = "select strftime('%s','now','localtime')"
+        db.cursor.execute(cmd)
+        ret = db.cursor.fetchall()
+        now_epoch = int(ret[0][0])
+
+        #
+        cmd  = "select strftime('%s','now','localtime','-2 days')"
+        db.cursor.execute(cmd)
+        ret = db.cursor.fetchall()
+        prev_epoch = int(ret[0][0])
+
+        diff_epoch = now_epoch - prev_epoch
+
+        #
+        # diff is equivalent to 2 days?
+        diff_days = diff_epoch / (24.0 * 60.0 * 60.0)
+        self.assertTrue(int(diff_days + 0.5)==2)
+        
+        db.close()
+
+    def test_age_delta2(self):
+        #pu.db
+        db = datastore.Datastore()
+
+        now = '2018-04-01T18:00:00.000'
+        then = '2018-03-30T18:00:00.000'
+        
+        #
+        # get 'now'
+        # db returns: [(u'1522438500',)]   
+        cmd = "select strftime('%s','{now}')".format(now=now)
+        db.cursor.execute(cmd)
+        ret = db.cursor.fetchall()
+        now_epoch = int(ret[0][0])
+
+        #
+        cmd  = "select strftime('%s','{then}')".format(then=then)
+        db.cursor.execute(cmd)
+        ret = db.cursor.fetchall()
+        prev_epoch = int(ret[0][0])
+
+        diff_epoch = now_epoch - prev_epoch
+
+        #
+        # diff is equivalent to 2 days?
+        diff_days = diff_epoch / (24.0 * 60.0 * 60.0)
+        self.assertTrue(int(diff_days + 0.5)==2)
+        
+        db.close()
+
+    def test_select_by_age(self):
         pu.db
         db = datastore.Datastore()
         dirwalk.walk_dir_and_load_db(db, 'testdata/FTP')
-        db.close()
 
+        row_list = db.select_rows_by_age(baseline_time='2018-02-26', cull_threshold_days=1)
+        db.close()
+        self.assertTrue(len(row_list)==1153)
+        
         
 if __name__ == '__main__':
     unittest.main()

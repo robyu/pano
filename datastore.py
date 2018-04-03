@@ -1,17 +1,20 @@
 import sqlite3
 
+"""
+"""    
 
 class Row:
     d = {}
     
     col_defs = ( \
-                 ['cam_name',      'STRING', ''],
-                 ['ctime',         'STRING', ''],
-                 ['fname',         'STRING', ''],
-                 ['has_thumbnail', 'INTEGER', 0],
-                 ['mediatype',     'STRING', ''],
-                 ['mtime',         'STRING', ''],
-                 ['path',          'STRING', ''],
+                 ['cam_name',      'STRING',   ''],
+                 ['ctime',         'STRING',   ''],
+                 ['ctime_unix',    'INTEGER',  -1],
+                 ['fname',         'STRING',   ''],
+                 ['has_thumbnail', 'INTEGER',   0],
+                 ['mediatype',     'STRING',   ''],
+                 ['mtime',         'STRING',   ''],
+                 ['path',          'STRING',   ''],
     )
     
     def __init__(self):
@@ -21,6 +24,21 @@ class Row:
             default_val = col[2]
             self.d[key] = default_val
 
+    def db_entry_to_row(self, entry):
+        """
+        (1, u'b0', u'2018-02-24T00:03:07', 1519401787, u'00.03.07-00.03.31[M][0@0][0].dav', 0, u'dav', u'',                                                         
+        u'testdata/FTP/b0/AMC0028V_795UUB/2018-02-24/001/dav/00')
+        """
+        self.d['id']            = entry[0]
+        self.d['cam_name']      = entry[1]
+        self.d['ctime']         = entry[2]
+        self.d['ctime_unix']    = entry[3]
+        self.d['fname']         = entry[4]
+        self.d['has_thumbnail'] = entry[5]
+        self.d['mediatype']     = entry[6]
+        self.d['mtime']         = entry[7]
+        self.d['path']          = entry[8]
+            
 class Datastore:
     def __init__(self, db_fname="panodb.sqlite"):
         self.db_fname = db_fname
@@ -56,6 +74,15 @@ class Datastore:
         #           " VALUES ({fname}, {mediatype}, {path}, {mtime}, {ctime}, {has_thumbnail})".
         #           format(fname=row.d['fname'], mediatype=row.d['mediatype'], path=row.d['path'],
         #                  mtime=row.d['mtime'], ctime=row.d['ctime'], has_thumbnail=row.d['has_thumbnail']))
+
+        # if ctime_unix is < 0, then compute ctime_unix
+        if row.d['ctime_unix'] < 0:
+            cmd = "select strftime('%s','{ctime}','localtime')".format(ctime=row.d['ctime'])
+            self.cursor.execute(cmd)
+            ret = self.cursor.fetchall()
+            unix_time = int(ret[0][0])
+            row.d['ctime_unix'] = unix_time
+        
         cmd = "INSERT INTO %s " % self.tablename
         col_vector = "("
         val_vector = "("
@@ -80,7 +107,49 @@ class Datastore:
         
         c.execute(cmd)
 
-    
+    def select_rows_by_age(self, baseline_time=None, cull_threshold_days=14):
+        """
+        given baseline_time
+        cull_threshold_days
+
+        return list of row entries which are older than baseline_time - threshold_days
+
+        """
+        #select julianday('now','localtime');
+        #select julianday("2018-03-27T03:03:00");
+        # SELECT strftime('%s','now') - strftime('%s','2004-01-01 02:34:56');
+        # select * from pano where ctime BETWEEN datetime('1004-01-01T00:00') AND datetime('2018-03-01T00:04');  
+        # select  strftime('%s','2018-03-31T00:00:00','-2 days')
+
+        #
+        # compute epoch time for threshold epoch = baseline_time - cull days
+        # if baseline_time==None:
+        #     baseline_time="'now'"
+        assert (cull_threshold_days > 0) and (cull_threshold_days < 60)
+        
+        cmd = "select strftime('%s','{baseline}','localtime')".format(baseline=baseline_time)
+        self.cursor.execute(cmd)
+        ret  = self.cursor.fetchall()
+        baseline_unix = int(ret[0][0])
+        thresh_unix = baseline_unix - int(cull_threshold_days * 24.0 * 60 * 60)
+        assert thresh_unix > 0
+        
+        cmd = "select * from {tn} where ctime_unix < {thresh}".format(tn=self.tablename,
+                                                                      thresh=thresh_unix)
+        self.cursor.execute(cmd)
+        entry_list= self.cursor.fetchall()
+
+        row_list = []
+        for n in range(len(entry_list)):
+            row = Row()
+            row.db_entry_to_row(entry_list[n])
+            row_list.append(row)
+        #end
+        assert len(entry_list)==len(row_list)
+
+        return row_list
+        
+
     def close(self):
         self.dbconn.close()
         

@@ -61,20 +61,18 @@ def parse_info_amcrest(root_dir, dir_path, fname):
     # ['b0', 'AMC0028V_795UUB', '2018-02-24', '001', 'jpg', '10', '35']
     # or
     # ['b0', 'AMC0028V_795UUB', '2018-02-24', '001', 'dav', '11']
-    print(dir_element_list)
     if len(dir_element_list) < 6:
         return None
 
     row = datastore.Row()
     row.d['path'] = os.path.join(root_dir, dir_path)
     row.d['fname'] = fname
-    print("%s %s" % (row.d['path'], row.d['fname']))
     if dir_element_list[4]=='jpg' and fname[-3:len(fname)]=='jpg':
         row = parse_info_amcrest_jpg(row, dir_element_list, fname)
     elif dir_element_list[4]=='dav' and fname[-3:len(fname)]=='dav':
         row = parse_info_amcrest_dav(row, dir_element_list, fname)
     else:
-        print('dont know how to handle %s %s',row.d['path'], row.d['fname'])
+        print('dont know how to handle %s %s' % (row.d['path'], row.d['fname']))
         return None
     return row
     
@@ -146,8 +144,9 @@ def cull_empty_dirs(root_dir):
 
 
 def walk_dir_and_load_db(db, root_dir='.'):
-    #
-    # first cull dirs
+
+
+    cull_files_by_ext(root_dir, ext_list=['.avi','.idx','.mp4'])
     cull_empty_dirs(root_dir)
     
     for dir_path, subdir_list, file_list in os.walk(root_dir):
@@ -159,6 +158,9 @@ def walk_dir_and_load_db(db, root_dir='.'):
         #end
     #end
     db.dbconn.commit()
+
+
+    
     
 
 if __name__=="__main__":
