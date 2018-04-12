@@ -25,6 +25,7 @@ class TestPano(unittest.TestCase):
         subprocess.call(['./restore-testdata.sh'])
 
     def test_cull_files_by_ext(self):
+        pu.db
         num_deleted = dirwalk.cull_files_by_ext(root_dir=self.test_data_dir)
         print("num_deleted = %d" % num_deleted)
         self.assertTrue(num_deleted==290)
@@ -32,7 +33,7 @@ class TestPano(unittest.TestCase):
     def test_cull_files_by_age(self):
         baseline_time = time.strptime("26 feb 2018 00:00", "%d %b %Y %H:%M")
         baseline_time_epoch = time.mktime(baseline_time)
-        num_deleted = dirwalk.cull_files_by_age(baseline_time_epoch=baseline_time_epoch, cull_threshold_days=1.75,root_dir=self.test_data_dir)
+        num_deleted = dirwalk.cull_files_by_age(baseline_time_epoch=baseline_time_epoch, max_age_days=1.75,root_dir=self.test_data_dir)
         print("deleted %d files" % num_deleted)
         self.assertTrue(num_deleted==136)
         self.assertTrue(True)
@@ -71,8 +72,8 @@ class TestPano(unittest.TestCase):
 
     def test_insert_row(self):
         db = datastore.Datastore()
-        db.cursor.execute("INSERT INTO {tn} (fname, path, has_thumbnail) VALUES ('abcd', 'xyz', 1)".format(tn=db.tablename))
-        db.cursor.execute("INSERT INTO {tn} (fname, path, has_thumbnail) VALUES ('efgh', '123', 0)".format(tn=db.tablename))
+        db.cursor.execute("INSERT INTO {tn} (fname, path, derived_fname) VALUES ('abcd', 'xyz', 'foo')".format(tn=db.tablename))
+        db.cursor.execute("INSERT INTO {tn} (fname, path, derived_fname) VALUES ('efgh', '123', 'foo')".format(tn=db.tablename))
         #db.dbconn.commit()
         db.cursor.execute('SELECT * FROM {tn} WHERE fname like "%a%"'.format(tn=db.tablename))
         all_rows = db.cursor.fetchall()
@@ -156,10 +157,54 @@ class TestPano(unittest.TestCase):
         db = datastore.Datastore()
         dirwalk.walk_dir_and_load_db(db, 'testdata/FTP')
 
-        row_list = db.select_rows_by_age(baseline_time='2018-02-26', cull_threshold_days=1)
-        db.close()
+        row_list = db.select_rows_by_age(baseline_time='2018-02-26', max_age_days=1)
+        print(len(row_list))
         self.assertTrue(len(row_list)==1153)
+
+        row_list = db.select_rows_by_age(baseline_time='2018-02-26', max_age_days=1.75)
+        print(len(row_list))
+        self.assertTrue(len(row_list)==123)
         
+        db.close()
+
+    def test_cull_files_by_age(self):
+        pu.db
+        db = datastore.Datastore()
+        num_entries = dirwalk.walk_dir_and_load_db(db, root_dir='testdata/FTP')
+        
+        num_deleted = dirwalk.cull_files_by_age(db,
+                                                root_dir='testdata/FTP',
+                                                baseline_time='2018-02-26',
+                                                max_age_days=1)
+        row_list = db.select_all()
+        
+        self.assertTrue(num_deleted==1153)
+        self.assertTrue(len(row_list) + num_deleted==num_entries)
+        db.close()
+
+    def test_update_row(self):
+        pu.db
+        db = datastore.Datastore()
+        dirwalk.walk_dir_and_load_db(db, 'testdata/FTP')
+        row_list = db.select_all()
+        id = row_list[-1].d['id']
+        db.update_row(id, 'derived_fname', 'foo')
+
+        row = db.select_by_id(id)
+        self.assertTrue(row.d['id'] == id)
+        self.assertTrue(row.d['derived_fname']=='foo')
+        db.close()
+
+    def test_make_derived_files(self):
+        pu.db
+        db = datastore.Datastore()
+        dirwalk.walk_dir_and_load_db(db, 'testdata/FTP')
+        num_deleted = dirwalk.cull_files_by_age(db,
+                                                root_dir='testdata/FTP',
+                                                baseline_time='2018-02-26',
+                                                max_age_days=0.25)
+        dirwalk.make_derived_files(db, root_dir='testdata/FTP')
+        db.close()
         
 if __name__ == '__main__':
     unittest.main()

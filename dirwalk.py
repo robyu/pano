@@ -65,14 +65,14 @@ def parse_info_amcrest(root_dir, dir_path, fname):
         return None
 
     row = datastore.Row()
-    row.d['path'] = os.path.join(root_dir, dir_path)
+    row.d['path'] = dir_path
     row.d['fname'] = fname
     if dir_element_list[4]=='jpg' and fname[-3:len(fname)]=='jpg':
         row = parse_info_amcrest_jpg(row, dir_element_list, fname)
     elif dir_element_list[4]=='dav' and fname[-3:len(fname)]=='dav':
         row = parse_info_amcrest_dav(row, dir_element_list, fname)
     else:
-        print('dont know how to handle %s %s' % (row.d['path'], row.d['fname']))
+        #print('dont know how to handle %s %s' % (row.d['path'], row.d['fname']))
         return None
     return row
     
@@ -83,7 +83,7 @@ def cull_files_by_ext(root_dir='.', ext_list=['.avi','.idx']):
             full_fname = os.path.join(dir_path, fname)
             (root, ext) = os.path.splitext(fname)  # split foo.bar into 'foo', '.bar'
             if ext in ext_list:
-                print("found %s in delete list" % fname)
+                #print("found %s in delete list" % fname)
                 try:
                     os.remove(full_fname)
                     num_deleted += 1
@@ -92,37 +92,33 @@ def cull_files_by_ext(root_dir='.', ext_list=['.avi','.idx']):
     return num_deleted
     
 
-def cull_files_by_age(baseline_time_epoch=None, cull_threshold_days=14, root_dir='.'):
+def cull_files_by_age(db, root_dir='.',baseline_time=None, derived_dir='derived',max_age_days=14):
     """
-    given:
-    baseline_time_epoch = baseline time, specified in epoch seconds, see runtests.py::test_cull_files
-    cull_threshold_days = number of days allowed after baseline time
-    root_dir = starting directory
+    given file entries in db,
+    delete files based on age:
 
-    delete files (NOT directories)
+    threshold_age = baseline_time - max_age_days
 
-    returns:
-    number of files deleted 
+    baseline_time = "YYYY-MM-DDThh:mm:ss"
+        or None, which is the same as "Now"
+
+    max_age_days = number of days previous to baseline_time which to retain files
+
+    and remove corresponding row in database
     """
-    num_deleted = 0
-    cull_threshold_sec = cull_threshold_days * 24 * 60 * 60
-    if baseline_time_epoch==None:
-        baseline_time_epoch = time.time()  # current time in epoch seconds
-    for dir_path, subdir_list, file_list in os.walk(root_dir):
-        for fname in file_list:
-            full_fname = os.path.join(dir_path, fname)
-            filetime_epoch = os.path.getmtime(full_fname)
-            localtime = time.localtime(filetime_epoch)
-            # print("%s/%s mtime=%s" % (dir_path, fname, time.asctime(localtime)))
-            diff_sec = baseline_time_epoch - filetime_epoch
-            if diff_sec > cull_threshold_sec:
-                print("delete %s (mtime = %s, %f sec > %f sec)" % (fname, time.asctime(localtime), diff_sec, cull_threshold_sec))
-                try:
-                    os.remove(full_fname)
-                    num_deleted += 1
-                except OSError:
-                    pass
-    return num_deleted
+
+    row_list = db.select_rows_by_age(baseline_time=baseline_time, max_age_days=max_age_days)
+    for row in row_list:
+        full_fname = os.path.join(root_dir, row.d['path'], row.d['fname'])
+        print(full_fname)
+        os.remove(full_fname)
+        if row.d['derived_fname'] != 0:
+            try:
+                os.remove(row.d['derived_fname'])
+            except OSError:
+                pass
+        db.delete_row(row)
+    return len(row_list)
 
 def cull_empty_dirs(root_dir):
     """
@@ -143,28 +139,102 @@ def cull_empty_dirs(root_dir):
     subprocess.call(['find',root_dir,'-type','d','-empty','-exec','rm','-rf','{}',';'])
 
 
+def convert_dav_to_mp4(root_dir, path, fname, derived_dir):
+    src_fname = os.path.join(root_dir, path, fname)
+    dest_path = os.path.join(derived_dir, path)
+    dest_fname = os.path.join(dest_path, fname)
+    dest_fname = dest_fname.replace('.dav','.mp4')
+    assert os.path.exists(src_fname)
+    try:
+        os.makedirs(dest_path)
+    except os.error:
+        pass
+
+    if os.path.exists(dest_fname)==False:
+        # ffmpeg -i 21.18.33-21.26.00\[M\]\[0\@0\]\[0\].dav -vcodec copy -preset veryfast out2.avi
+        cmd = ['ffmpeg', '-y','-i',src_fname, '-vcodec', 'copy', '-preset', 'veryfast', dest_fname]
+        subprocess.call(cmd)
+
+    # check again: conversion may have failed
+    if os.path.exists(dest_fname)==False:
+        dest_fname=''  # if failed, then return empty string
+        
+    return dest_fname
+
+def make_thumbnail(root_dir, path, fname, derived_dir):
+    src_fname = os.path.join(root_dir, path, fname)
+    dest_path = os.path.join(derived_dir, path)
+    dest_fname = os.path.join(dest_path, fname)
+    assert os.path.exists(src_fname)
+    try:
+        os.makedirs(dest_path)
+    except os.error:
+        pass
+
+    if os.path.exists(dest_fname)==False:
+        cmd = ['magick','convert',src_fname, '-resize', '50%',dest_fname]
+        subprocess.call(cmd)
+
+    if os.path.exists(dest_fname)==False:
+        dest_fname=''  # if failed, then return empty string
+    
+    return dest_fname
+    
+def make_derived_files(db, root_dir='.', derived_dir='derived'):
+    """
+    create directory for derived files.
+    for each entry in database, create derived files (thumbnails, converted video)
+    populate the derived fname column
+    """
+    try:
+        os.mkdir(os.path.join('.',derived_dir))
+    except OSError:
+        print("derived dir (%s) already exists" % derived_dir)
+        
+    row_list = db.select_all()
+    for row in row_list:
+        if row.d['mediatype']=='dav':
+            derived_fname=convert_dav_to_mp4(root_dir, row.d['path'], row.d['fname'], derived_dir)
+        elif row.d['mediatype']=='jpg':
+            derived_fname=make_thumbnail(root_dir, row.d['path'], row.d['fname'], derived_dir)
+        else:
+            assert False, "mediatype (%s) not recognized" % row.d['mediatype']
+
+        # set entry's derived column
+        db.update_row(row.d['id'], 'derived_fname', derived_fname)
+        if len(derived_fname)==0:
+            print("could not create derived file for row id [%d]" % row.d['id'])
+        
+    return
+        
 def walk_dir_and_load_db(db, root_dir='.'):
+    """
+    search root_dir
+    delete empty directories
+    delete files with specific file extensions
+    add remaining files to the database
 
-
+    returns: number of files added
+    """
     cull_files_by_ext(root_dir, ext_list=['.avi','.idx','.mp4'])
     cull_empty_dirs(root_dir)
     
+    num_added = 0
     for dir_path, subdir_list, file_list in os.walk(root_dir):
         for fname in file_list:
             # TODO: get mtime
             row = parse_info_amcrest(root_dir, dir_path, fname)
             if (row != None):
                 db.add_row(row)
+                num_added += 1
         #end
     #end
     db.dbconn.commit()
+    return num_added
 
-
-    
-    
 
 if __name__=="__main__":
     baseline_time = time.strptime("26 feb 2018 00:00", "%d %b %Y %H:%M")
     baseline_time_epoch = time.mktime(baseline_time)
-    num_deleted = cull_files(baseline_time_epoch=baseline_time_epoch, cull_threshold_days=1)
+    num_deleted = cull_files(baseline_time_epoch=baseline_time_epoch, max_age_days=1)
     print(num_deleted)

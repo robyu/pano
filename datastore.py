@@ -7,13 +7,13 @@ class Row:
     d = {}
     
     col_defs = ( \
+                 ['id',            'INTEGER PRIMARY KEY', ''],
                  ['cam_name',      'STRING',   ''],
                  ['ctime',         'STRING',   ''],
                  ['ctime_unix',    'INTEGER',  -1],
                  ['fname',         'STRING',   ''],
-                 ['has_thumbnail', 'INTEGER',   0],
+                 ['derived_fname', 'STRING',   ''],
                  ['mediatype',     'STRING',   ''],
-                 ['mtime',         'STRING',   ''],
                  ['path',          'STRING',   ''],
     )
     
@@ -34,10 +34,9 @@ class Row:
         self.d['ctime']         = entry[2]
         self.d['ctime_unix']    = entry[3]
         self.d['fname']         = entry[4]
-        self.d['has_thumbnail'] = entry[5]
+        self.d['derived_fname'] = entry[5]
         self.d['mediatype']     = entry[6]
-        self.d['mtime']         = entry[7]
-        self.d['path']          = entry[8]
+        self.d['path']          = entry[7]
             
 class Datastore:
     def __init__(self, db_fname="panodb.sqlite"):
@@ -63,6 +62,9 @@ class Datastore:
         for entry in Row.col_defs:
             col_name = entry[0]
             col_type = entry[1]
+            if col_name=="id":
+                continue
+            #end
             cmd = "ALTER TABLE {tn} ADD COLUMN {cn} {ct}".format(tn=self.tablename, cn=col_name, ct=col_type)
             c.execute(cmd)
         return
@@ -70,10 +72,10 @@ class Datastore:
     def add_row(self, row):
         assert self.cursor!=None
         c = self.cursor
-        # c.execute("INSERT INTO {tn} (fname, mediatype, path, mtime, ctime, has_thumbnail) " \
-        #           " VALUES ({fname}, {mediatype}, {path}, {mtime}, {ctime}, {has_thumbnail})".
+        # c.execute("INSERT INTO {tn} (fname, mediatype, path, mtime, ctime, has_derived) " \
+        #           " VALUES ({fname}, {mediatype}, {path}, {mtime}, {ctime}, {has_derived})".
         #           format(fname=row.d['fname'], mediatype=row.d['mediatype'], path=row.d['path'],
-        #                  mtime=row.d['mtime'], ctime=row.d['ctime'], has_thumbnail=row.d['has_thumbnail']))
+        #                  mtime=row.d['mtime'], ctime=row.d['ctime'], has_derived=row.d['has_derived']))
 
         # if ctime_unix is < 0, then compute ctime_unix
         if row.d['ctime_unix'] < 0:
@@ -90,6 +92,9 @@ class Datastore:
         for n in range(num_cols):
             entry = Row.col_defs[n]
             key = entry[0]
+            if key == "id":
+                continue
+
             col_vector += " %s" % key
             if entry[1]=='INTEGER':
                 val_vector += " %d" % row.d[key]
@@ -97,9 +102,11 @@ class Datastore:
                 val_vector += """ \'%s\'""" % row.d[key]
             else:
                 assert False, "unhandled column type"
+
             if n < num_cols-1:
                 col_vector += ","
                 val_vector += ","
+            #end
         #end
         col_vector += ")"
         val_vector += ")"
@@ -107,10 +114,29 @@ class Datastore:
         
         c.execute(cmd)
 
-    def select_rows_by_age(self, baseline_time=None, cull_threshold_days=14):
+    def select_all(self):
+        cmd = "select * from {tn}".format(tn=self.tablename)
+        self.cursor.execute(cmd)
+        entry_list = self.cursor.fetchall()
+
+        #
+        # should refactor this into a function:
+        row_list = []
+        for n in range(len(entry_list)):
+            row = Row()
+            row.db_entry_to_row(entry_list[n])
+            row_list.append(row)
+        #end
+        assert len(entry_list)==len(row_list)
+
+        return row_list
+
+        
+        
+    def select_rows_by_age(self, baseline_time=None, max_age_days=14):
         """
         given baseline_time
-        cull_threshold_days
+        max_age_days
 
         return list of row entries which are older than baseline_time - threshold_days
 
@@ -125,13 +151,13 @@ class Datastore:
         # compute epoch time for threshold epoch = baseline_time - cull days
         # if baseline_time==None:
         #     baseline_time="'now'"
-        assert (cull_threshold_days > 0) and (cull_threshold_days < 60)
+        assert (max_age_days > 0) and (max_age_days < 60)
         
         cmd = "select strftime('%s','{baseline}','localtime')".format(baseline=baseline_time)
         self.cursor.execute(cmd)
         ret  = self.cursor.fetchall()
         baseline_unix = int(ret[0][0])
-        thresh_unix = baseline_unix - int(cull_threshold_days * 24.0 * 60 * 60)
+        thresh_unix = baseline_unix - int(max_age_days * 24.0 * 60 * 60)
         assert thresh_unix > 0
         
         cmd = "select * from {tn} where ctime_unix < {thresh}".format(tn=self.tablename,
@@ -148,8 +174,30 @@ class Datastore:
         assert len(entry_list)==len(row_list)
 
         return row_list
-        
 
+    def update_row(self, id, col, val):
+        if isinstance(val, basestring):
+            cmd = "update {tn} set {col}='{val}' where id={id}".format(tn=self.tablename, col=col,val=val,id=id)
+        else:
+            cmd = "update {tn} set {col}={val} where id={id}".format(tn=self.tablename, col=col,val=val,id=id)
+        self.cursor.execute(cmd)
+        self.dbconn.commit()
+        return
+
+    def select_by_id(self, id):
+        cmd = "select * from {tn} where id={id}".format(tn=self.tablename, id=id)
+        self.cursor.execute(cmd)
+        entry = self.cursor.fetchall()
+        assert len(entry)==1
+        row = Row()
+        row.db_entry_to_row(entry[0])
+        return row
+
+    def delete_row(self, row):
+        cmd = "delete from {tn} where id={id}".format(tn=self.tablename, id=row.d['id'])
+        self.cursor.execute(cmd)
+        return
+    
     def close(self):
         self.dbconn.close()
         
