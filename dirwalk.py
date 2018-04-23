@@ -1,16 +1,17 @@
 
-
 import os
 import time
 import subprocess
 import datastore
+
+DERIVED_DIR='derived'
 
 def parse_info_amcrest_jpg(row, dir_element_list, fname):
     # ['b0', 'AMC0028V_795UUB', '2018-02-24', '001', 'jpg', '10', '35']
     # 31[M][0@0][0].jpg
     assert dir_element_list[4]=='jpg'
 
-    row.d['mediatype'] = dir_element_list[4]
+    row.d['mediatype'] = datastore.MEDIA_IMAGE
     row.d['cam_name'] = dir_element_list[0]
 
     date = dir_element_list[2]
@@ -25,7 +26,7 @@ def parse_info_amcrest_dav(row, dir_element_list, fname):
     # 11.50.41-11.52.11[M][0@0][0].dav
     assert dir_element_list[4]=='dav'
 
-    row.d['mediatype'] = dir_element_list[4]
+    row.d['mediatype'] = datastore.MEDIA_VIDEO
     row.d['cam_name'] = dir_element_list[0]
     date = dir_element_list[2]
     hour = int(fname[0:2])
@@ -92,7 +93,7 @@ def cull_files_by_ext(root_dir='.', ext_list=['.avi','.idx']):
     return num_deleted
     
 
-def cull_files_by_age(db, root_dir='.',baseline_time=None, derived_dir='derived',max_age_days=14):
+def cull_files_by_age(db, root_dir='.',baseline_time=None, derived_dir=DERIVED_DIR,max_age_days=14):
     """
     given file entries in db,
     delete files based on age:
@@ -106,18 +107,19 @@ def cull_files_by_age(db, root_dir='.',baseline_time=None, derived_dir='derived'
 
     and remove corresponding row in database
     """
-
     row_list = db.select_rows_by_age(baseline_time=baseline_time, max_age_days=max_age_days)
     for row in row_list:
         full_fname = os.path.join(root_dir, row.d['path'], row.d['fname'])
-        print(full_fname)
         os.remove(full_fname)
         if row.d['derived_fname'] != 0:
             try:
                 os.remove(row.d['derived_fname'])
             except OSError:
                 pass
+        #end
         db.delete_row(row)
+    #end
+    print("cull_files_by_age: deleted (%d) files" % len(row_list))
     return len(row_list)
 
 def cull_empty_dirs(root_dir):
@@ -144,6 +146,7 @@ def convert_dav_to_mp4(root_dir, path, fname, derived_dir):
     dest_path = os.path.join(derived_dir, path)
     dest_fname = os.path.join(dest_path, fname)
     dest_fname = dest_fname.replace('.dav','.mp4')
+    dest_fname = os.path.abspath(dest_fname)
     assert os.path.exists(src_fname)
     try:
         os.makedirs(dest_path)
@@ -162,9 +165,16 @@ def convert_dav_to_mp4(root_dir, path, fname, derived_dir):
     return dest_fname
 
 def make_thumbnail(root_dir, path, fname, derived_dir):
+    """
+    given the root_dir+path+fname of an image,
+    generate a thumbnail image in derived_dir,
+
+    returns the absolute filename of the thumbnail
+    """
     src_fname = os.path.join(root_dir, path, fname)
     dest_path = os.path.join(derived_dir, path)
     dest_fname = os.path.join(dest_path, fname)
+    dest_fname = os.path.abspath(dest_fname)
     assert os.path.exists(src_fname)
     try:
         os.makedirs(dest_path)
@@ -172,7 +182,7 @@ def make_thumbnail(root_dir, path, fname, derived_dir):
         pass
 
     if os.path.exists(dest_fname)==False:
-        cmd = ['magick','convert',src_fname, '-resize', '50%',dest_fname]
+        cmd = ['magick','convert',src_fname, '-resize', '10%',dest_fname]
         subprocess.call(cmd)
 
     if os.path.exists(dest_fname)==False:
@@ -180,7 +190,7 @@ def make_thumbnail(root_dir, path, fname, derived_dir):
     
     return dest_fname
     
-def make_derived_files(db, root_dir='.', derived_dir='derived'):
+def make_derived_files(db, root_dir='.', derived_dir=DERIVED_DIR):
     """
     create directory for derived files.
     for each entry in database, create derived files (thumbnails, converted video)
@@ -193,9 +203,9 @@ def make_derived_files(db, root_dir='.', derived_dir='derived'):
         
     row_list = db.select_all()
     for row in row_list:
-        if row.d['mediatype']=='dav':
+        if row.d['mediatype']==datastore.MEDIA_VIDEO:
             derived_fname=convert_dav_to_mp4(root_dir, row.d['path'], row.d['fname'], derived_dir)
-        elif row.d['mediatype']=='jpg':
+        elif row.d['mediatype']==datastore.MEDIA_IMAGE:
             derived_fname=make_thumbnail(root_dir, row.d['path'], row.d['fname'], derived_dir)
         else:
             assert False, "mediatype (%s) not recognized" % row.d['mediatype']

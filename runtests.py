@@ -8,13 +8,15 @@ import subprocess
 import os
 import datastore
 import pudb
+import shutil
+import webpage
 
 """
 run all unit tests
 python -m unittest runtests.py
 
 run an individual test
-python -m unittest testica.TestIca.test_smoketest   # works with pu.db in code
+python -m unittest testica.TestIca.test_smoketest   # works with #pu.db in code
 """
 
 class TestPano(unittest.TestCase):
@@ -25,7 +27,7 @@ class TestPano(unittest.TestCase):
         subprocess.call(['./restore-testdata.sh'])
 
     def test_cull_files_by_ext(self):
-        pu.db
+        #pu.db
         num_deleted = dirwalk.cull_files_by_ext(root_dir=self.test_data_dir)
         print("num_deleted = %d" % num_deleted)
         self.assertTrue(num_deleted==290)
@@ -153,7 +155,7 @@ class TestPano(unittest.TestCase):
         db.close()
 
     def test_select_by_age(self):
-        pu.db
+        #pu.db
         db = datastore.Datastore()
         dirwalk.walk_dir_and_load_db(db, 'testdata/FTP')
 
@@ -168,7 +170,7 @@ class TestPano(unittest.TestCase):
         db.close()
 
     def test_cull_files_by_age(self):
-        pu.db
+        #pu.db
         db = datastore.Datastore()
         num_entries = dirwalk.walk_dir_and_load_db(db, root_dir='testdata/FTP')
         
@@ -183,7 +185,7 @@ class TestPano(unittest.TestCase):
         db.close()
 
     def test_update_row(self):
-        pu.db
+        #pu.db
         db = datastore.Datastore()
         dirwalk.walk_dir_and_load_db(db, 'testdata/FTP')
         row_list = db.select_all()
@@ -195,8 +197,13 @@ class TestPano(unittest.TestCase):
         self.assertTrue(row.d['derived_fname']=='foo')
         db.close()
 
+
     def test_make_derived_files(self):
-        pu.db
+        #pu.db
+        try:
+            shutil.rmtree(dirwalk.DERIVED_DIR)
+        except:
+            pass
         db = datastore.Datastore()
         dirwalk.walk_dir_and_load_db(db, 'testdata/FTP')
         num_deleted = dirwalk.cull_files_by_age(db,
@@ -205,9 +212,83 @@ class TestPano(unittest.TestCase):
                                                 max_age_days=0.25)
         dirwalk.make_derived_files(db, root_dir='testdata/FTP')
         db.close()
+
+    def test_string_to_sec(self):
+        db = datastore.Datastore()
+        start_sec = db.strtime2sec('2018-03-27T03:03:00')
+        print("%d" % start_sec)
+        
+        self.assertTrue(start_sec==1522094580)
+
+    def test_time_iterate(self):
+        db = datastore.Datastore()
+        incr_sec = 60 * 10   # 10 minutes
+        
+        
+        start_sec = db.strtime2sec('2018-03-27T03:03:00')
+        print("%d" % start_sec)
+        max_age_sec = start_sec - int(24 * 60 * 60 * 0.5)
+        
+
+        upper_time_sec = start_sec
+        lower_time_sec = start_sec - incr_sec
+        
+        while lower_time_sec > max_age_sec:
+            diff_sec = upper_time_sec - lower_time_sec
+            diff_min = diff_sec / 60.0
+            print("| %15d .. %15d | diff = %f min" % (upper_time_sec, lower_time_sec, diff_min))
+
+            upper_time_sec = lower_time_sec
+            lower_time_sec = upper_time_sec - incr_sec
+        
+        self.assertTrue(True)
+
+    def test_select_by_time(self):
+        pu.db
+        db = datastore.Datastore()
+        dirwalk.walk_dir_and_load_db(db, 'testdata/FTP')
+        delta_sec = 60 * 10   # 10 minutes
+        upper_time_sec = db.strtime2sec('2018-02-25T19:14:22')
+        lower_time_sec = upper_time_sec - delta_sec
+
+        row_list = db.select_by_time_cam_media('b0',upper_time_sec, lower_time_sec,mediatype=datastore.MEDIA_IMAGE)
+        self.assertTrue(len(row_list)==6)
+        
+    def test_gen_webpage(self):
+        pu.db
+        start_time = '2018-02-25T19:14:22'
+        delta_min = 10
+
+        #
+        # populate db and get rows corresponding to time interval
+        db = datastore.Datastore()
+        dirwalk.walk_dir_and_load_db(db, 'testdata/FTP-culled')
+        num_deleted = dirwalk.cull_files_by_age(db,
+                                                root_dir='testdata/FTP-culled',
+                                                baseline_time='2018-02-26',
+                                                max_age_days=0.25)
+        dirwalk.make_derived_files(db, root_dir='testdata/FTP-culled')
+        delta_sec = 60 * delta_min   # 10 minutes
+        upper_time_sec = db.strtime2sec(start_time)
+        lower_time_sec = upper_time_sec - delta_sec
+        row_image_list = db.select_by_time_cam_media('b0',upper_time_sec, lower_time_sec,mediatype=datastore.MEDIA_IMAGE)
+        row_video_list = db.select_by_time_cam_media('b0',upper_time_sec, lower_time_sec,mediatype=datastore.MEDIA_VIDEO)
+        db.close()
+        self.assertTrue(len(row_image_list)==6)
+        self.assertTrue(len(row_video_list)==2)
+
+
+        cam_webpage = webpage.Webpage('www/test_b0.html', './testdata/FTP-culled')
+        cam_webpage.write_header()
+
+        row_html = cam_webpage.make_html_image_list(row_image_list)
+        cam_webpage.write_row(row_html)
+        
+        cam_webpage.close()
+        
+        self.assertTrue(True)
+        
         
 if __name__ == '__main__':
     unittest.main()
     
-
-

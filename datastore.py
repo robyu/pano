@@ -3,6 +3,10 @@ import sqlite3
 """
 """    
 
+MEDIA_UNKNOWN = 0
+MEDIA_IMAGE = 1
+MEDIA_VIDEO = 2
+
 class Row:
     d = {}
     
@@ -13,7 +17,7 @@ class Row:
                  ['ctime_unix',    'INTEGER',  -1],
                  ['fname',         'STRING',   ''],
                  ['derived_fname', 'STRING',   ''],
-                 ['mediatype',     'STRING',   ''],
+                 ['mediatype',     'INTEGER',   0],
                  ['path',          'STRING',   ''],
     )
     
@@ -39,6 +43,7 @@ class Row:
         self.d['path']          = entry[7]
             
 class Datastore:
+    
     def __init__(self, db_fname="panodb.sqlite"):
         self.db_fname = db_fname
         self.dbconn = None
@@ -114,25 +119,42 @@ class Datastore:
         
         c.execute(cmd)
 
-    def select_all(self):
-        cmd = "select * from {tn}".format(tn=self.tablename)
-        self.cursor.execute(cmd)
-        entry_list = self.cursor.fetchall()
+    def entries_to_rows(self, entry_list):
+        """
+        convert list of database entries
+        to list of row objects
 
-        #
-        # should refactor this into a function:
-        row_list = []
+        returns
+        row_list
+        """
+        row_list=[]
         for n in range(len(entry_list)):
             row = Row()
             row.db_entry_to_row(entry_list[n])
             row_list.append(row)
         #end
-        assert len(entry_list)==len(row_list)
+        return row_list
+        
+    def select_all(self):
+        cmd = "select * from {tn}".format(tn=self.tablename)
+        self.cursor.execute(cmd)
+        entry_list = self.cursor.fetchall()
 
+        row_list = self.entries_to_rows(entry_list)
         return row_list
 
         
-        
+    def strtime2sec(self, strtime):
+        """
+        convert a string time, such as '2018-03-27T03:03:00',
+        into epoch time in seconds
+        """
+        cmd = "select strftime('%s', '{strtime}','localtime')".format(strtime=strtime)
+        self.cursor.execute(cmd)
+        ret = self.cursor.fetchall()
+        sec = int(ret[0][0])
+        return sec
+    
     def select_rows_by_age(self, baseline_time=None, max_age_days=14):
         """
         given baseline_time
@@ -165,17 +187,14 @@ class Datastore:
         self.cursor.execute(cmd)
         entry_list= self.cursor.fetchall()
 
-        row_list = []
-        for n in range(len(entry_list)):
-            row = Row()
-            row.db_entry_to_row(entry_list[n])
-            row_list.append(row)
-        #end
-        assert len(entry_list)==len(row_list)
+        row_list = self.entries_to_rows(entry_list)
 
         return row_list
 
     def update_row(self, id, col, val):
+        """
+        update database entry's column:value 
+        """
         if isinstance(val, basestring):
             cmd = "update {tn} set {col}='{val}' where id={id}".format(tn=self.tablename, col=col,val=val,id=id)
         else:
@@ -185,6 +204,13 @@ class Datastore:
         return
 
     def select_by_id(self, id):
+        """
+        select db entry based on id
+
+        returns:
+        selected row
+        """
+
         cmd = "select * from {tn} where id={id}".format(tn=self.tablename, id=id)
         self.cursor.execute(cmd)
         entry = self.cursor.fetchall()
@@ -194,10 +220,34 @@ class Datastore:
         return row
 
     def delete_row(self, row):
+        """
+        delete row from database
+        """
         cmd = "delete from {tn} where id={id}".format(tn=self.tablename, id=row.d['id'])
         self.cursor.execute(cmd)
         return
-    
+
+    def select_by_time_cam_media(self, cam_name, upper_time_sec, lower_time_sec, mediatype):
+        """
+        select db entries based on criteria
+        
+        return:
+        list of selected rows
+        """
+        cmd = "select * from {tn} where (cam_name='{cam_name}')"\
+              " AND (ctime_unix > {lower_time})"\
+              " AND (ctime_unix <= {upper_time})"\
+              " AND (mediatype={mediatype})"\
+              .format(tn=self.tablename,
+                      cam_name=cam_name,
+                      upper_time = upper_time_sec,
+                      lower_time = lower_time_sec,
+                      mediatype=mediatype)
+        self.cursor.execute(cmd)
+        entry_list = self.cursor.fetchall()
+        row_list = self.entries_to_rows(entry_list)
+        return row_list
+
     def close(self):
         self.dbconn.close()
         
