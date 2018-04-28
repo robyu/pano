@@ -144,16 +144,26 @@ class Datastore:
         return row_list
 
         
-    def strtime2sec(self, strtime):
+    def iso8601_to_sec(self, strtime):
         """
-        convert a string time, such as '2018-03-27T03:03:00',
-        into epoch time in seconds
+        convert a string time, such as '2018-03-27T03:03:00' or 'now' (in localtime)
+        into UTC epoch time in seconds
         """
-        cmd = "select strftime('%s', '{strtime}','localtime')".format(strtime=strtime)
+        cmd = "select strftime('%s','{strtime}','utc')".format(strtime=strtime)
         self.cursor.execute(cmd)
         ret = self.cursor.fetchall()
         sec = int(ret[0][0])
         return sec
+
+    def sec_to_iso8601(self, sec):
+        """
+        convert UTC epoch time (seconds) to iso8601 timestring
+        """
+        cmd = "select datetime(%d, 'unixepoch','localtime')" % sec
+        self.cursor.execute(cmd)
+        ret = self.cursor.fetchall()
+        return ret[0][0]
+        
     
     def select_rows_by_age(self, baseline_time=None, max_age_days=14):
         """

@@ -145,6 +145,10 @@ class Webpage:
     # <img border="0" alt="W3Schools" src="logo_w3s.gif" width="100" height="100">
     # </a>
     def make_html_image_list(self, image_row_list):
+        """
+        given a list of row elements representing images,
+        return HTML
+        """
         html = ''
         n = 0
         
@@ -177,13 +181,26 @@ class Webpage:
         html += "</p>\n"
         assert n==len(image_row_list)
         return html
-            
 
-    def write_row(self, html_images):
-        datetime_upper = 'now'
-        datetime_lower = 'then'
-        html_videos = ''
+    def make_html_video_list(self, video_row_list):
+        html = ''
+        n = 0
+        
+        while n < len(video_row_list):
+            row = video_row_list[n]
+            html += "<p>\n"
+            video_fname = row.d['derived_fname']
+            assert os.path.exists(video_fname)
+            html += """<a href="{actual_video}">{label}</a>\n"""\
+                                .format(actual_video=video_fname,
+                                        label=row.d['ctime'])
 
+            html += "</p>\n"
+            n += 1
+        #end
+        return html
+
+    def write_row(self, html_images, html_videos, datetime_upper, datetime_lower):
         html = Webpage.templ_row.format(datetime_upper = datetime_upper,
                                         datetime_lower = datetime_lower,
                                         html_images = html_images,
@@ -192,12 +209,6 @@ class Webpage:
         return
         
     
-    def gen_webpage(self, row_):
-        self.dest_file.write(Webpage.templ_row.
-                             format(datetime_upper='upper',
-                                    datetime_lower='lower',
-                                    html_images=Webpage.templ_list_image4,
-                                    html_videos=''))
         
         
         
