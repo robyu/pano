@@ -166,7 +166,7 @@ class TestPano(unittest.TestCase):
         select datetime('1524887171','unixepoch','localtime') -- interpret ddddd as unixepoch, convert to localtime, return yyyy-mm-dd hh:mm:ss
         -- result is 2018-04-27 20:46:11
         """
-        pu.db
+        #pu.db
         time_string0 = '2018-04-01 18:00:00'
         db = datastore.Datastore()
         time_sec = db.iso8601_to_sec(time_string0)
@@ -179,25 +179,24 @@ class TestPano(unittest.TestCase):
         """
         seconds -> iso8601 -> seconds
         """
-        pu.db
+        #pu.db
         db = datastore.Datastore()
         time_sec0 = 1524887171
         time_string = db.sec_to_iso8601(time_sec0)
         time_sec = db.iso8601_to_sec(time_string)
 
         self.assertTrue(time_sec==time_sec0)
-        
-        
+
     def test_select_by_age(self):
         #pu.db
         db = datastore.Datastore()
         dirwalk.walk_dir_and_load_db(db, 'testdata/FTP')
 
-        row_list = db.select_rows_by_age(baseline_time='2018-02-26', max_age_days=1)
+        row_list = db.select_by_age(baseline_time='2018-02-26', max_age_days=1)
         print(len(row_list))
         self.assertTrue(len(row_list)==1153)
 
-        row_list = db.select_rows_by_age(baseline_time='2018-02-26', max_age_days=1.75)
+        row_list = db.select_by_age(baseline_time='2018-02-26', max_age_days=1.75)
         print(len(row_list))
         self.assertTrue(len(row_list)==123)
         
@@ -248,11 +247,12 @@ class TestPano(unittest.TestCase):
         db.close()
 
     def test_string_to_sec(self):
+        #pu.db
         db = datastore.Datastore()
         start_sec = db.iso8601_to_sec('2018-03-27T03:03:00')
         print("%d" % start_sec)
         
-        self.assertTrue(start_sec==1522094580)
+        self.assertTrue(start_sec==1522144980)
 
     def test_time_iterate(self):
         db = datastore.Datastore()
@@ -278,7 +278,7 @@ class TestPano(unittest.TestCase):
         self.assertTrue(True)
 
     def test_select_by_time(self):
-        pu.db
+        #pu.db
         db = datastore.Datastore()
         dirwalk.walk_dir_and_load_db(db, 'testdata/FTP')
         delta_sec = 60 * 10   # 10 minutes
@@ -289,7 +289,7 @@ class TestPano(unittest.TestCase):
         self.assertTrue(len(row_list)==6)
         
     def test_gen_webpage(self):
-        pu.db
+        #pu.db
         start_time = '2018-02-25T19:14:22'
         delta_min = 10
 
@@ -328,7 +328,7 @@ class TestPano(unittest.TestCase):
         self.assertTrue(os.path.exists(fname_webpage))
 
     def OLDtest_gen_webpage_1day(self):
-        pu.db
+        #pu.db
         start_time = '2018-02-25T19:14:22'
         delta_min = 10
 

@@ -84,10 +84,7 @@ class Datastore:
 
         # if ctime_unix is < 0, then compute ctime_unix
         if row.d['ctime_unix'] < 0:
-            cmd = "select strftime('%s','{ctime}','localtime')".format(ctime=row.d['ctime'])
-            self.cursor.execute(cmd)
-            ret = self.cursor.fetchall()
-            unix_time = int(ret[0][0])
+            unix_time = self.iso8601_to_sec(row.d['ctime'])
             row.d['ctime_unix'] = unix_time
         
         cmd = "INSERT INTO %s " % self.tablename
@@ -148,6 +145,8 @@ class Datastore:
         """
         convert a string time, such as '2018-03-27T03:03:00' or 'now' (in localtime)
         into UTC epoch time in seconds
+
+        see https://www.techonthenet.com/sqlite/functions/datetime.php
         """
         cmd = "select strftime('%s','{strtime}','utc')".format(strtime=strtime)
         self.cursor.execute(cmd)
@@ -158,6 +157,7 @@ class Datastore:
     def sec_to_iso8601(self, sec):
         """
         convert UTC epoch time (seconds) to iso8601 timestring
+        see https://www.techonthenet.com/sqlite/functions/datetime.php
         """
         cmd = "select datetime(%d, 'unixepoch','localtime')" % sec
         self.cursor.execute(cmd)
@@ -165,7 +165,7 @@ class Datastore:
         return ret[0][0]
         
     
-    def select_rows_by_age(self, baseline_time=None, max_age_days=14):
+    def select_by_age(self, baseline_time=None, max_age_days=14):
         """
         given baseline_time
         max_age_days
@@ -185,10 +185,7 @@ class Datastore:
         #     baseline_time="'now'"
         assert (max_age_days > 0) and (max_age_days < 60)
         
-        cmd = "select strftime('%s','{baseline}','localtime')".format(baseline=baseline_time)
-        self.cursor.execute(cmd)
-        ret  = self.cursor.fetchall()
-        baseline_unix = int(ret[0][0])
+        baseline_unix = self.iso8601_to_sec(baseline_time)
         thresh_unix = baseline_unix - int(max_age_days * 24.0 * 60 * 60)
         assert thresh_unix > 0
         

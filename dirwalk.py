@@ -107,7 +107,7 @@ def cull_files_by_age(db, root_dir='.',baseline_time=None, derived_dir=DERIVED_D
 
     and remove corresponding row in database
     """
-    row_list = db.select_rows_by_age(baseline_time=baseline_time, max_age_days=max_age_days)
+    row_list = db.select_by_age(baseline_time=baseline_time, max_age_days=max_age_days)
     for row in row_list:
         full_fname = os.path.join(root_dir, row.d['path'], row.d['fname'])
         os.remove(full_fname)
