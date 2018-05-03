@@ -41,15 +41,15 @@ class Webpage:
 
     #
     # templ_row placeholders:
-    # {datetime_upper} = upper  date and time, e.g. 2018-03-22 10:10:00
-    # {datetime_lower} = lower date and time
+    # {upper_datetime} = upper  date and time, e.g. 2018-03-22 10:10:00
+    # {lower_datetime} = lower date and time
     # {html_images} = HTML of images
     # {html_videos} = HTML of videos
     templ_row = unicode("""
 	<div class="row">
 	    <div class="col-md-6">
 		<h2>
-		    {datetime_upper}..{datetime_lower}
+		    {upper_datetime}..{lower_datetime}
 		</h2>
 		<p>
                     {html_images}
@@ -81,7 +81,7 @@ class Webpage:
     #<img alt="Bootstrap Image Preview" src="http://www.layoutit.com/img/sports-q-c-140-140-3.jpg">
     #
 
-    def __init__(self, dest_fname, base_dir='.', derived_dir='derived'):
+    def __init__(self, dest_fname, camera_name, base_dir='.', derived_dir='derived'):
         self.dest_fname = dest_fname
         self.dest_file = open(dest_fname, "wt")
         self.num_images_per_row = 4
@@ -96,6 +96,8 @@ class Webpage:
 
         self.derived_dir = os.path.abspath(derived_dir)
         assert os.path.exists(self.derived_dir)
+
+        self.camera_name = camera_name
         
     def write_header(self):
         """
@@ -104,7 +106,7 @@ class Webpage:
         self.dest_file.write(Webpage.templ_header)
         return
 
-    def write_row(self,cam_name, start_time, delta_min, row_image_list, row_video_list):
+    def write_row(self,camera_name, start_time, delta_min, row_image_list, row_video_list):
         """
         write a row (corresponding to time interval)
         with image list and video list
@@ -200,15 +202,70 @@ class Webpage:
         #end
         return html
 
-    def write_row(self, html_images, html_videos, datetime_upper, datetime_lower):
-        html = Webpage.templ_row.format(datetime_upper = datetime_upper,
-                                        datetime_lower = datetime_lower,
+    def write_row(self, html_images, html_videos, upper_datetime, lower_datetime):
+        """
+        given 
+        html_images: html listing images
+        html_videos: html listing videos
+        upper_datetime:  string specifying start datetime
+        lower_datetime: string specifying stop datetime
+
+        write a "row" to the webpage
+        """
+        html = Webpage.templ_row.format(upper_datetime = upper_datetime,
+                                        lower_datetime = lower_datetime,
                                         html_images = html_images,
                                         html_videos = html_videos)
         self.dest_file.write(html)
         return
         
-    
+    def make_webpage(self, upper_datetime, max_age_days, interval_min, db):
+        """
+        given
+        upper_datetime: starting datetime string
+        max_age_days: maximum number of days to include in webpage
+        interval_min: time interval for each row in webpage
+        db: a datastore object
+        
+        generate a complete webpage
+        """
+        #
+        # convert and compute datetime intervals in seconds
+        upper_time_sec = db.iso8601_to_sec(upper_datetime)
+        assert upper_time_sec > 0
+
+        final_lower_time_sec = upper_time_sec - int(max_age_days * 24.0 * 60.0 * 60.0) # days * (hrs/day)(min/hrs)(sec/min)
+        assert (final_lower_time_sec > 0)
+
+        assert interval_min > 0
+        interval_sec = int(interval_min * 60.0)
+
+        #
+        # generate webpage
+        self.write_header()
+        while(upper_time_sec > final_lower_time_sec):
+            lower_time_sec = upper_time_sec - interval_sec
+            row_image_list = db.select_by_time_cam_media(self.camera_name,
+                                                         upper_time_sec,
+                                                         lower_time_sec,
+                                                         mediatype=datastore.MEDIA_IMAGE)
+            row_video_list = db.select_by_time_cam_media(self.camera_name,
+                                                         upper_time_sec,
+                                                         lower_time_sec,
+                                                         mediatype=datastore.MEDIA_VIDEO)
+            if (len(row_image_list)>0) or (len(row_video_list)>0):
+                image_html = self.make_html_image_list(row_image_list)
+                video_html = self.make_html_video_list(row_video_list)
+                start_datetime = db.sec_to_iso8601(upper_time_sec)
+                stop_datetime = db.sec_to_iso8601(lower_time_sec)
+                self.write_row(image_html, video_html, start_datetime, stop_datetime)
+            #end
+            upper_time_sec = lower_time_sec
+        #end
+        self.close()
+        
+        
+        
         
         
         

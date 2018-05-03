@@ -292,6 +292,7 @@ class TestPano(unittest.TestCase):
         #pu.db
         start_time = '2018-02-25T19:14:22'
         delta_min = 10
+        camera_name = 'b0'
 
         #
         # populate db and get rows corresponding to time interval
@@ -305,36 +306,37 @@ class TestPano(unittest.TestCase):
         delta_sec = 60 * delta_min   # 10 minutes
         upper_time_sec = db.iso8601_to_sec(start_time)
         lower_time_sec = upper_time_sec - delta_sec
-        row_image_list = db.select_by_time_cam_media('b0',upper_time_sec, lower_time_sec,mediatype=datastore.MEDIA_IMAGE)
-        row_video_list = db.select_by_time_cam_media('b0',upper_time_sec, lower_time_sec,mediatype=datastore.MEDIA_VIDEO)
-        db.close()
+        row_image_list = db.select_by_time_cam_media(camera_name,upper_time_sec, lower_time_sec,mediatype=datastore.MEDIA_IMAGE)
+        row_video_list = db.select_by_time_cam_media(camera_name,upper_time_sec, lower_time_sec,mediatype=datastore.MEDIA_VIDEO)
         self.assertTrue(len(row_image_list)==6)
         self.assertTrue(len(row_video_list)==2)
 
         fname_webpage = 'www/test_b0.html'
-        cam_webpage = webpage.Webpage(fname_webpage, './testdata/FTP-culled')
+        cam_webpage = webpage.Webpage(fname_webpage, camera_name, base_dir='./testdata/FTP-culled')
         cam_webpage.write_header()
 
         row_html = cam_webpage.make_html_image_list(row_image_list)
         video_html = cam_webpage.make_html_video_list(row_video_list)
-        datetime_upper = datetime.datetime.fromtimestamp(upper_time_sec).strftime('%I:%M:%S')
-        datetime_lower = datetime.datetime.fromtimestamp(lower_time_sec).strftime('%I:%M:%S')
-        cam_webpage.write_row(row_html, video_html, datetime_upper, datetime_lower)
-        cam_webpage.write_row(row_html, video_html, datetime_upper, datetime_lower)
-        cam_webpage.write_row(row_html, video_html, datetime_upper, datetime_lower)
+        upper_datetime = db.sec_to_iso8601(upper_time_sec)
+        lower_datetime = db.sec_to_iso8601(lower_time_sec)
+        cam_webpage.write_row(row_html, video_html, upper_datetime, lower_datetime)
+        cam_webpage.write_row(row_html, video_html, upper_datetime, lower_datetime)
+        cam_webpage.write_row(row_html, video_html, upper_datetime, lower_datetime)
         
         cam_webpage.close()
+        db.close()
         
         self.assertTrue(os.path.exists(fname_webpage))
 
-    def OLDtest_gen_webpage_1day(self):
+
+    def test_gen_webpage2(self):
         #pu.db
-        start_time = '2018-02-25T19:14:22'
+        start_datetime = '2018-02-25T19:14:22'
         delta_min = 10
 
         #
         # populate db and get rows corresponding to time interval
-        testdata_dir  = 'testdata/FTP'
+        testdata_dir  = 'testdata/FTP-culled'
         db = datastore.Datastore()
         dirwalk.walk_dir_and_load_db(db, testdata_dir)
         num_deleted = dirwalk.cull_files_by_age(db,
@@ -342,29 +344,19 @@ class TestPano(unittest.TestCase):
                                                 baseline_time='2018-02-26',
                                                 max_age_days=1)
         dirwalk.make_derived_files(db, testdata_dir)
-        delta_sec = 60 * delta_min   # 10 minutes
-        upper_time_sec = db.iso8601_to_sec(start_time)
-        lower_time_sec = upper_time_sec - delta_sec
-        row_image_list = db.select_by_time_cam_media('b0',upper_time_sec, lower_time_sec,mediatype=datastore.MEDIA_IMAGE)
-        row_video_list = db.select_by_time_cam_media('b0',upper_time_sec, lower_time_sec,mediatype=datastore.MEDIA_VIDEO)
-        db.close()
-        print("num image rows: %d" % len(row_image_list))
-        print("num video rows: %d" % len(row_video_list))
-
         fname_webpage = 'www/test_b0.html'
-        cam_webpage = webpage.Webpage(fname_webpage, testdata_dir)
-        cam_webpage.write_header()
+        camera_name = 'b0'
 
-        row_html = cam_webpage.make_html_image_list(row_image_list)
-        video_html = cam_webpage.make_html_video_list(row_video_list)
-        cam_webpage.write_row(row_html, video_html)
-        cam_webpage.write_row(row_html, video_html)
-        cam_webpage.write_row(row_html, video_html)
-        
-        cam_webpage.close()
-        
+        try:
+            os.remove(fname_webpage)
+        except OSError:
+            pass
+
+        cam_webpage = webpage.Webpage(fname_webpage, camera_name, base_dir=testdata_dir)
+        cam_webpage.make_webpage(start_datetime, 1, delta_min, db)
+
         self.assertTrue(os.path.exists(fname_webpage))
-                        
+        
         
 if __name__ == '__main__':
     unittest.main()
