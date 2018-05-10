@@ -35,12 +35,12 @@ def parse_info_amcrest_dav(row, dir_element_list, fname):
     row.d['ctime'] = '%sT%02d:%02d:%02d' % (date, hour, minute, sec)
     return row
 
-def parse_info_amcrest(root_dir, dir_path, fname):
+def parse_info_amcrest(base_data_dir, dir_path, fname):
     """
     given dir_path, fname,
 
     e.g.
-    root_dir = './temp/FTP'
+    base_data_dir = './temp/FTP'
     dir_path = ./testdata/FTP/b1/AMC002A3_K2G7HH/2018-02-25/001/jpg/18/53
     fname = 29[M][0@0][0].jpg
 
@@ -49,12 +49,12 @@ def parse_info_amcrest(root_dir, dir_path, fname):
      'ctime':'yyyy-mm-ddThh:mm:ss.ssss',
     }
     """
-    if dir_path.find(root_dir) != 0:
-        assert False, "dir_path does not begin with root_dir"
+    if dir_path.find(base_data_dir) != 0:
+        assert False, "dir_path does not begin with base_data_dir"
 
-    # chop off root_dir from dir_path
-    len_root_dir = len(root_dir)
-    dir_path = dir_path[len_root_dir+1:len(dir_path)]   # chop off './temp/FTP/'
+    # chop off base_data_dir from dir_path
+    len_base_data_dir = len(base_data_dir)
+    dir_path = dir_path[len_base_data_dir+1:len(dir_path)]   # chop off './temp/FTP/'
     dir_element_list = dir_path.split('/')
 
     
@@ -77,9 +77,9 @@ def parse_info_amcrest(root_dir, dir_path, fname):
         return None
     return row
     
-def cull_files_by_ext(root_dir='.', ext_list=['.avi','.idx']):
+def cull_files_by_ext(base_data_dir='.', ext_list=['.avi','.idx']):
     num_deleted = 0
-    for dir_path, subdir_list, file_list in os.walk(root_dir):
+    for dir_path, subdir_list, file_list in os.walk(base_data_dir):
         for fname in file_list:
             full_fname = os.path.join(dir_path, fname)
             (root, ext) = os.path.splitext(fname)  # split foo.bar into 'foo', '.bar'
@@ -93,7 +93,7 @@ def cull_files_by_ext(root_dir='.', ext_list=['.avi','.idx']):
     return num_deleted
     
 
-def cull_files_by_age(db, root_dir='.',baseline_time=None, derived_dir=DERIVED_DIR,max_age_days=14):
+def cull_files_by_age(db, base_data_dir='.',baseline_time=None, derived_dir=DERIVED_DIR,max_age_days=14):
     """
     given file entries in db,
     delete files based on age:
@@ -109,7 +109,7 @@ def cull_files_by_age(db, root_dir='.',baseline_time=None, derived_dir=DERIVED_D
     """
     row_list = db.select_by_age(baseline_time=baseline_time, max_age_days=max_age_days)
     for row in row_list:
-        full_fname = os.path.join(root_dir, row.d['path'], row.d['fname'])
+        full_fname = os.path.join(base_data_dir, row.d['path'], row.d['fname'])
         os.remove(full_fname)
         if row.d['derived_fname'] != 0:
             try:
@@ -122,27 +122,27 @@ def cull_files_by_age(db, root_dir='.',baseline_time=None, derived_dir=DERIVED_D
     print("cull_files_by_age: deleted (%d) files" % len(row_list))
     return len(row_list)
 
-def cull_empty_dirs(root_dir):
+def cull_empty_dirs(base_data_dir):
     """
     execute: 
-    find root_dir -type d -empty -exec rm {} ;
+    find base_data_dir -type d -empty -exec rm {} ;
 
     returns:
     none
     """
     subprocess.call(['pwd'])
     subprocess.call(['which','find'])
-    subprocess.call(['ls',root_dir])
+    subprocess.call(['ls',base_data_dir])
     # print empty dirs
-    subprocess.call(['find',root_dir,'-type','d','-empty','-print'])
-    print(['find',root_dir,'-type','d','-empty','-print'])
+    subprocess.call(['find',base_data_dir,'-type','d','-empty','-print'])
+    print(['find',base_data_dir,'-type','d','-empty','-print'])
 
     # delete empty dirs
-    subprocess.call(['find',root_dir,'-type','d','-empty','-exec','rm','-rf','{}',';'])
+    subprocess.call(['find',base_data_dir,'-type','d','-empty','-exec','rm','-rf','{}',';'])
 
 
-def convert_dav_to_mp4(root_dir, path, fname, derived_dir):
-    src_fname = os.path.join(root_dir, path, fname)
+def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir):
+    src_fname = os.path.join(base_data_dir, path, fname)
     dest_path = os.path.join(derived_dir, path)
     dest_fname = os.path.join(dest_path, fname)
     dest_fname = dest_fname.replace('.dav','.mp4')
@@ -164,14 +164,14 @@ def convert_dav_to_mp4(root_dir, path, fname, derived_dir):
         
     return dest_fname
 
-def make_thumbnail(root_dir, path, fname, derived_dir):
+def make_thumbnail(base_data_dir, path, fname, derived_dir):
     """
-    given the root_dir+path+fname of an image,
+    given the base_data_dir+path+fname of an image,
     generate a thumbnail image in derived_dir,
 
     returns the absolute filename of the thumbnail
     """
-    src_fname = os.path.join(root_dir, path, fname)
+    src_fname = os.path.join(base_data_dir, path, fname)
     dest_path = os.path.join(derived_dir, path)
     dest_fname = os.path.join(dest_path, fname)
     dest_fname = os.path.abspath(dest_fname)
@@ -190,7 +190,7 @@ def make_thumbnail(root_dir, path, fname, derived_dir):
     
     return dest_fname
     
-def make_derived_files(db, root_dir='.', derived_dir=DERIVED_DIR):
+def make_derived_files(db, base_data_dir='.', derived_dir=DERIVED_DIR):
     """
     create directory for derived files.
     for each entry in database, create derived files (thumbnails, converted video)
@@ -204,9 +204,9 @@ def make_derived_files(db, root_dir='.', derived_dir=DERIVED_DIR):
     row_list = db.select_all()
     for row in row_list:
         if row.d['mediatype']==datastore.MEDIA_VIDEO:
-            derived_fname=convert_dav_to_mp4(root_dir, row.d['path'], row.d['fname'], derived_dir)
+            derived_fname=convert_dav_to_mp4(base_data_dir, row.d['path'], row.d['fname'], derived_dir)
         elif row.d['mediatype']==datastore.MEDIA_IMAGE:
-            derived_fname=make_thumbnail(root_dir, row.d['path'], row.d['fname'], derived_dir)
+            derived_fname=make_thumbnail(base_data_dir, row.d['path'], row.d['fname'], derived_dir)
         else:
             assert False, "mediatype (%s) not recognized" % row.d['mediatype']
 
@@ -217,23 +217,23 @@ def make_derived_files(db, root_dir='.', derived_dir=DERIVED_DIR):
         
     return
         
-def walk_dir_and_load_db(db, root_dir='.'):
+def walk_dir_and_load_db(db, base_data_dir='.'):
     """
-    search root_dir
+    search base_data_dir
     delete empty directories
     delete files with specific file extensions
     add remaining files to the database
 
     returns: number of files added
     """
-    cull_files_by_ext(root_dir, ext_list=['.avi','.idx','.mp4'])
-    cull_empty_dirs(root_dir)
+    cull_files_by_ext(base_data_dir, ext_list=['.avi','.idx','.mp4'])
+    cull_empty_dirs(base_data_dir)
     
     num_added = 0
-    for dir_path, subdir_list, file_list in os.walk(root_dir):
+    for dir_path, subdir_list, file_list in os.walk(base_data_dir):
         for fname in file_list:
             # TODO: get mtime
-            row = parse_info_amcrest(root_dir, dir_path, fname)
+            row = parse_info_amcrest(base_data_dir, dir_path, fname)
             if (row != None):
                 db.add_row(row)
                 num_added += 1

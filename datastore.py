@@ -54,7 +54,6 @@ class Datastore:
         self.add_cols()
 
     def create_table(self):
-        sqlite_file = './test_db.sqlite'
         self.dbconn = sqlite3.connect(self.db_fname)
         self.cursor = self.dbconn.cursor()
         self.cursor.execute('DROP TABLE IF EXISTS {tn};'.format(tn=self.tablename))

@@ -13,6 +13,8 @@ import shutil
 import webpage
 import datetime
 import tzlocal
+import json
+import pano
 
 """
 run all unit tests
@@ -31,14 +33,14 @@ class TestPano(unittest.TestCase):
 
     def test_cull_files_by_ext(self):
         #pu.db
-        num_deleted = dirwalk.cull_files_by_ext(root_dir=self.test_data_dir)
+        num_deleted = dirwalk.cull_files_by_ext(base_data_dir=self.test_data_dir)
         print("num_deleted = %d" % num_deleted)
         self.assertTrue(num_deleted==290)
         
     def test_cull_files_by_age(self):
         baseline_time = time.strptime("26 feb 2018 00:00", "%d %b %Y %H:%M")
         baseline_time_epoch = time.mktime(baseline_time)
-        num_deleted = dirwalk.cull_files_by_age(baseline_time_epoch=baseline_time_epoch, max_age_days=1.75,root_dir=self.test_data_dir)
+        num_deleted = dirwalk.cull_files_by_age(baseline_time_epoch=baseline_time_epoch, max_age_days=1.75,base_data_dir=self.test_data_dir)
         print("deleted %d files" % num_deleted)
         self.assertTrue(num_deleted==136)
         self.assertTrue(True)
@@ -205,10 +207,10 @@ class TestPano(unittest.TestCase):
     def test_cull_files_by_age(self):
         #pu.db
         db = datastore.Datastore()
-        num_entries = dirwalk.walk_dir_and_load_db(db, root_dir='testdata/FTP')
+        num_entries = dirwalk.walk_dir_and_load_db(db, base_data_dir='testdata/FTP')
         
         num_deleted = dirwalk.cull_files_by_age(db,
-                                                root_dir='testdata/FTP',
+                                                base_data_dir='testdata/FTP',
                                                 baseline_time='2018-02-26',
                                                 max_age_days=1)
         row_list = db.select_all()
@@ -240,10 +242,10 @@ class TestPano(unittest.TestCase):
         db = datastore.Datastore()
         dirwalk.walk_dir_and_load_db(db, 'testdata/FTP')
         num_deleted = dirwalk.cull_files_by_age(db,
-                                                root_dir='testdata/FTP',
+                                                base_data_dir='testdata/FTP',
                                                 baseline_time='2018-02-26',
                                                 max_age_days=0.25)
-        dirwalk.make_derived_files(db, root_dir='testdata/FTP')
+        dirwalk.make_derived_files(db, base_data_dir='testdata/FTP')
         db.close()
 
     def test_string_to_sec(self):
@@ -299,10 +301,10 @@ class TestPano(unittest.TestCase):
         db = datastore.Datastore()
         dirwalk.walk_dir_and_load_db(db, 'testdata/FTP-culled')
         num_deleted = dirwalk.cull_files_by_age(db,
-                                                root_dir='testdata/FTP-culled',
+                                                base_data_dir='testdata/FTP-culled',
                                                 baseline_time='2018-02-26',
                                                 max_age_days=0.25)
-        dirwalk.make_derived_files(db, root_dir='testdata/FTP-culled')
+        dirwalk.make_derived_files(db, base_data_dir='testdata/FTP-culled')
         delta_sec = 60 * delta_min   # 10 minutes
         upper_time_sec = db.iso8601_to_sec(start_time)
         lower_time_sec = upper_time_sec - delta_sec
@@ -340,7 +342,7 @@ class TestPano(unittest.TestCase):
         db = datastore.Datastore()
         dirwalk.walk_dir_and_load_db(db, testdata_dir)
         num_deleted = dirwalk.cull_files_by_age(db,
-                                                root_dir=testdata_dir,
+                                                base_data_dir=testdata_dir,
                                                 baseline_time='2018-02-26',
                                                 max_age_days=1)
         dirwalk.make_derived_files(db, testdata_dir)
@@ -356,6 +358,26 @@ class TestPano(unittest.TestCase):
         cam_webpage.make_webpage(start_datetime, 1, delta_min, db)
 
         self.assertTrue(os.path.exists(fname_webpage))
+
+    def test_read_json(self):
+        pu.db
+        f = open('testdata2/test_pano_init.json','rt')
+        d = json.load(f)
+        print(d)
+        self.assertTrue(d['camera_list'][0]['name']==u'b0')
+        self.assertTrue(len(d['camera_list'])==2)
+        self.assertTrue(d['max_age_days']==14)
+
+    def test_pano_init(self):
+        pu.db
+        mypano = pano.Pano("testdata2/test_pano_init.json")
+        self.assertTrue(True)
+        
+    def test_pano_slurp(self):
+        pu.db
+        mypano = pano.Pano("testdata2/test_pano_init.json")
+        num_files_added = mypano.slurp_images()
+        self.assertTrue(num_files_added==2642)
         
         
 if __name__ == '__main__':
