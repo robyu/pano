@@ -126,7 +126,7 @@ class Webpage:
         return the abs path to the derived image/video file
         OR a default image (if the derived file does not exist)
         """
-        if len(row.d['derived_fname']) == 0:
+        if len(row.d['derived_fname']) == 0:   # no thumbnail
             thumb_path = self.default_image_fname
         else:
             thumb_path = os.path.join(self.derived_dir, row.d['derived_fname'])
@@ -149,12 +149,14 @@ class Webpage:
     def make_html_image_list(self, image_row_list):
         """
         given a list of row elements representing images,
-        return HTML
+        return HTML for a single row
         """
         html = ''
         n = 0
-        
-        while n+self.num_images_per_row < len(image_row_list):
+
+        #
+        # make a single row of (num_images_per_row) images
+        while n+self.num_images_per_row <= len(image_row_list):
             html += "<p>\n"
             for m in range(self.num_images_per_row):
                 row = image_row_list[n+m]
@@ -169,6 +171,9 @@ class Webpage:
             n += self.num_images_per_row
         #end
         assert len(image_row_list) - n < self.num_images_per_row
+
+        #
+        # make a row of the remaining imagees
         html += "<p>\n"
         while n < len(image_row_list):
             row = image_row_list[n]
@@ -185,11 +190,19 @@ class Webpage:
         return html
 
     def make_html_video_list(self, video_row_list):
+        """
+        given a list of row elements representing videos,
+        return HTML for a single row
+        """
         html = ''
         n = 0
         
         while n < len(video_row_list):
             row = video_row_list[n]
+            if len(row.d['derived_fname']) <= 0:
+                n += 1
+                continue
+            #else...
             html += "<p>\n"
             video_fname = row.d['derived_fname']
             assert os.path.exists(video_fname)

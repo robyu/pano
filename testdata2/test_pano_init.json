@@ -1,9 +1,9 @@
 {
     "database_file" : "panodb.sqlite",
-    "base_data_dir" : "testdata/FTP",
+    "base_data_dir" : "testdata/FTP-culldata",
     "delta_min": 10,
-    "max_age_days": 14,
-    "www_dir": "wwww",
+    "max_age_days": 0.25,
+    "www_dir": "www",
     "baseline_datetime": "2018-02-25T19:14:22",
     "cull_old_files": 1,
     "camera_list" : [
