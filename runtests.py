@@ -15,6 +15,7 @@ import datetime
 import tzlocal
 import json
 import pano
+import derived
 
 """
 run all unit tests
@@ -245,7 +246,7 @@ class TestPano(unittest.TestCase):
                                                 base_data_dir='testdata/FTP',
                                                 baseline_time='2018-02-26',
                                                 max_age_days=0.25)
-        dirwalk.make_derived_files(db, base_data_dir='testdata/FTP')
+        derived.make_derived_files(db, base_data_dir='testdata/FTP')
         db.close()
 
     def test_string_to_sec(self):
@@ -304,7 +305,7 @@ class TestPano(unittest.TestCase):
                                                 base_data_dir='testdata/FTP-culled',
                                                 baseline_time='2018-02-26',
                                                 max_age_days=0.25)
-        dirwalk.make_derived_files(db, base_data_dir='testdata/FTP-culled')
+        derived.make_derived_files(db, base_data_dir='testdata/FTP-culled')
         delta_sec = 60 * delta_min   # 10 minutes
         upper_time_sec = db.iso8601_to_sec(start_time)
         lower_time_sec = upper_time_sec - delta_sec
@@ -345,7 +346,7 @@ class TestPano(unittest.TestCase):
                                                 base_data_dir=testdata_dir,
                                                 baseline_time='2018-02-26',
                                                 max_age_days=1)
-        dirwalk.make_derived_files(db, testdata_dir)
+        derived.make_derived_files(db, testdata_dir)
         fname_webpage = 'www/test_b0.html'
         camera_name = 'b0'
 
@@ -394,6 +395,35 @@ class TestPano(unittest.TestCase):
         self.assertTrue(len(cam_page_fname_list)==2)
         for fname in cam_page_fname_list:
             self.assertTrue(os.path.exists(fname))
+
+    def test_gen_derived_elapsed(self):
+        """
+        test elapsed time to generate derived files
+        """
+        pu.db
+
+        #
+        # populate db and get rows corresponding to time interval
+        testdata_dir  = 'testdata/FTP-culled'
+        db = datastore.Datastore()
+        dirwalk.walk_dir_and_load_db(db, testdata_dir)
+
+        try:
+            shutil.rmtree(derived.DERIVED_DIR)
+        except:
+            pass
+        time_start = time.time()
+        derived.make_derived_files(db, testdata_dir, num_workers = 1, test_thread_flag=True)
+        time_stop = time.time()
+        time_one_thread = time_stop - time_start
+
+        time_start = time.time()
+        derived.make_derived_files(db, testdata_dir, num_workers = 2, test_thread_flag=True)
+        time_stop = time.time()
+        time_two_threads = time_stop - time_start
+        
+
+        self.assertTrue(time_two_threads < time_one_thread)
         
         
 if __name__ == '__main__':

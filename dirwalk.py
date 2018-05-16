@@ -3,8 +3,7 @@ import os
 import time
 import subprocess
 import datastore
-
-DERIVED_DIR='derived'
+import derived
 
 def parse_info_amcrest_jpg(row, dir_element_list, fname):
     # ['b0', 'AMC0028V_795UUB', '2018-02-24', '001', 'jpg', '10', '35']
@@ -93,7 +92,7 @@ def cull_files_by_ext(base_data_dir='.', ext_list=['.avi','.idx']):
     return num_deleted
     
 
-def cull_files_by_age(db, base_data_dir='.',baseline_time=None, derived_dir=DERIVED_DIR,max_age_days=14):
+def cull_files_by_age(db, base_data_dir='.',baseline_time=None, derived_dir=derived.DERIVED_DIR,max_age_days=14):
     """
     given file entries in db,
     delete files based on age:
@@ -141,81 +140,6 @@ def cull_empty_dirs(base_data_dir):
     subprocess.call(['find',base_data_dir,'-type','d','-empty','-exec','rm','-rf','{}',';'])
 
 
-def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir):
-    src_fname = os.path.join(base_data_dir, path, fname)
-    dest_path = os.path.join(derived_dir, path)
-    dest_fname = os.path.join(dest_path, fname)
-    dest_fname = dest_fname.replace('.dav','.mp4')
-    dest_fname = os.path.abspath(dest_fname)
-    assert os.path.exists(src_fname)
-    try:
-        os.makedirs(dest_path)
-    except os.error:
-        pass
-
-    if os.path.exists(dest_fname)==False:
-        # ffmpeg -i 21.18.33-21.26.00\[M\]\[0\@0\]\[0\].dav -vcodec copy -preset veryfast out2.avi
-        cmd = ['ffmpeg', '-y','-i',src_fname, '-vcodec', 'copy', '-preset', 'veryfast', dest_fname]
-        subprocess.call(cmd)
-
-    # check again: conversion may have failed
-    if os.path.exists(dest_fname)==False:
-        dest_fname=''  # if failed, then return empty string
-        
-    return dest_fname
-
-def make_thumbnail(base_data_dir, path, fname, derived_dir):
-    """
-    given the base_data_dir+path+fname of an image,
-    generate a thumbnail image in derived_dir,
-
-    returns the absolute filename of the thumbnail
-    """
-    src_fname = os.path.join(base_data_dir, path, fname)
-    dest_path = os.path.join(derived_dir, path)
-    dest_fname = os.path.join(dest_path, fname)
-    dest_fname = os.path.abspath(dest_fname)
-    assert os.path.exists(src_fname)
-    try:
-        os.makedirs(dest_path)
-    except os.error:
-        pass
-
-    if os.path.exists(dest_fname)==False:
-        cmd = ['magick','convert',src_fname, '-resize', '10%',dest_fname]
-        subprocess.call(cmd)
-
-    if os.path.exists(dest_fname)==False:
-        dest_fname=''  # if failed, then return empty string
-    
-    return dest_fname
-    
-def make_derived_files(db, base_data_dir='.', derived_dir=DERIVED_DIR):
-    """
-    create directory for derived files.
-    for each entry in database, create derived files (thumbnails, converted video)
-    populate the derived fname column
-    """
-    try:
-        os.mkdir(os.path.join('.',derived_dir))
-    except OSError:
-        print("derived dir (%s) already exists" % derived_dir)
-        
-    row_list = db.select_all()
-    for row in row_list:
-        if row.d['mediatype']==datastore.MEDIA_VIDEO:
-            derived_fname=convert_dav_to_mp4(base_data_dir, row.d['path'], row.d['fname'], derived_dir)
-        elif row.d['mediatype']==datastore.MEDIA_IMAGE:
-            derived_fname=make_thumbnail(base_data_dir, row.d['path'], row.d['fname'], derived_dir)
-        else:
-            assert False, "mediatype (%s) not recognized" % row.d['mediatype']
-
-        # set entry's derived column
-        db.update_row(row.d['id'], 'derived_fname', derived_fname)
-        if len(derived_fname)==0:
-            print("could not create derived file for row id [%d]" % row.d['id'])
-        
-    return
         
 def walk_dir_and_load_db(db, base_data_dir='.'):
     """

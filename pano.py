@@ -3,6 +3,7 @@ import datastore
 import dirwalk
 import os
 import webpage
+import derived
 
 """
 data dict
@@ -127,7 +128,7 @@ class Pano:
                                   base_data_dir=self.param_dict['base_data_dir'],
                                   baseline_time = self.param_dict['baseline_datetime'],
                                   max_age_days = self.param_dict['max_age_days'])
-        dirwalk.make_derived_files(self.image_db, base_data_dir = self.param_dict['base_data_dir'])
+        derived.make_derived_files(self.image_db, base_data_dir = self.param_dict['base_data_dir'])
         
         cam_page_fname_list=[]
         cam_name_list = self.get_cam_name_list()
