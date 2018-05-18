@@ -12,6 +12,7 @@ class Row:
     
     col_defs = ( \
                  ['id',            'INTEGER PRIMARY KEY', ''],
+                 ['base_data_dir', 'STRING',   ''],
                  ['cam_name',      'STRING',   ''],
                  ['ctime',         'STRING',   ''],
                  ['ctime_unix',    'INTEGER',  -1],
@@ -34,13 +35,14 @@ class Row:
         u'testdata/FTP/b0/AMC0028V_795UUB/2018-02-24/001/dav/00')
         """
         self.d['id']            = entry[0]
-        self.d['cam_name']      = entry[1]
-        self.d['ctime']         = entry[2]
-        self.d['ctime_unix']    = entry[3]
-        self.d['fname']         = entry[4]
-        self.d['derived_fname'] = entry[5]
-        self.d['mediatype']     = entry[6]
-        self.d['path']          = entry[7]
+        self.d['base_data_dir'] = entry[1]
+        self.d['cam_name']      = entry[2]
+        self.d['ctime']         = entry[3]
+        self.d['ctime_unix']    = entry[4]
+        self.d['fname']         = entry[5]
+        self.d['derived_fname'] = entry[6]
+        self.d['mediatype']     = entry[7]
+        self.d['path']          = entry[8]
             
 class Datastore:
     

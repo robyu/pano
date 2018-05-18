@@ -125,7 +125,6 @@ class Pano:
         list of camera webpage filenames
         """
         dirwalk.cull_files_by_age(self.image_db,
-                                  base_data_dir=self.param_dict['base_data_dir'],
                                   baseline_time = self.param_dict['baseline_datetime'],
                                   max_age_days = self.param_dict['max_age_days'])
         derived.make_derived_files(self.image_db, base_data_dir = self.param_dict['base_data_dir'])

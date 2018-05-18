@@ -80,9 +80,9 @@ def process_media_file(row, derived_dir):
     print("%s %s" % (row.d['fname'], derived_dir))
 
     if row.d['mediatype']==datastore.MEDIA_VIDEO:
-        derived_fname=convert_dav_to_mp4(base_data_dir, row.d['path'], row.d['fname'], derived_dir)
+        derived_fname=convert_dav_to_mp4(row.d['base_data_dir'], row.d['path'], row.d['fname'], derived_dir)
     elif row.d['mediatype']==datastore.MEDIA_IMAGE:
-        derived_fname=make_thumbnail(base_data_dir, row.d['path'], row.d['fname'], derived_dir)
+        derived_fname=make_thumbnail(row.d['base_data_dir'], row.d['path'], row.d['fname'], derived_dir)
     else:
         print("(%s) has unrecognized mediatype (%d)" % (media_fname, media_type))
         derived_fname = None
@@ -145,7 +145,7 @@ def make_derived_files(db, base_data_dir='.', derived_dir=DERIVED_DIR, num_worke
             # run a fake test fcn, just to test thread pool
             result = pool.apply_async(sleep_fcn, args=(row, derived_dir))
         else:
-            assert False, "not yet implemented"
+            result = pool.apply_async(process_media_file, args=(row, derived_dir))
         result_list.append(result)
 
     for result in result_list:

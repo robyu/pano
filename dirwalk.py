@@ -67,6 +67,7 @@ def parse_info_amcrest(base_data_dir, dir_path, fname):
     row = datastore.Row()
     row.d['path'] = dir_path
     row.d['fname'] = fname
+    row.d['base_data_dir'] = base_data_dir
     if dir_element_list[4]=='jpg' and fname[-3:len(fname)]=='jpg':
         row = parse_info_amcrest_jpg(row, dir_element_list, fname)
     elif dir_element_list[4]=='dav' and fname[-3:len(fname)]=='dav':
@@ -92,7 +93,7 @@ def cull_files_by_ext(base_data_dir='.', ext_list=['.avi','.idx']):
     return num_deleted
     
 
-def cull_files_by_age(db, base_data_dir='.',baseline_time=None, derived_dir=derived.DERIVED_DIR,max_age_days=14):
+def cull_files_by_age(db, baseline_time=None, derived_dir=derived.DERIVED_DIR,max_age_days=14):
     """
     given file entries in db,
     delete files based on age:
@@ -108,7 +109,7 @@ def cull_files_by_age(db, base_data_dir='.',baseline_time=None, derived_dir=deri
     """
     row_list = db.select_by_age(baseline_time=baseline_time, max_age_days=max_age_days)
     for row in row_list:
-        full_fname = os.path.join(base_data_dir, row.d['path'], row.d['fname'])
+        full_fname = os.path.join(row.d['base_data_dir'], row.d['path'], row.d['fname'])
         os.remove(full_fname)
         if row.d['derived_fname'] != 0:
             try:

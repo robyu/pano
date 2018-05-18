@@ -41,7 +41,7 @@ class TestPano(unittest.TestCase):
     def test_cull_files_by_age(self):
         baseline_time = time.strptime("26 feb 2018 00:00", "%d %b %Y %H:%M")
         baseline_time_epoch = time.mktime(baseline_time)
-        num_deleted = dirwalk.cull_files_by_age(baseline_time_epoch=baseline_time_epoch, max_age_days=1.75,base_data_dir=self.test_data_dir)
+        num_deleted = dirwalk.cull_files_by_age(baseline_time_epoch=baseline_time_epoch, max_age_days=1.75)
         print("deleted %d files" % num_deleted)
         self.assertTrue(num_deleted==136)
         self.assertTrue(True)
@@ -211,7 +211,6 @@ class TestPano(unittest.TestCase):
         num_entries = dirwalk.walk_dir_and_load_db(db, base_data_dir='testdata/FTP')
         
         num_deleted = dirwalk.cull_files_by_age(db,
-                                                base_data_dir='testdata/FTP',
                                                 baseline_time='2018-02-26',
                                                 max_age_days=1)
         row_list = db.select_all()
@@ -243,7 +242,6 @@ class TestPano(unittest.TestCase):
         db = datastore.Datastore()
         dirwalk.walk_dir_and_load_db(db, 'testdata/FTP')
         num_deleted = dirwalk.cull_files_by_age(db,
-                                                base_data_dir='testdata/FTP',
                                                 baseline_time='2018-02-26',
                                                 max_age_days=0.25)
         derived.make_derived_files(db, base_data_dir='testdata/FTP')
@@ -302,7 +300,6 @@ class TestPano(unittest.TestCase):
         db = datastore.Datastore()
         dirwalk.walk_dir_and_load_db(db, 'testdata/FTP-culled')
         num_deleted = dirwalk.cull_files_by_age(db,
-                                                base_data_dir='testdata/FTP-culled',
                                                 baseline_time='2018-02-26',
                                                 max_age_days=0.25)
         derived.make_derived_files(db, base_data_dir='testdata/FTP-culled')
@@ -343,7 +340,6 @@ class TestPano(unittest.TestCase):
         db = datastore.Datastore()
         dirwalk.walk_dir_and_load_db(db, testdata_dir)
         num_deleted = dirwalk.cull_files_by_age(db,
-                                                base_data_dir=testdata_dir,
                                                 baseline_time='2018-02-26',
                                                 max_age_days=1)
         derived.make_derived_files(db, testdata_dir)
@@ -361,33 +357,33 @@ class TestPano(unittest.TestCase):
         self.assertTrue(os.path.exists(fname_webpage))
 
     def test_read_json(self):
-        pu.db
+        #pu.db
         f = open('testdata2/test_pano_init.json','rt')
         d = json.load(f)
         print(d)
         self.assertTrue(d['camera_list'][0]['name']==u'b0')
         self.assertTrue(len(d['camera_list'])==2)
-        self.assertTrue(d['max_age_days']==14)
+        self.assertTrue(d['max_age_days']==0.25)
 
     def test_pano_init(self):
-        pu.db
+        #pu.db
         mypano = pano.Pano("testdata2/test_pano_init.json")
         self.assertTrue(True)
         
     def test_pano_slurp(self):
-        pu.db
+        #pu.db
         mypano = pano.Pano("testdata2/test_pano_init.json")
         num_files_added = mypano.slurp_images()
         self.assertTrue(num_files_added==2642)
 
     def test_pano_slurp(self):
-        pu.db
+        #pu.db
         mypano = pano.Pano("testdata2/test_pano_init.json")
         num_files_added = mypano.slurp_images()
         self.assertTrue(num_files_added==2642)
 
     def test_pano_make_pages(self):
-        pu.db
+        #pu.db
         mypano = pano.Pano("testdata2/test_pano_init.json")
         num_files_added = mypano.slurp_images()
         cam_page_fname_list = mypano.gen_camera_pages()
@@ -396,11 +392,12 @@ class TestPano(unittest.TestCase):
         for fname in cam_page_fname_list:
             self.assertTrue(os.path.exists(fname))
 
-    def test_gen_derived_elapsed(self):
+    def test_gen_derived_elapsed_mock(self):
         """
         test elapsed time to generate derived files
         """
-        pu.db
+        #pu.db
+        use_mock_test_fcn = True
 
         #
         # populate db and get rows corresponding to time interval
@@ -413,12 +410,50 @@ class TestPano(unittest.TestCase):
         except:
             pass
         time_start = time.time()
-        derived.make_derived_files(db, testdata_dir, num_workers = 1, test_thread_flag=True)
+        derived.make_derived_files(db, testdata_dir, num_workers = 1, test_thread_flag=use_mock_test_fcn)
         time_stop = time.time()
         time_one_thread = time_stop - time_start
 
+        try:
+            shutil.rmtree(derived.DERIVED_DIR)
+        except:
+            pass
         time_start = time.time()
-        derived.make_derived_files(db, testdata_dir, num_workers = 2, test_thread_flag=True)
+        derived.make_derived_files(db, testdata_dir, num_workers = 2, test_thread_flag=use_mock_test_fcn)
+        time_stop = time.time()
+        time_two_threads = time_stop - time_start
+        
+
+        self.assertTrue(time_two_threads < time_one_thread)
+
+    def test_gen_derived_elapsed(self):
+        """
+        test elapsed time to generate derived files
+        """
+        #pu.db
+        use_mock_test_fcn = False
+
+        #
+        # populate db and get rows corresponding to time interval
+        testdata_dir  = 'testdata/FTP-culled'
+        db = datastore.Datastore()
+        dirwalk.walk_dir_and_load_db(db, testdata_dir)
+
+        try:
+            shutil.rmtree(derived.DERIVED_DIR)
+        except:
+            pass
+        time_start = time.time()
+        derived.make_derived_files(db, testdata_dir, num_workers = 1, test_thread_flag=use_mock_test_fcn)
+        time_stop = time.time()
+        time_one_thread = time_stop - time_start
+
+        try:
+            shutil.rmtree(derived.DERIVED_DIR)
+        except:
+            pass
+        time_start = time.time()
+        derived.make_derived_files(db, testdata_dir, num_workers = 2, test_thread_flag=use_mock_test_fcn)
         time_stop = time.time()
         time_two_threads = time_stop - time_start
         
