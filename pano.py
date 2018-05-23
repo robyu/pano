@@ -4,6 +4,7 @@ import dirwalk
 import os
 import webpage
 import derived
+import indexpage
 
 """
 data dict
@@ -29,6 +30,7 @@ class Pano:
     default_json_fname = "pano_defaults.json"
     param_dict = {}
     image_db = None
+    cam_page_fname_list=[]
     
     def __init__(self, config_fname):
         self.param_dict = self.init_param_dict(config_fname)
@@ -102,20 +104,23 @@ class Pano:
         num_files_added = dirwalk.walk_dir_and_load_db(self.image_db, base_data_dir)
         return num_files_added
 
-    def get_cam_name_list(self):
+    def get_cam_list(self):
         """
         return list of camera names extracted from param_dict
         """
         cam_list = self.param_dict['camera_list']
-        num_cams = len(cam_list)
-        cam_name_list = []
-        for n in range(num_cams):
-            cam_name_list.append(cam_list[n]['name'])
-        return cam_name_list
+        return cam_list
     
     def gen_index_page(self):
-        pass
+        assert len(self.cam_page_fname_list) > 0, "you gotta run gen_camera_pages first"
+        cam_list = self.get_cam_list()
 
+        assert len(cam_list) == len(self.cam_page_fname_list)
+        index_page = indexpage.IndexPage()
+        index_fname = index_page.make_index(self.cam_page_fname_list, cam_list)
+        return index_fname
+    
+    
     def gen_camera_pages(self):
         """
         for each camera listed in the json file, 
@@ -129,15 +134,15 @@ class Pano:
                                   max_age_days = self.param_dict['max_age_days'])
         derived.make_derived_files(self.image_db, base_data_dir = self.param_dict['base_data_dir'])
         
-        cam_page_fname_list=[]
-        cam_name_list = self.get_cam_name_list()
-        print(cam_name_list)
+        cam_list = self.get_cam_list()
 
         if os.path.exists(self.param_dict['www_dir'])==False:
             os.mkdir(self.param_dict['www_dir'])
-        
-        for cam_name in cam_name_list:
-            cam_page_fname = os.path.join(self.param_dict['www_dir'], '%s.html' % cam_name)
+
+        cam_page_fname_list=[]
+        for index in range(len(cam_list)):
+            cam_page_fname = os.path.join(self.param_dict['www_dir'], 'cam_%02d.html' % index)
+            cam_name = cam_list[index]['name']
             cam_page = webpage.Webpage(cam_page_fname, cam_name, base_dir=self.param_dict['base_data_dir'])
             cam_page.make_webpage(self.param_dict['baseline_datetime'],
                                   self.param_dict['max_age_days'],
@@ -145,7 +150,7 @@ class Pano:
                                   self.image_db)
             cam_page_fname_list.append(cam_page_fname)
         #end
-
+        self.cam_page_fname_list = cam_page_fname_list
         return cam_page_fname_list
         
 

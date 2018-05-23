@@ -151,9 +151,9 @@ def make_derived_files(db, base_data_dir='.', derived_dir=DERIVED_DIR, num_worke
     for result in result_list:
         try:
             result_dict = result.get(60 * 2)
-            print("SUCCESS for id=(%d)" % result_dict['id'])
             # update datastore with derived fname
             if len(result_dict['derived_fname']) > 0:
                 db.update_row(result_dict['id'], 'derived_fname', result_dict['derived_fname'])
         except mp.TimeoutError:
             pass
+    print("done with derived files")

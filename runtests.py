@@ -383,7 +383,7 @@ class TestPano(unittest.TestCase):
         self.assertTrue(num_files_added==2642)
 
     def test_pano_make_pages(self):
-        #pu.db
+        pu.db
         mypano = pano.Pano("testdata2/test_pano_init.json")
         num_files_added = mypano.slurp_images()
         cam_page_fname_list = mypano.gen_camera_pages()
@@ -391,6 +391,11 @@ class TestPano(unittest.TestCase):
         self.assertTrue(len(cam_page_fname_list)==2)
         for fname in cam_page_fname_list:
             self.assertTrue(os.path.exists(fname))
+        #end
+
+        index_fname = mypano.gen_index_page()
+        self.assertTrue(os.path.exists(index_fname))
+        
 
     def test_gen_derived_elapsed_mock(self):
         """

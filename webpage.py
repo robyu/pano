@@ -7,8 +7,6 @@ import os
   
 """
 class Webpage:
-    dest_dir = 'html'
-
     #
     # {row} = HTML of row class
     templ_header = unicode("""
@@ -88,7 +86,7 @@ class Webpage:
         self.base_dir = os.path.abspath(base_dir)
         assert os.path.exists(self.base_dir)
 
-        self.www_dir = os.path.join(os.getcwd(), 'www')
+        self.www_dir = os.path.join(os.getcwd(), "www")
         assert os.path.exists(self.www_dir)
 
         self.default_image_fname = os.path.join(self.www_dir, 'mryuck.png')
