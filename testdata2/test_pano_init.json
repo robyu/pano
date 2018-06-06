@@ -6,15 +6,18 @@
     "www_dir": "www",
     "baseline_datetime": "2018-02-25T19:14:22",
     "cull_old_files": 1,
+    "wait_interval_min":0.1,
     "camera_list" : [
 	{
             "name": "b0",
-            "live_url": "http://192.168.0.1",
+            "live_url": "rtsp://192.168.0.1",
+            "admin_url": "http://192.168.0.1",
             "description": "porch"
 	},
 	{
             "name": "b1",
-            "live_url": "http://192.168.0.1",
+            "live_url": "rtsp://192.168.0.1",
+            "admin_url": "http://192.168.0.1",
             "description": "front pointing north"
 	}
     ]

@@ -5,6 +5,8 @@ import os
 import webpage
 import derived
 import indexpage
+import click
+import time
 
 """
 data dict
@@ -121,9 +123,11 @@ class Pano:
         return index_fname
     
     
-    def gen_camera_pages(self):
+    def gen_camera_pages(self, make_derived_files=True):
         """
         for each camera listed in the json file, 
+        cull files by age
+        generate derivative media files (thumbnails, etc)
         generate a webpage 
 
         returns:
@@ -132,7 +136,9 @@ class Pano:
         dirwalk.cull_files_by_age(self.image_db,
                                   baseline_time = self.param_dict['baseline_datetime'],
                                   max_age_days = self.param_dict['max_age_days'])
-        derived.make_derived_files(self.image_db, base_data_dir = self.param_dict['base_data_dir'])
+        if (make_derived_files==True):
+            derived.make_derived_files(self.image_db, base_data_dir = self.param_dict['base_data_dir'])
+        #endif
         
         cam_list = self.get_cam_list()
 
@@ -141,9 +147,10 @@ class Pano:
 
         cam_page_fname_list=[]
         for index in range(len(cam_list)):
-            cam_page_fname = os.path.join(self.param_dict['www_dir'], 'cam_%02d.html' % index)
+            cam_page_fname =  'cam_%02d.html' % index
             cam_name = cam_list[index]['name']
-            cam_page = webpage.Webpage(cam_page_fname, cam_name, base_dir=self.param_dict['base_data_dir'])
+            cam_page = webpage.Webpage(os.path.join(self.param_dict['www_dir'], cam_page_fname),
+                                       cam_name, base_dir=self.param_dict['base_data_dir'])
             cam_page.make_webpage(self.param_dict['baseline_datetime'],
                                   self.param_dict['max_age_days'],
                                   self.param_dict['delta_min'],
@@ -152,7 +159,28 @@ class Pano:
         #end
         self.cam_page_fname_list = cam_page_fname_list
         return cam_page_fname_list
+
+    def sleep(self):
+        assert self.param_dict['sleep_interval_min'] > 0.0
+        sleep_interval_sec = 60.0 * self.param_dict['sleep_interval_min']
+        time.sleep(sleep_interval_sec)
+        return
         
 
     
+@click.command()
+@click.option('--config', prompt="json config file",help='the JSON config file')
+def pano_main(config):
+    print("config file=%s" % config)
+    mypano = Pano(config)
+    while True:
+        num_files_added = mypano.slurp_images()
+        cam_page_fname_list = mypano.gen_camera_pages()
+        index_fname = mypano.gen_index_page()
+        print("sleeping...")
+        mypano.sleep()
+    #end
+
+if __name__=="__main__":
+    pano_main()
     

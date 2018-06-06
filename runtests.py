@@ -16,6 +16,7 @@ import tzlocal
 import json
 import pano
 import derived
+import glob
 
 """
 run all unit tests
@@ -31,6 +32,10 @@ class TestPano(unittest.TestCase):
     def setUp(self):
         print("setup")
         subprocess.call(['./restore-testdata.sh'])
+
+        fname_list = glob.glob("www/*.html")
+        for fname in fname_list:
+            os.remove(fname)
 
     def test_cull_files_by_ext(self):
         #pu.db
@@ -386,15 +391,16 @@ class TestPano(unittest.TestCase):
         pu.db
         mypano = pano.Pano("testdata2/test_pano_init.json")
         num_files_added = mypano.slurp_images()
-        cam_page_fname_list = mypano.gen_camera_pages()
+        cam_page_fname_list = mypano.gen_camera_pages(make_derived_files=False)
 
         self.assertTrue(len(cam_page_fname_list)==2)
         for fname in cam_page_fname_list:
-            self.assertTrue(os.path.exists(fname))
+            full_fname = os.path.join("www", fname)
+            self.assertTrue(os.path.exists(full_fname))
         #end
 
         index_fname = mypano.gen_index_page()
-        self.assertTrue(os.path.exists(index_fname))
+        self.assertTrue(os.path.exists(os.path.join("www", index_fname)))
         
 
     def test_gen_derived_elapsed_mock(self):
@@ -402,7 +408,7 @@ class TestPano(unittest.TestCase):
         test elapsed time to generate derived files
         """
         #pu.db
-        use_mock_test_fcn = True
+        use_mock_test_fcn = True   # dont really generated derived files
 
         #
         # populate db and get rows corresponding to time interval
@@ -461,9 +467,34 @@ class TestPano(unittest.TestCase):
         derived.make_derived_files(db, testdata_dir, num_workers = 2, test_thread_flag=use_mock_test_fcn)
         time_stop = time.time()
         time_two_threads = time_stop - time_start
-        
 
         self.assertTrue(time_two_threads < time_one_thread)
+
+    def test_sleep(self):
+        time_start = time.time()
+        time.sleep(5.0)  # sleep 5 sec
+        time_stop = time.time()
+        time_delta = time_stop - time_start
+        print("start...stop=%f..%f" % (time_start,time_stop))
+        print("diff= %f" % time_delta)
+              
+        self.assertTrue(time_delta >= 4.8)
+        
+    def test_two_loops(self):
+        mypano = pano.Pano("testdata2/test_pano_init.json")
+        num_files_added = mypano.slurp_images()
+        cam_page_fname_list = mypano.gen_camera_pages(make_derived_files=False)
+
+        self.assertTrue(len(cam_page_fname_list)==2)
+        for fname in cam_page_fname_list:
+            full_fname = os.path.join("www", fname)
+            self.assertTrue(os.path.exists(full_fname))
+        #end
+    
+        index_fname = mypano.gen_index_page()
+        self.assertTrue(os.path.exists(os.path.join("www", index_fname)))
+        
+        
         
         
 if __name__ == '__main__':

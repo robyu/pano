@@ -6,7 +6,8 @@
     "www_dir": "www",
     "baseline_datetime": "now",
     "cull_old_files": 1,
-    "@camera_list" : [
+    "sleep_interval_min": 5,
+    "@camera_list (example)" : [
 	{
             "name": "b0",
             "live_url": "http://192.168.0.1",

@@ -50,6 +50,9 @@ class IndexPage:
 							Status Page
 						</th>
  				                <th>
+						        Admin Login
+						</th>
+ 				                <th>
 						        Live Video
 						</th>
 					</tr>
@@ -97,10 +100,13 @@ class IndexPage:
 							{camera_descr}
 						</td>
 						<td>
-							{webpage_url}
+							<a href=\"{webpage_url}\">{camera_name}</a>
 						</td>
 						<td>
-						        {live_link_url}
+							<a href=\"{admin_url}\">{camera_name}</a>
+						</td>
+						<td>
+						        <a href=\"{live_link_url}\">{live_link_url}</a>
 					        </td>
 					</tr>
 				</tbody>
@@ -110,20 +116,22 @@ class IndexPage:
         self.www_dir = os.path.join(os.getcwd(), "www")
         assert os.path.exists(self.www_dir)
 
-        self.dest_fname = os.path.join(self.www_dir, dest_fname)
-        self.dest_file = open(dest_fname, "wt")
+        self.dest_fname = dest_fname
 
     def make_index(self, cam_page_fname_list, cam_list):
         assert len(cam_page_fname_list)==len(cam_list)
         rows_html = ''
         for n in range(len(cam_list)):
+            full_cam_page_fname = os.path.join(self.www_dir, cam_page_fname_list[n])
             rows_html += IndexPage.templ_cam_row.format(camera_index=n,
                                                         camera_name=cam_list[n]['name'],
                                                         camera_descr=cam_list[n]['description'],
-                                                        webpage_url=cam_page_fname_list[n],
+                                                        webpage_url=full_cam_page_fname,
+                                                        admin_url=cam_list[n]['admin_url'],
                                                         live_link_url=cam_list[n]['live_url'])
                              
-        f = open(self.dest_fname, "wt")
+        full_dest_fname = os.path.join(self.www_dir, self.dest_fname)
+        f = open(full_dest_fname, "wt")
         f.write(IndexPage.templ_webpage.format(camera_rows = rows_html))
         f.close()
 
