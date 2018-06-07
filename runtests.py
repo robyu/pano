@@ -381,14 +381,8 @@ class TestPano(unittest.TestCase):
         num_files_added = mypano.slurp_images()
         self.assertTrue(num_files_added==2642)
 
-    def test_pano_slurp(self):
-        #pu.db
-        mypano = pano.Pano("testdata2/test_pano_init.json")
-        num_files_added = mypano.slurp_images()
-        self.assertTrue(num_files_added==2642)
-
     def test_pano_make_pages(self):
-        pu.db
+        #pu.db
         mypano = pano.Pano("testdata2/test_pano_init.json")
         num_files_added = mypano.slurp_images()
         cam_page_fname_list = mypano.gen_camera_pages(make_derived_files=False)
