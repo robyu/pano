@@ -134,11 +134,13 @@ def cull_empty_dirs(base_data_dir):
     subprocess.call(['which','find'])
     subprocess.call(['ls',base_data_dir])
     # print empty dirs
-    subprocess.call(['find',base_data_dir,'-type','d','-empty','-print'])
     print(['find',base_data_dir,'-type','d','-empty','-print'])
+    subprocess.call(['find',base_data_dir,'-type','d','-empty','-print'])
 
     # delete empty dirs
-    subprocess.call(['find',base_data_dir,'-type','d','-empty','-exec','rm','-rf','{}',';'])
+    # for some reason, rm -rf {} doesn't work under linux
+    #subprocess.call(['find',base_data_dir,'-type','d','-empty','-exec','rm','-rf','{}',';'])
+    subprocess.call(['find',base_data_dir,'-type','d','-empty','-delete'])
 
 
         

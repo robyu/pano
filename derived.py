@@ -3,6 +3,7 @@ import time
 import subprocess
 import datastore
 import multiprocessing as mp
+import sys
 
 DERIVED_DIR='derived'
 
@@ -132,21 +133,38 @@ def make_derived_files(db, base_data_dir='.', derived_dir=DERIVED_DIR, num_worke
         print("derived dir (%s) already exists" % derived_dir)
         
     row_list = db.select_all()
+    print("make_derived_files:")
+    print("num_workers=%d" % num_workers)
 
-    if (num_workers > 0):
-        pool = mp.Pool(num_workers)
-    else:
-        pool = mp.Pool(None)  # None -> use cpu_count()
-        
+    if (num_workers <= 0):
+        num_workers = mp.cpu_count()
+    #end
+
     result_list = []
-    for row in row_list:
-        if test_thread_flag==True:
-            #
-            # run a fake test fcn, just to test thread pool
-            result = pool.apply_async(sleep_fcn, args=(row, derived_dir))
-        else:
-            result = pool.apply_async(process_media_file, args=(row, derived_dir))
-        result_list.append(result)
+    if (num_workers > 1):
+        pool = mp.Pool(num_workers)
+        for row in row_list:
+            if test_thread_flag==True:
+                #
+                # run a fake test fcn, just to test thread pool
+                result = pool.apply_async(sleep_fcn, args=(row, derived_dir))
+            else:
+                result = pool.apply_async(process_media_file, args=(row, derived_dir))
+            #end
+            result_list.append(result)
+        #end
+    else:
+        for row in row_list:
+            if test_thread_flag==True:
+                #
+                # run a fake test fcn, just to test thread pool
+                result = sleep_fcn(row, derived_dir)
+            else:
+                result = process_media_file(row, derived_dir)
+            #end
+            result_list.append(result)
+        #end
+    #end
 
     for result in result_list:
         try:

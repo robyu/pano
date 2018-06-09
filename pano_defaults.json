@@ -7,6 +7,7 @@
     "baseline_datetime": "now",
     "cull_old_files": 1,
     "sleep_interval_min": 5,
+    "num_worker_threads": -1,
     "@camera_list (example)" : [
 	{
             "name": "b0",

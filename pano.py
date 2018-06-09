@@ -101,8 +101,11 @@ class Pano:
         number of files added
         """
         base_data_dir = self.param_dict['base_data_dir']
+        print("** cull empty dirs")
         dirwalk.cull_empty_dirs(base_data_dir)
+        print("** cull files by ext")
         num_deleted = dirwalk.cull_files_by_ext(base_data_dir=base_data_dir)
+        print("** walk dir and load db")
         num_files_added = dirwalk.walk_dir_and_load_db(self.image_db, base_data_dir)
         return num_files_added
 
@@ -137,7 +140,9 @@ class Pano:
                                   baseline_time = self.param_dict['baseline_datetime'],
                                   max_age_days = self.param_dict['max_age_days'])
         if (make_derived_files==True):
-            derived.make_derived_files(self.image_db, base_data_dir = self.param_dict['base_data_dir'])
+            derived.make_derived_files(self.image_db,
+                                       base_data_dir = self.param_dict['base_data_dir'],
+                                       num_workers = self.param_dict['num_worker_threads'])
         #endif
         
         cam_list = self.get_cam_list()
