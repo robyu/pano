@@ -120,6 +120,35 @@ def OLDmake_derived_files(db, base_data_dir='.', derived_dir=DERIVED_DIR):
         
     return
 
+
+def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag):
+    """
+    run media processing functions 
+    in worker pool threads
+    """
+    MAX_WAIT_SEC = 60 *2 
+    assert num_workers >= 1
+    pool = mp.Pool(num_workers)
+    mpr_list = []
+    for row in row_list:
+        if test_thread_flag==True:
+            #
+            # run a fake test fcn, just to test thread pool
+            mpr = pool.apply_async(sleep_fcn, args=(row, derived_dir))
+        else:
+            mpr = pool.apply_async(process_media_file, args=(row, derived_dir))
+        mpr_list.append(mpr)
+
+    for mpr in mpr_list:
+        try:
+            result_dict = mpr.get(MAX_WAIT_SEC)
+            # update datastore with derived fname
+            if len(result_dict['derived_fname']) > 0:
+                db.update_row(result_dict['id'], 'derived_fname', result_dict['derived_fname'])
+        except mp.TimeoutError:
+            pass
+    
+    
 def make_derived_files(db, base_data_dir='.', derived_dir=DERIVED_DIR, num_workers = -1, test_thread_flag=False):
     """
     create directory for derived files.
@@ -132,44 +161,28 @@ def make_derived_files(db, base_data_dir='.', derived_dir=DERIVED_DIR, num_worke
         print("derived dir (%s) already exists" % derived_dir)
         
     row_list = db.select_all()
-    print("make_derived_files:")
 
-    if (num_workers <= 0):
+    if num_workers <= 0:
         num_workers = mp.cpu_count()
-    #end
-    print("num_workers=%d" % num_workers)
 
-    result_list = []
-    if (num_workers > 1):
-        pool = mp.Pool(num_workers)
-        for row in row_list:
-            if test_thread_flag==True:
-                #
-                # run a fake test fcn, just to test thread pool
-                result = pool.apply_async(sleep_fcn, args=(row, derived_dir))
-            else:
-                result = pool.apply_async(process_media_file, args=(row, derived_dir))
-            #end
-            result_list.append(result)
-        #end
+    assert num_workers >= 1
+    
+    if num_workers >= 2:
+        derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag)
     else:
+        #
+        # for 1 thread, do not use worker pool (to save memory)
         for row in row_list:
             if test_thread_flag==True:
-                #
-                # run a fake test fcn, just to test thread pool
                 result_dict = sleep_fcn(row, derived_dir)
             else:
                 result_dict = process_media_file(row, derived_dir)
             #end
-            result_list.append(result_dict)
-        #end
-    #end
 
-    for result_dict in result_list:
-        try:
-            # update datastore with derived fname
             if len(result_dict['derived_fname']) > 0:
                 db.update_row(result_dict['id'], 'derived_fname', result_dict['derived_fname'])
-        except mp.TimeoutError:
-            pass
+            #end
+        #end
+    #end
     print("done with derived files")
+    

@@ -461,7 +461,8 @@ class TestPano(unittest.TestCase):
         derived.make_derived_files(db, testdata_dir, num_workers = 2, test_thread_flag=use_mock_test_fcn)
         time_stop = time.time()
         time_two_threads = time_stop - time_start
-
+        print("time 1 thread=%f" % time_one_thread)
+        print("time 2 thread2=%f" % time_two_threads)
         self.assertTrue(time_two_threads < time_one_thread)
 
     def test_sleep(self):
