@@ -3,7 +3,6 @@ import time
 import subprocess
 import datastore
 import multiprocessing as mp
-import sys
 
 DERIVED_DIR='derived'
 
@@ -134,11 +133,11 @@ def make_derived_files(db, base_data_dir='.', derived_dir=DERIVED_DIR, num_worke
         
     row_list = db.select_all()
     print("make_derived_files:")
-    print("num_workers=%d" % num_workers)
 
     if (num_workers <= 0):
         num_workers = mp.cpu_count()
     #end
+    print("num_workers=%d" % num_workers)
 
     result_list = []
     if (num_workers > 1):
@@ -158,17 +157,16 @@ def make_derived_files(db, base_data_dir='.', derived_dir=DERIVED_DIR, num_worke
             if test_thread_flag==True:
                 #
                 # run a fake test fcn, just to test thread pool
-                result = sleep_fcn(row, derived_dir)
+                result_dict = sleep_fcn(row, derived_dir)
             else:
-                result = process_media_file(row, derived_dir)
+                result_dict = process_media_file(row, derived_dir)
             #end
-            result_list.append(result)
+            result_list.append(result_dict)
         #end
     #end
 
-    for result in result_list:
+    for result_dict in result_list:
         try:
-            result_dict = result.get(60 * 2)
             # update datastore with derived fname
             if len(result_dict['derived_fname']) > 0:
                 db.update_row(result_dict['id'], 'derived_fname', result_dict['derived_fname'])

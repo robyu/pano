@@ -6,7 +6,7 @@
     "www_dir": "www",
     "baseline_datetime": "2018-02-25T19:14:22",
     "cull_old_files": 1,
-    "wait_interval_min":0.1,
+    "sleep_interval_min":0.01,
     "camera_list" : [
 	{
             "name": "b0",

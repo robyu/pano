@@ -4,6 +4,7 @@ import time
 import subprocess
 import datastore
 import derived
+import timeit
 
 def parse_info_amcrest_jpg(row, dir_element_list, fname):
     # ['b0', 'AMC0028V_795UUB', '2018-02-24', '001', 'jpg', '10', '35']
@@ -92,7 +93,7 @@ def cull_files_by_ext(base_data_dir='.', ext_list=['.avi','.idx']):
                     pass
     return num_deleted
     
-
+@timeit.timeit
 def cull_files_by_age(db, baseline_time=None, derived_dir=derived.DERIVED_DIR,max_age_days=14):
     """
     given file entries in db,
@@ -122,6 +123,7 @@ def cull_files_by_age(db, baseline_time=None, derived_dir=derived.DERIVED_DIR,ma
     print("cull_files_by_age: deleted (%d) files" % len(row_list))
     return len(row_list)
 
+@timeit.timeit
 def cull_empty_dirs(base_data_dir):
     """
     execute: 
@@ -143,7 +145,7 @@ def cull_empty_dirs(base_data_dir):
     subprocess.call(['find',base_data_dir,'-type','d','-empty','-delete'])
 
 
-        
+@timeit.timeit        
 def walk_dir_and_load_db(db, base_data_dir='.'):
     """
     search base_data_dir

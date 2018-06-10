@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import json
 import datastore
 import dirwalk
@@ -7,6 +8,7 @@ import derived
 import indexpage
 import click
 import time
+import timeit
 
 """
 data dict
@@ -79,7 +81,7 @@ class Pano:
             else:
                 final_val = default_val
             #end
-            assert (final_val != "") and (final_val != -1), "parameter (%s) not assigned" % k
+            assert (final_val != "") , "parameter (%s) not assigned" % k
             merged_dict[k] = final_val
         #end
 
@@ -90,6 +92,7 @@ class Pano:
 
         return merged_dict
 
+    @timeit.timeit
     def slurp_images(self):
         """
         given base_data_dir,
@@ -126,6 +129,7 @@ class Pano:
         return index_fname
     
     
+    @timeit.timeit
     def gen_camera_pages(self, make_derived_files=True):
         """
         for each camera listed in the json file, 
@@ -165,25 +169,36 @@ class Pano:
         self.cam_page_fname_list = cam_page_fname_list
         return cam_page_fname_list
 
+    @timeit.timeit
     def sleep(self):
         assert self.param_dict['sleep_interval_min'] > 0.0
         sleep_interval_sec = 60.0 * self.param_dict['sleep_interval_min']
         time.sleep(sleep_interval_sec)
         return
         
-
     
 @click.command()
-@click.option('--config', prompt="json config file",help='the JSON config file')
-def pano_main(config):
+@click.option('--config', help='the JSON config file')
+@click.option('--loopcnt',default=-1,help='number of times to loop; -1 == forever')
+def pano_main(config, loopcnt):
     print("config file=%s" % config)
+    print("loopcnt=%d" % loopcnt)
     mypano = Pano(config)
-    while True:
+    loop_flag = True
+    loop_index=0
+    while loop_flag:
         num_files_added = mypano.slurp_images()
         cam_page_fname_list = mypano.gen_camera_pages()
         index_fname = mypano.gen_index_page()
         print("sleeping...")
         mypano.sleep()
+
+        loop_index += 1
+        if (loopcnt >= 0):
+            loop_flag = loop_index < loopcnt
+        else:
+            loop_flag = True
+        #end
     #end
 
 if __name__=="__main__":
