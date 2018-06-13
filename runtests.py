@@ -401,7 +401,7 @@ class TestPano(unittest.TestCase):
         """
         test elapsed time to generate derived files
         """
-        #pu.db
+        pu.db
         use_mock_test_fcn = True   # dont really generated derived files
 
         #
@@ -419,6 +419,10 @@ class TestPano(unittest.TestCase):
         time_stop = time.time()
         time_one_thread = time_stop - time_start
 
+        #
+        # delete all rows to clear the "derived_failed" field
+        db.delete_all_rows()
+        dirwalk.walk_dir_and_load_db(db, testdata_dir)
         try:
             shutil.rmtree(derived.DERIVED_DIR)
         except:
@@ -427,9 +431,12 @@ class TestPano(unittest.TestCase):
         derived.make_derived_files(db, testdata_dir, num_workers = 2, test_thread_flag=use_mock_test_fcn)
         time_stop = time.time()
         time_two_threads = time_stop - time_start
-        
 
+        time_two_threads = time_stop - time_start
+        print("time 1 thread=%f" % time_one_thread)
+        print("time 2 thread2=%f" % time_two_threads)
         self.assertTrue(time_two_threads < time_one_thread)
+
 
     def test_gen_derived_elapsed(self):
         """
@@ -453,6 +460,11 @@ class TestPano(unittest.TestCase):
         time_stop = time.time()
         time_one_thread = time_stop - time_start
 
+        #
+        # delete all rows to clear the "derived_failed" field
+        db.delete_all_rows()
+        dirwalk.walk_dir_and_load_db(db, testdata_dir)
+
         try:
             shutil.rmtree(derived.DERIVED_DIR)
         except:
@@ -464,6 +476,43 @@ class TestPano(unittest.TestCase):
         print("time 1 thread=%f" % time_one_thread)
         print("time 2 thread2=%f" % time_two_threads)
         self.assertTrue(time_two_threads < time_one_thread)
+
+    def test_gen_derive_twice(self):
+        """
+        test elapsed time to generate derived files
+        """
+        #pu.db
+
+        #
+        # populate db and get rows corresponding to time interval
+        testdata_dir  = 'testdata/FTP-culled'
+        db = datastore.Datastore()
+        dirwalk.walk_dir_and_load_db(db, testdata_dir)
+
+        try:
+            shutil.rmtree(derived.DERIVED_DIR)
+        except:
+            pass
+
+        #
+        # process media files twice, make sure
+        # the 2nd time it doesn't try to reprocess the failures
+        time_start = time.time()
+        count_success0, count_failed0 = derived.make_derived_files(db, testdata_dir, num_workers = 2)
+        time_stop = time.time()
+        time_trial0 = time_stop - time_start
+
+        time_start = time.time()
+        count_success1, count_failed1 = derived.make_derived_files(db, testdata_dir, num_workers = 2)
+        time_stop = time.time()
+        time_trial1 =  time_stop - time_start
+
+        print("0: success=%d, fail=%d, time=%f" % (count_success0, count_failed0, time_trial0))
+        print("1: success=%d, fail=%d, time=%f" % (count_success1, count_failed1, time_trial1))
+
+        self.assertTrue(count_success0==27)
+        self.assertTrue(count_success1==0)  # no files processed 2nd trial
+        
 
     def test_sleep(self):
         time_start = time.time()

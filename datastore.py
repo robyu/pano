@@ -17,6 +17,7 @@ class Row:
                  ['ctime',         'STRING',   ''],
                  ['ctime_unix',    'INTEGER',  -1],
                  ['fname',         'STRING',   ''],
+                 ['derive_failed', 'INTEGER',   0],
                  ['derived_fname', 'STRING',   ''],
                  ['mediatype',     'INTEGER',   0],
                  ['path',          'STRING',   ''],
@@ -40,9 +41,10 @@ class Row:
         self.d['ctime']         = entry[3]
         self.d['ctime_unix']    = entry[4]
         self.d['fname']         = entry[5]
-        self.d['derived_fname'] = entry[6]
-        self.d['mediatype']     = entry[7]
-        self.d['path']          = entry[8]
+        self.d['derive_failed'] = entry[6]
+        self.d['derived_fname'] = entry[7]
+        self.d['mediatype']     = entry[8]
+        self.d['path']          = entry[9]
             
 class Datastore:
     
@@ -235,6 +237,14 @@ class Datastore:
         self.cursor.execute(cmd)
         return
 
+    def delete_all_rows(self):
+        """
+        delete all rows (for testing)
+        """
+        cmd = "delete from {tn}".format(tn=self.tablename)
+        self.cursor.execute(cmd)
+        return
+    
     def select_by_time_cam_media(self, cam_name, upper_time_sec, lower_time_sec, mediatype):
         """
         select db entries based on criteria
