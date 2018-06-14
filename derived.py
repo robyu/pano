@@ -6,7 +6,7 @@ import multiprocessing as mp
 import sys
 DERIVED_DIR='derived'
 
-def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir):
+def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir,print_cmd_flag=False):
     src_fname = os.path.join(base_data_dir, path, fname)
     dest_path = os.path.join(derived_dir, path)
     dest_fname = os.path.join(dest_path, fname)
@@ -25,6 +25,8 @@ def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir):
     capture_file = open("ffmpeg.out","wt")
     # ffmpeg -i 21.18.33-21.26.00\[M\]\[0\@0\]\[0\].dav -vcodec copy -preset veryfast out2.avi
     cmd = ['ffmpeg', '-y','-i',src_fname, '-vcodec', 'copy', '-preset', 'veryfast', dest_fname]
+    if print_cmd_flag==True:
+        print(cmd)
     subprocess.call(cmd,stdout=capture_file, stderr=capture_file)
     capture_file.close()
 
@@ -38,7 +40,7 @@ def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir):
         
     return dest_fname
 
-def make_thumbnail(base_data_dir, path, fname, derived_dir):
+def make_thumbnail(base_data_dir, path, fname, derived_dir,print_cmd_flag=False):
     """
     given the base_data_dir+path+fname of an image,
     generate a thumbnail image in derived_dir,
@@ -60,6 +62,8 @@ def make_thumbnail(base_data_dir, path, fname, derived_dir):
     # because we wouldn't be calling this function if derived_failed == 1
 
     cmd = ['magick','convert',src_fname, '-resize', '10%',dest_fname]
+    if print_cmd_flag==True:
+        print(cmd)
     subprocess.call(cmd)
 
     if os.path.exists(dest_fname)==False:

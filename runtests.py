@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 
 import sqlite3
@@ -538,7 +537,37 @@ class TestPano(unittest.TestCase):
         index_fname = mypano.gen_index_page()
         self.assertTrue(os.path.exists(os.path.join("www", index_fname)))
         
+    def test_derive_subprocess_mp4(self):
+        base_data_dir = 'testdata/FTP-culled'
+        path = 'b0/AMC0028V_795UUB/2018-02-25/001/dav/18'
+        fname = '18.15.48-18.16.11[M][0@0][0].dav'
+        derived_dir = './derived'
+
+        try:
+            shutil.rmtree(derived_dir)
+            os.mkdir(os.path.join('.',derived_dir))
+        except:
+            pass
         
+        derived_fname = derived.convert_dav_to_mp4(base_data_dir, path, fname, derived_dir, print_cmd_flag=True)
+        print('derived_fname=%s' % derived_fname)
+        self.assertTrue(os.path.exists(os.path.join(derived_dir, derived_fname)))
+
+    def test_derive_subprocess_jpg(self):
+        derived_dir = 'derived'
+        base_data_dir = 'testdata/FTP-culled'
+        path = 'b1/AMC002A3_K2G7HH/2018-02-25/001/jpg/18/09'
+        fname = '42[M][0@0][0].jpg'
+
+        try:
+            shutil.rmtree(derived_dir)
+            os.mkdir(os.path.join('.',derived_dir))
+        except:
+            pass
+
+        derived_fname = derived.make_thumbnail(base_data_dir, path, fname, derived_dir, print_cmd_flag=True)
+        print('derived_fname=%s' % derived_fname)
+        self.assertTrue(os.path.exists(os.path.join(derived_dir, derived_fname)))
         
         
 if __name__ == '__main__':
