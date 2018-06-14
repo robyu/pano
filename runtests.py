@@ -401,7 +401,7 @@ class TestPano(unittest.TestCase):
         """
         test elapsed time to generate derived files
         """
-        pu.db
+        #pu.db
         use_mock_test_fcn = True   # dont really generated derived files
 
         #

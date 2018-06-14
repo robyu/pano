@@ -178,7 +178,7 @@ class Pano:
         
     
 @click.command()
-@click.option('--config', help='the JSON config file')
+@click.argument('config')
 @click.option('--loopcnt',default=-1,help='number of times to loop; -1 == forever')
 def pano_main(config, loopcnt):
     print("config file=%s" % config)
