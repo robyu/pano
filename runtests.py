@@ -568,7 +568,11 @@ class TestPano(unittest.TestCase):
         derived_fname = derived.make_thumbnail(base_data_dir, path, fname, derived_dir, print_cmd_flag=True)
         print('derived_fname=%s' % derived_fname)
         self.assertTrue(os.path.exists(os.path.join(derived_dir, derived_fname)))
-        
+
+    def test_subprocess(self):
+        cmd = ['ls','-l']
+        subprocess.call(cmd)
+        self.assertTrue(True)
         
 if __name__ == '__main__':
     unittest.main()
