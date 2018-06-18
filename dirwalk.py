@@ -78,6 +78,7 @@ def parse_info_amcrest(base_data_dir, dir_path, fname):
         return None
     return row
     
+@timeit.timeit
 def cull_files_by_ext(base_data_dir='.', ext_list=['.avi','.idx']):
     num_deleted = 0
     for dir_path, subdir_list, file_list in os.walk(base_data_dir):
@@ -132,9 +133,7 @@ def cull_empty_dirs(base_data_dir):
     returns:
     none
     """
-    subprocess.call(['pwd'])
-    subprocess.call(['which','find'])
-    subprocess.call(['ls',base_data_dir])
+    print("culling %s" % base_data_dir)
     # print empty dirs
     # print(['find',base_data_dir,'-type','d','-empty','-print'])
     # subprocess.call(['find',base_data_dir,'-type','d','-empty','-print'])
@@ -148,16 +147,10 @@ def cull_empty_dirs(base_data_dir):
 @timeit.timeit        
 def walk_dir_and_load_db(db, base_data_dir='.'):
     """
-    search base_data_dir
-    delete empty directories
-    delete files with specific file extensions
     add remaining files to the database
 
     returns: number of files added
     """
-    cull_files_by_ext(base_data_dir, ext_list=['.avi','.idx','.mp4'])
-    cull_empty_dirs(base_data_dir)
-    
     num_added = 0
     for dir_path, subdir_list, file_list in os.walk(base_data_dir):
         for fname in file_list:

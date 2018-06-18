@@ -103,12 +103,13 @@ class Pano:
         returns
         number of files added
         """
+        print("** slurp images")
         base_data_dir = self.param_dict['base_data_dir']
-        print("** cull empty dirs")
+        print("*** cull empty dirs")
         dirwalk.cull_empty_dirs(base_data_dir)
-        print("** cull files by ext")
+        print("*** cull files by ext")
         num_deleted = dirwalk.cull_files_by_ext(base_data_dir=base_data_dir)
-        print("** walk dir and load db")
+        print("*** walk dir and load db")
         num_files_added = dirwalk.walk_dir_and_load_db(self.image_db, base_data_dir)
         return num_files_added
 
@@ -120,6 +121,7 @@ class Pano:
         return cam_list
     
     def gen_index_page(self):
+        print("** generate index page")
         assert len(self.cam_page_fname_list) > 0, "you gotta run gen_camera_pages first"
         cam_list = self.get_cam_list()
 
@@ -140,9 +142,12 @@ class Pano:
         returns:
         list of camera webpage filenames
         """
+        print("** generate camera webpages")
+        print("*** cull files by age")
         dirwalk.cull_files_by_age(self.image_db,
                                   baseline_time = self.param_dict['baseline_datetime'],
                                   max_age_days = self.param_dict['max_age_days'])
+        print("*** make derived files")
         if (make_derived_files==True):
             derived.make_derived_files(self.image_db,
                                        base_data_dir = self.param_dict['base_data_dir'],
@@ -155,6 +160,7 @@ class Pano:
             os.mkdir(self.param_dict['www_dir'])
 
         cam_page_fname_list=[]
+        print("*** write webpages")
         for index in range(len(cam_list)):
             cam_page_fname =  'cam_%02d.html' % index
             cam_name = cam_list[index]['name']

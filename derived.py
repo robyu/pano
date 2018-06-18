@@ -61,7 +61,7 @@ def make_thumbnail(base_data_dir, path, fname, derived_dir,print_cmd_flag=False)
     # dont need to check beforehand if the dest_fname already exists,
     # because we wouldn't be calling this function if derived_failed == 1
 
-    cmd = ['magick','convert',src_fname, '-resize', '10%',dest_fname]
+    cmd = ['convert',src_fname, '-resize', '10%',dest_fname]
     if print_cmd_flag==True:
         print(cmd)
     subprocess.call(cmd)

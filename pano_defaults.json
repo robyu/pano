@@ -11,12 +11,14 @@
     "@camera_list (example)" : [
 	{
             "name": "b0",
-            "live_url": "http://192.168.0.1",
+            "live_url": "rtsp://192.168.0.1",
+	    "admin_url": "http://192.168.0.1",
             "description": "porch"
 	},
 	{
             "name": "b0",
-            "live_url": "http://192.168.0.1",
+            "live_url": "rtsp://192.168.0.1",
+	    "admin_url": "http://192.168.0.1",
             "description": "porch"
 	}
     ],
