@@ -55,13 +55,22 @@ class Datastore:
         self.cursor = None
         
         self.create_table()
-        self.add_cols()
+
+        #
+        # there doesn't seem to be any way to determine if the sqlite database
+        # already has the tables set up, so try to add the columns
+        # and catch any errors with exceptions:
+        try:
+            self.add_cols()
+        except sqlite3.OperationalError:
+            pass
+            
 
     def create_table(self):
         self.dbconn = sqlite3.connect(self.db_fname)
         self.cursor = self.dbconn.cursor()
-        self.cursor.execute('DROP TABLE IF EXISTS {tn};'.format(tn=self.tablename))
-        self.cursor.execute('CREATE TABLE {tn} (id INTEGER PRIMARY KEY)'.format(tn=self.tablename))
+        #self.cursor.execute('DROP TABLE IF EXISTS {tn};'.format(tn=self.tablename))
+        retval = self.cursor.execute('CREATE TABLE IF NOT EXISTS {tn} (id INTEGER PRIMARY KEY)'.format(tn=self.tablename))
         return
 
     def add_cols(self):
@@ -73,6 +82,7 @@ class Datastore:
             if col_name=="id":
                 continue
             #end
+
             cmd = "ALTER TABLE {tn} ADD COLUMN {cn} {ct}".format(tn=self.tablename, cn=col_name, ct=col_type)
             c.execute(cmd)
         return
@@ -211,6 +221,7 @@ class Datastore:
             cmd = "update {tn} set {col}={val} where id={id}".format(tn=self.tablename, col=col,val=val,id=id)
         self.cursor.execute(cmd)
         self.dbconn.commit()
+        print("updated row %d" % id)
         return
 
     def select_by_id(self, id):

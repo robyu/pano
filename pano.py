@@ -145,13 +145,15 @@ class Pano:
         print("** generate camera webpages")
         print("*** cull files by age")
         dirwalk.cull_files_by_age(self.image_db,
+                                  derived_dir = self.param_dict['derived_dir'],
                                   baseline_time = self.param_dict['baseline_datetime'],
                                   max_age_days = self.param_dict['max_age_days'])
         print("*** make derived files")
         if (make_derived_files==True):
             derived.make_derived_files(self.image_db,
                                        base_data_dir = self.param_dict['base_data_dir'],
-                                       num_workers = self.param_dict['num_worker_threads'])
+                                       num_workers = self.param_dict['num_worker_threads'],
+                                       derived_dir = self.param_dict['derived_dir'])
         #endif
         
         cam_list = self.get_cam_list()
@@ -165,7 +167,9 @@ class Pano:
             cam_page_fname =  'cam_%02d.html' % index
             cam_name = cam_list[index]['name']
             cam_page = webpage.Webpage(os.path.join(self.param_dict['www_dir'], cam_page_fname),
-                                       cam_name, base_dir=self.param_dict['base_data_dir'])
+                                       cam_name,
+                                       base_dir=self.param_dict['base_data_dir'],
+                                       derived_dir = self.param_dict['derived_dir'])
             cam_page.make_webpage(self.param_dict['baseline_datetime'],
                                   self.param_dict['max_age_days'],
                                   self.param_dict['delta_min'],

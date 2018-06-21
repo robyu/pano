@@ -27,6 +27,7 @@ python -m unittest testica.TestIca.test_smoketest   # works with #pu.db in code
 
 class TestPano(unittest.TestCase):
     test_data_dir = './testdata/FTP'
+    derived_dir = './derived'
 
     def setUp(self):
         print("setup")
@@ -240,7 +241,7 @@ class TestPano(unittest.TestCase):
     def test_make_derived_files(self):
         #pu.db
         try:
-            shutil.rmtree(dirwalk.DERIVED_DIR)
+            shutil.rmtree(derived_dir)
         except:
             pass
         db = datastore.Datastore()
@@ -410,7 +411,7 @@ class TestPano(unittest.TestCase):
         dirwalk.walk_dir_and_load_db(db, testdata_dir)
 
         try:
-            shutil.rmtree(derived.DERIVED_DIR)
+            shutil.rmtree(derived_dir)
         except:
             pass
         time_start = time.time()
@@ -423,7 +424,7 @@ class TestPano(unittest.TestCase):
         db.delete_all_rows()
         dirwalk.walk_dir_and_load_db(db, testdata_dir)
         try:
-            shutil.rmtree(derived.DERIVED_DIR)
+            shutil.rmtree(derived_dir)
         except:
             pass
         time_start = time.time()
@@ -451,7 +452,7 @@ class TestPano(unittest.TestCase):
         dirwalk.walk_dir_and_load_db(db, testdata_dir)
 
         try:
-            shutil.rmtree(derived.DERIVED_DIR)
+            shutil.rmtree(derived_dir)
         except:
             pass
         time_start = time.time()
@@ -465,7 +466,7 @@ class TestPano(unittest.TestCase):
         dirwalk.walk_dir_and_load_db(db, testdata_dir)
 
         try:
-            shutil.rmtree(derived.DERIVED_DIR)
+            shutil.rmtree(derived_dir)
         except:
             pass
         time_start = time.time()
@@ -489,7 +490,7 @@ class TestPano(unittest.TestCase):
         dirwalk.walk_dir_and_load_db(db, testdata_dir)
 
         try:
-            shutil.rmtree(derived.DERIVED_DIR)
+            shutil.rmtree(derived_dir)
         except:
             pass
 

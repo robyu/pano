@@ -95,7 +95,7 @@ def cull_files_by_ext(base_data_dir='.', ext_list=['.avi','.idx']):
     return num_deleted
     
 @timeit.timeit
-def cull_files_by_age(db, baseline_time=None, derived_dir=derived.DERIVED_DIR,max_age_days=14):
+def cull_files_by_age(db, baseline_time=None, derived_dir='derived',max_age_days=14):
     """
     given file entries in db,
     delete files based on age:
@@ -112,7 +112,10 @@ def cull_files_by_age(db, baseline_time=None, derived_dir=derived.DERIVED_DIR,ma
     row_list = db.select_by_age(baseline_time=baseline_time, max_age_days=max_age_days)
     for row in row_list:
         full_fname = os.path.join(row.d['base_data_dir'], row.d['path'], row.d['fname'])
-        os.remove(full_fname)
+        try:
+            os.remove(full_fname)
+        except OSError:
+            pass
         if row.d['derived_fname'] != 0:
             try:
                 os.remove(row.d['derived_fname'])

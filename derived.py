@@ -4,7 +4,7 @@ import subprocess
 import datastore
 import multiprocessing as mp
 import sys
-DERIVED_DIR='derived'
+import timeit
 
 def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir,print_cmd_flag=False):
     src_fname = os.path.join(base_data_dir, path, fname)
@@ -18,26 +18,27 @@ def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir,print_cmd_flag=Fa
     except os.error:
         pass
 
-    #
-    # dont need to check beforehand if the dest_fname already exists,
-    # because we wouldn't be calling this function if derived_failed == 1
+    if os.path.exists(dest_fname)==True:
+        print("%s -> %s already exists" % (src_fname, dest_fname))
+    else:        
+        capture_file = open("ffmpeg.out","wt")
+        # ffmpeg -i 21.18.33-21.26.00\[M\]\[0\@0\]\[0\].dav -vcodec copy -preset veryfast out2.avi
+        cmd = ['ffmpeg', '-y','-i',src_fname, '-vcodec', 'copy', '-preset', 'veryfast', dest_fname]
+        if print_cmd_flag==True:
+            print(cmd)
+        #end
+        subprocess.call(cmd,stdout=capture_file, stderr=capture_file)
+        capture_file.close()
 
-    capture_file = open("ffmpeg.out","wt")
-    # ffmpeg -i 21.18.33-21.26.00\[M\]\[0\@0\]\[0\].dav -vcodec copy -preset veryfast out2.avi
-    cmd = ['ffmpeg', '-y','-i',src_fname, '-vcodec', 'copy', '-preset', 'veryfast', dest_fname]
-    if print_cmd_flag==True:
-        print(cmd)
-    subprocess.call(cmd,stdout=capture_file, stderr=capture_file)
-    capture_file.close()
-
-    # check again: conversion may have failed
-    if os.path.exists(dest_fname)==False:
-        print("%s -> %s failed" % (src_fname, dest_fname))
-        dest_fname=''  # if failed, then return empty string
-    else:
-        print("%s -> %s success" % (src_fname, dest_fname))
-        
-        
+        # check again: conversion may have failed
+        if os.path.exists(dest_fname)==False:
+            print("%s -> %s failed" % (src_fname, dest_fname))
+            dest_fname=''  # if failed, then return empty string
+            assert len(dest_fname)==0
+        else:
+            print("%s -> %s success" % (src_fname, dest_fname))
+        #end 
+    #end
     return dest_fname
 
 def make_thumbnail(base_data_dir, path, fname, derived_dir,print_cmd_flag=False):
@@ -57,21 +58,27 @@ def make_thumbnail(base_data_dir, path, fname, derived_dir,print_cmd_flag=False)
     except os.error:
         pass
 
-    #
-    # dont need to check beforehand if the dest_fname already exists,
-    # because we wouldn't be calling this function if derived_failed == 1
+    if os.path.exists(dest_fname)==True:
+        print("%s -> %s already exists" % (src_fname, dest_fname))
+    else:        
+        #
+        # dont need to check beforehand if the dest_fname already exists,
+        # because we wouldn't be calling this function if derived_failed == 1
 
-    cmd = ['convert',src_fname, '-resize', '10%',dest_fname]
-    if print_cmd_flag==True:
-        print(cmd)
-    subprocess.call(cmd)
+        cmd = ['convert',src_fname, '-resize', '10%',dest_fname]
+        if print_cmd_flag==True:
+            print(cmd)
+        #end
+        subprocess.call(cmd)
 
-    if os.path.exists(dest_fname)==False:
-        print("%s -> %s failed" % (src_fname, dest_fname))
-        dest_fname=''  # if failed, then return empty string
-    else:
-        print("%s -> %s success" % (src_fname, dest_fname))
-    
+        if os.path.exists(dest_fname)==False:
+            print("%s -> %s failed" % (src_fname, dest_fname))
+            dest_fname=''  # if failed, then return empty string
+            assert len(dest_fname)==0
+        else:
+            print("%s -> %s success" % (src_fname, dest_fname))
+        #end
+    #end    
     return dest_fname
 
 def sleep_fcn(row, derived_dir):
@@ -96,6 +103,10 @@ def process_media_file(row, derived_dir):
     'id' = id of processed database entry
     'derived_fname' = filename of generated media file (== '' if failed)
     """
+    print("process_media_file: id=%d derive_failed=%d derived_fname=%s fname=%s" % (row.d['id'],
+                                                                       row.d['derive_failed'],
+                                                                       row.d['derived_fname'],
+                                                                       row.d['fname']))
     if row.d['mediatype']==datastore.MEDIA_VIDEO:
         derived_fname=convert_dav_to_mp4(row.d['base_data_dir'], row.d['path'], row.d['fname'], derived_dir)
     elif row.d['mediatype']==datastore.MEDIA_IMAGE:
@@ -110,6 +121,7 @@ def process_media_file(row, derived_dir):
     return return_dict
     
 
+@timeit.timeit
 def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag):
     """
     run media processing functions 
@@ -125,40 +137,57 @@ def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag
     MAX_WAIT_SEC = 60 *2 
     assert num_workers >= 1
     pool = mp.Pool(num_workers)
-    mpr_list = []
-    for row in row_list:
-        if row.d['derive_failed']==0 and len(row.d['derived_fname'])==0:
-            if test_thread_flag==True:
-                #
-                # run a fake test fcn, just to test thread pool
-                mpr = pool.apply_async(sleep_fcn, args=(row, derived_dir))
-            else:
-                mpr = pool.apply_async(process_media_file, args=(row, derived_dir))
-            #end  
-            mpr_list.append(mpr)
-        #end
-    #end 
+    index=0
+    count_success=0
+    count_failed =0
 
-    count_success = 0
-    count_failed = 0
-    for mpr in mpr_list:
-        try:
-            result_dict = mpr.get(MAX_WAIT_SEC)
-            # update datastore with derived fname
-            if len(result_dict['derived_fname']) > 0:
-                db.update_row(result_dict['id'], 'derived_fname', result_dict['derived_fname'])
-                count_success += 1
-            else:
+    #
+    # assign only as many workers as specified (pool.apply_async) before
+    # waiting for the results (mpr.get) because
+    # we want to regularly update the database with the pass/fail results
+    while index < len(row_list):
+        mpr_list = []
+        
+        # assign media file to each worker
+        for n in range(num_workers):
+            row = row_list[index]
+            index += 1
+            if row.d['derive_failed']==0 and len(row.d['derived_fname'])==0:
+                if test_thread_flag==True:
+                    #
+                    # run a fake test fcn, just to test thread pool
+                    mpr = pool.apply_async(sleep_fcn, args=(row, derived_dir))
+                else:
+                    mpr = pool.apply_async(process_media_file, args=(row, derived_dir))
+                    print("assigned row %d to worker %d" % (index, n))
+                #end  
+                mpr_list.append(mpr)
+            #end
+        #end
+
+        # marshall workers
+        for mpr in mpr_list:
+            try:
+                result_dict = mpr.get(MAX_WAIT_SEC)
+                # update datastore with derived fname
+                if len(result_dict['derived_fname']) > 0:
+                    db.update_row(result_dict['id'], 'derived_fname', result_dict['derived_fname'])
+                    count_success += 1
+                else:
+                    count_failed += 1
+                    db.update_row(result_dict['id'], 'derive_failed', 1)
+                #end
+            except mp.TimeoutError:
                 count_failed += 1
                 db.update_row(result_dict['id'], 'derive_failed', 1)
             #end
-        except mp.TimeoutError:
-            pass
+        
+        #end
     #end
     return (count_success, count_failed)
     
     
-
+@timeit.timeit
 def derive_with_single_thread(db, derived_dir, row_list, test_thread_flag):
     """
     process each file in row_list to generate derived file (thumbnail, etc)
@@ -188,7 +217,8 @@ def derive_with_single_thread(db, derived_dir, row_list, test_thread_flag):
     #end
     return (count_success, count_failed)
 
-def make_derived_files(db, base_data_dir='.', derived_dir=DERIVED_DIR, num_workers = -1, test_thread_flag=False):
+@timeit.timeit
+def make_derived_files(db, derived_dir='derived', base_data_dir='.', num_workers = -1, test_thread_flag=False):
     """
     create directory for derived files.
     for each entry in database, create derived files (thumbnails, converted video)
