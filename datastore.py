@@ -20,7 +20,7 @@ class Row:
                  ['derive_failed', 'INTEGER',   0],
                  ['derived_fname', 'STRING',   ''],
                  ['mediatype',     'INTEGER',   0],
-                 ['path',          'STRING',   ''],
+                 ['path',          'STRING',   '']
     )
     
     def __init__(self):
@@ -48,29 +48,43 @@ class Row:
             
 class Datastore:
     
-    def __init__(self, db_fname="panodb.sqlite"):
+    def __init__(self, db_fname="panodb.sqlite", drop_table_flag=False):
         self.db_fname = db_fname
         self.dbconn = None
         self.tablename = "pano"
         self.cursor = None
         
-        self.create_table()
+        self.create_table(drop_table_flag)
 
         #
         # there doesn't seem to be any way to determine if the sqlite database
         # already has the tables set up, so try to add the columns
         # and catch any errors with exceptions:
-        try:
-            self.add_cols()
-        except sqlite3.OperationalError:
-            pass
+        # try:
+        #     self.add_cols()
+        # except sqlite3.OperationalError:
+        #     pass
             
 
-    def create_table(self):
+    def create_table(self, drop_table_flag=False):
         self.dbconn = sqlite3.connect(self.db_fname)
         self.cursor = self.dbconn.cursor()
-        #self.cursor.execute('DROP TABLE IF EXISTS {tn};'.format(tn=self.tablename))
-        retval = self.cursor.execute('CREATE TABLE IF NOT EXISTS {tn} (id INTEGER PRIMARY KEY)'.format(tn=self.tablename))
+        if drop_table_flag==True:
+            self.cursor.execute('DROP TABLE IF EXISTS {tn};'.format(tn=self.tablename))
+        #end
+        cmd =  'CREATE TABLE IF NOT EXISTS {tn} ('.format(tn=self.tablename)
+
+        #
+        # each column definition
+        for entry in Row.col_defs:
+            col_name = entry[0]
+            col_type = entry[1]
+            cmd = cmd + "{cn} {ct}".format(cn=col_name, ct=col_type)
+            cmd = cmd + ", "
+        #end
+        cmd = cmd + "unique (path, fname) ON CONFLICT IGNORE)"
+        retval = self.cursor.execute(cmd)
+
         return
 
     def add_cols(self):
@@ -99,7 +113,8 @@ class Datastore:
         if row.d['ctime_unix'] < 0:
             unix_time = self.iso8601_to_sec(row.d['ctime'])
             row.d['ctime_unix'] = unix_time
-        
+        #end
+
         cmd = "INSERT INTO %s " % self.tablename
         col_vector = "("
         val_vector = "("
@@ -219,8 +234,10 @@ class Datastore:
             cmd = "update {tn} set {col}='{val}' where id={id}".format(tn=self.tablename, col=col,val=val,id=id)
         else:
             cmd = "update {tn} set {col}={val} where id={id}".format(tn=self.tablename, col=col,val=val,id=id)
+        #end
         self.cursor.execute(cmd)
         self.dbconn.commit()
+
         print("updated row %d" % id)
         return
 
