@@ -186,7 +186,6 @@ class Pano:
         time.sleep(sleep_interval_sec)
         return
         
-    
 @click.command()
 @click.argument('config')
 @click.option('--loopcnt',default=-1,help='number of times to loop; -1 == forever')

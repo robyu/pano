@@ -44,10 +44,7 @@ def parse_info_amcrest(base_data_dir, dir_path, fname):
     dir_path = ./testdata/FTP/b1/AMC002A3_K2G7HH/2018-02-25/001/jpg/18/53
     fname = 29[M][0@0][0].jpg
 
-    return dict:
-    {'camera_name':name of camera, 
-     'ctime':'yyyy-mm-ddThh:mm:ss.ssss',
-    }
+    return datastore Row object
     """
     if dir_path.find(base_data_dir) != 0:
         assert False, "dir_path does not begin with base_data_dir"
@@ -76,6 +73,8 @@ def parse_info_amcrest(base_data_dir, dir_path, fname):
     else:
         #print('dont know how to handle %s %s' % (row.d['path'], row.d['fname']))
         return None
+    #end
+
     return row
     
 @timeit.timeit
@@ -95,7 +94,7 @@ def cull_files_by_ext(base_data_dir='.', ext_list=['.avi','.idx']):
     return num_deleted
     
 @timeit.timeit
-def cull_files_by_age(db, baseline_time=None, derived_dir='derived',max_age_days=14):
+def cull_files_by_age(db, baseline_time='Now', derived_dir='derived',max_age_days=14):
     """
     given file entries in db,
     delete files based on age:
@@ -108,8 +107,10 @@ def cull_files_by_age(db, baseline_time=None, derived_dir='derived',max_age_days
     max_age_days = number of days previous to baseline_time which to retain files
 
     and remove corresponding row in database
+
+    RETURNS: number of files deleted
     """
-    row_list = db.select_by_age(baseline_time=baseline_time, max_age_days=max_age_days)
+    row_list = db.select_older_than(baseline_time=baseline_time, max_age_days=max_age_days)
     for row in row_list:
         full_fname = os.path.join(row.d['base_data_dir'], row.d['path'], row.d['fname'])
         try:
@@ -154,17 +155,26 @@ def walk_dir_and_load_db(db, base_data_dir='.'):
 
     returns: number of files added
     """
-    num_added = 0
+
+    # how many entries in db?
+    all_rows = db.select_all()
+    num_start = len(all_rows)
+    
     for dir_path, subdir_list, file_list in os.walk(base_data_dir):
         for fname in file_list:
             # TODO: get mtime
             row = parse_info_amcrest(base_data_dir, dir_path, fname)
             if (row != None):
                 db.add_row(row)
-                num_added += 1
         #end
     #end
     db.dbconn.commit()
+
+    all_rows = db.select_all()
+    num_stop = len(all_rows)
+    assert num_start <= num_stop
+    num_added = num_stop - num_start
+    
     return num_added
 
 

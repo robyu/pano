@@ -21,7 +21,7 @@ def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir,print_cmd_flag=Fa
     if os.path.exists(dest_fname)==True:
         print("%s -> %s already exists" % (src_fname, dest_fname))
     else:        
-        capture_file = open("ffmpeg.out","wt")
+        capture_file = open("ffmpeg_out.txt","wt")
         # ffmpeg -i 21.18.33-21.26.00\[M\]\[0\@0\]\[0\].dav -vcodec copy -preset veryfast out2.avi
         cmd = ['ffmpeg', '-y','-i',src_fname, '-vcodec', 'copy', '-preset', 'veryfast', dest_fname]
         if print_cmd_flag==True:
@@ -87,7 +87,7 @@ def sleep_fcn(row, derived_dir):
     
     sleep a bit, then return bogus results
     """
-    time.sleep(0.5)
+    time.sleep(0.1)
     print("%s -> %s...FAILED" % (row.d['fname'], os.path.join(derived_dir, row.d['fname'])))
 
     return_dict={}
@@ -103,10 +103,10 @@ def process_media_file(row, derived_dir):
     'id' = id of processed database entry
     'derived_fname' = filename of generated media file (== '' if failed)
     """
-    print("process_media_file: id=%d derive_failed=%d derived_fname=%s fname=%s" % (row.d['id'],
-                                                                       row.d['derive_failed'],
-                                                                       row.d['derived_fname'],
-                                                                       row.d['fname']))
+    # print("process_media_file: id=%d derive_failed=%d derived_fname=%s fname=%s" % (row.d['id'],
+    #                                                                    row.d['derive_failed'],
+    #                                                                    row.d['derived_fname'],
+    #                                                                    row.d['fname']))
     if row.d['mediatype']==datastore.MEDIA_VIDEO:
         derived_fname=convert_dav_to_mp4(row.d['base_data_dir'], row.d['path'], row.d['fname'], derived_dir)
     elif row.d['mediatype']==datastore.MEDIA_IMAGE:
@@ -149,19 +149,28 @@ def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag
         mpr_list = []
         
         # assign media file to each worker
-        for n in range(num_workers):
-            row = row_list[index]
-            index += 1
-            if row.d['derive_failed']==0 and len(row.d['derived_fname'])==0:
-                if test_thread_flag==True:
-                    #
-                    # run a fake test fcn, just to test thread pool
-                    mpr = pool.apply_async(sleep_fcn, args=(row, derived_dir))
-                else:
-                    mpr = pool.apply_async(process_media_file, args=(row, derived_dir))
-                    print("assigned row %d to worker %d" % (index, n))
-                #end  
-                mpr_list.append(mpr)
+        worker_index=0
+        while worker_index < num_workers:
+            if index >= len(row_list):
+                #
+                # exit loops
+                break
+            else:
+                assert index < len(row_list)
+                row = row_list[index]
+                index += 1
+                if row.d['derive_failed']==0 and len(row.d['derived_fname'])==0:
+                    if test_thread_flag==True:
+                            #
+                            # run a fake test fcn, just to test thread pool
+                        mpr = pool.apply_async(sleep_fcn, args=(row, derived_dir))
+                    else:
+                        mpr = pool.apply_async(process_media_file, args=(row, derived_dir))
+                        #print("assigned row %d to worker %d" % (index, n))
+                    #end  
+                    mpr_list.append(mpr)
+                    worker_index += 1
+                #end
             #end
         #end
 
@@ -218,11 +227,13 @@ def derive_with_single_thread(db, derived_dir, row_list, test_thread_flag):
     return (count_success, count_failed)
 
 @timeit.timeit
-def make_derived_files(db, derived_dir='derived', base_data_dir='.', num_workers = -1, test_thread_flag=False):
+def make_derived_files(db, derived_dir='./derived', num_workers = -1, test_thread_flag=False):
     """
     create directory for derived files.
     for each entry in database, create derived files (thumbnails, converted video)
     populate the derived fname column
+
+    returns (count_success, count_failed)
     """
     try:
         os.mkdir(os.path.join('.',derived_dir))
@@ -233,6 +244,7 @@ def make_derived_files(db, derived_dir='derived', base_data_dir='.', num_workers
 
     if num_workers <= 0:
         num_workers = mp.cpu_count()
+    print("make_derived_files: num_workers=%d" % num_workers)
 
     assert num_workers >= 1
     

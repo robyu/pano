@@ -102,6 +102,15 @@ class Datastore:
         return
 
     def add_row(self, row):
+        """
+        add row to database
+        if it's a duplicate row, then don't re-add it
+        (this is handled by the table UNIQUE constraint)
+
+        returns:
+        none
+        """
+
         assert self.cursor!=None
         c = self.cursor
         # c.execute("INSERT INTO {tn} (fname, mediatype, path, mtime, ctime, has_derived) " \
@@ -192,21 +201,22 @@ class Datastore:
         ret = self.cursor.fetchall()
         return ret[0][0]
         
-    
-    def select_by_age(self, baseline_time=None, max_age_days=14):
+
+    def select_older_than(self, baseline_time=None, max_age_days=14):
         """
         given baseline_time
         max_age_days
 
         return list of row entries which are older than baseline_time - threshold_days
 
-        """
-        #select julianday('now','localtime');
-        #select julianday("2018-03-27T03:03:00");
-        # SELECT strftime('%s','now') - strftime('%s','2004-01-01 02:34:56');
-        # select * from pano where ctime BETWEEN datetime('1004-01-01T00:00') AND datetime('2018-03-01T00:04');  
-        # select  strftime('%s','2018-03-31T00:00:00','-2 days')
+        for testing:
+        '2018-02-26' -> 1519632000
+        28800 sec = 8 hours
+        2018-02-26-8 hours..2018-02-26 yields 445 rows
 
+        """
+        # select * from pano where ctime_unix between 1519614800 and 1519614862
+        
         #
         # compute epoch time for threshold epoch = baseline_time - cull days
         # if baseline_time==None:
@@ -214,11 +224,51 @@ class Datastore:
         assert (max_age_days > 0) and (max_age_days < 60)
         
         baseline_unix = self.iso8601_to_sec(baseline_time)
-        thresh_unix = baseline_unix - int(max_age_days * 24.0 * 60 * 60)
-        assert thresh_unix > 0
+        age_sec = int(max_age_days * 24.0 * 60 * 60)
+        assert baseline_unix-age_sec > 0
+        #cmd = "select * from {tn} where ctime_unix < {thresh}".format(tn=self.tablename,
+        #    thresh=thresh_unix)
         
-        cmd = "select * from {tn} where ctime_unix < {thresh}".format(tn=self.tablename,
-                                                                      thresh=thresh_unix)
+        cmd = "select * from {tn} where ctime_unix < {start}".format(tn=self.tablename,
+                                                                     start = baseline_unix - age_sec)
+        self.cursor.execute(cmd)
+        entry_list= self.cursor.fetchall()
+
+        row_list = self.entries_to_rows(entry_list)
+
+        return row_list
+        
+    
+    def select_by_age_range(self, baseline_time=None, max_age_days=14):
+        """
+        given baseline_time
+        max_age_days
+
+        return list of row entries which fall into range baseline_time - threshold_days..baseline
+
+        for testing:
+        '2018-02-26' -> 1519632000
+        28800 sec = 8 hours
+        2018-02-26-8 hours..2018-02-26 yields 445 rows
+
+        """
+        # select * from pano where ctime_unix between 1519614800 and 1519614862
+        
+        #
+        # compute epoch time for threshold epoch = baseline_time - cull days
+        # if baseline_time==None:
+        #     baseline_time="'now'"
+        assert (max_age_days > 0) and (max_age_days < 60)
+        
+        baseline_unix = self.iso8601_to_sec(baseline_time)
+        age_sec = int(max_age_days * 24.0 * 60 * 60)
+        assert baseline_unix-age_sec > 0
+        #cmd = "select * from {tn} where ctime_unix < {thresh}".format(tn=self.tablename,
+        #    thresh=thresh_unix)
+        
+        cmd = "select * from {tn} where ctime_unix between {start} and {stop}".format(tn=self.tablename,
+                                                                                      start = baseline_unix - age_sec,
+                                                                                      stop = baseline_unix)
         self.cursor.execute(cmd)
         entry_list= self.cursor.fetchall()
 
@@ -238,7 +288,7 @@ class Datastore:
         self.cursor.execute(cmd)
         self.dbconn.commit()
 
-        print("updated row %d" % id)
+        #print("updated row %d" % id)
         return
 
     def select_by_id(self, id):

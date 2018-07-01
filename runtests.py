@@ -26,7 +26,7 @@ python -m unittest testica.TestIca.test_smoketest   # works with #pu.db in code
 """
 
 class TestPano(unittest.TestCase):
-    test_data_dir = './testdata/FTP'
+    test_data_dir = './testdata/FTP-culled'
     derived_dir = './derived'
 
     def setUp(self):
@@ -43,14 +43,6 @@ class TestPano(unittest.TestCase):
         print("num_deleted = %d" % num_deleted)
         self.assertTrue(num_deleted==290)
         
-    def test_cull_files_by_age(self):
-        baseline_time = time.strptime("26 feb 2018 00:00", "%d %b %Y %H:%M")
-        baseline_time_epoch = time.mktime(baseline_time)
-        num_deleted = dirwalk.cull_files_by_age(baseline_time_epoch=baseline_time_epoch, max_age_days=1.75)
-        print("deleted %d files" % num_deleted)
-        self.assertTrue(num_deleted==136)
-        self.assertTrue(True)
-
     def test_cull_empty_dirs(self):
         dirwalk.cull_empty_dirs(self.test_data_dir)
 
@@ -79,12 +71,12 @@ class TestPano(unittest.TestCase):
         self.assertTrue(True)
 
     def test_create_table2(self):
-        db = datastore.Datastore()
+        db = datastore.Datastore(drop_table_flag=True)
         db.close()
         self.assertTrue(True)
 
     def test_insert_row(self):
-        db = datastore.Datastore()
+        db = datastore.Datastore(drop_table_flag=True)
         db.cursor.execute("INSERT INTO {tn} (fname, path, derived_fname) VALUES ('abcd', 'xyz', 'foo')".format(tn=db.tablename))
         db.cursor.execute("INSERT INTO {tn} (fname, path, derived_fname) VALUES ('efgh', '123', 'foo')".format(tn=db.tablename))
         #db.dbconn.commit()
@@ -95,22 +87,47 @@ class TestPano(unittest.TestCase):
         db.close()
         self.assertTrue(len(all_rows)==1)
 
-    def test_walk_dir_and_store(self):
+    def test_insert_same_row(self):
+        db = datastore.Datastore(drop_table_flag=True)
+        db.cursor.execute("INSERT INTO {tn} (fname, path, derived_fname) VALUES ('abcd', 'xyz', 'foo')".format(tn=db.tablename))
+        db.cursor.execute("INSERT INTO {tn} (fname, path, derived_fname) VALUES ('1234', '567', 'bar')".format(tn=db.tablename))
+
+        # this row should be ignored because fname and path match previous row
+        db.cursor.execute("INSERT INTO {tn} (fname, path, derived_fname) VALUES ('abcd', 'xyz', 'foo')".format(tn=db.tablename))
+
+        all_rows = db.select_all()
+        print(all_rows)
+        print(len(all_rows))
+        db.close()
+        self.assertTrue(len(all_rows)==2)
+        
+        
+    def test_walk_dir_and_load(self):
         #pu.db
-        db = datastore.Datastore()
-        dirwalk.walk_dir_and_load_db(db, 'testdata/FTP')
+        db = datastore.Datastore(drop_table_flag=True)
+        num_added = dirwalk.walk_dir_and_load_db(db, 'testdata/FTP-culled')
+        db.close()
+        self.assertTrue(num_added==2642)
+
+    def test_walk_dir_and_load_twice(self):
+        #pu.db
+        db = datastore.Datastore(drop_table_flag=True)
+        num_added = dirwalk.walk_dir_and_load_db(db, 'testdata/FTP-culled')
+        db.close()
+        self.assertTrue(num_added==2642)
 
         #
-        # how many entries did we enter?
-        cmd = "SELECT * FROM %s" % (db.tablename)
-        db.cursor.execute(cmd)
-        entries = db.cursor.fetchall()
+        # 2nd time around, do not drop table
+        # verify that we do not add redundant entries to table
+        db = datastore.Datastore(drop_table_flag=False)
+        num_added = dirwalk.walk_dir_and_load_db(db, 'testdata/FTP-culled')
         db.close()
-        self.assertTrue(len(entries)==2642)
+        self.assertTrue(num_added==0)
+        
 
     def test_age_delta(self):
         #pu.db
-        db = datastore.Datastore()
+        db = datastore.Datastore(drop_table_flag=True)
 
         #
         # get 'now'
@@ -137,7 +154,7 @@ class TestPano(unittest.TestCase):
 
     def test_age_delta2(self):
         #pu.db
-        db = datastore.Datastore()
+        db = datastore.Datastore(drop_table_flag=True)
 
         now = '2018-04-01T18:00:00.000'
         then = '2018-03-30T18:00:00.000'
@@ -176,7 +193,7 @@ class TestPano(unittest.TestCase):
         """
         #pu.db
         time_string0 = '2018-04-01 18:00:00'
-        db = datastore.Datastore()
+        db = datastore.Datastore(drop_table_flag=True)
         time_sec = db.iso8601_to_sec(time_string0)
         time_string = db.sec_to_iso8601(time_sec)
         #time_string = time_string.replace('T',' ')
@@ -188,46 +205,64 @@ class TestPano(unittest.TestCase):
         seconds -> iso8601 -> seconds
         """
         #pu.db
-        db = datastore.Datastore()
+        db = datastore.Datastore(drop_table_flag=True)
         time_sec0 = 1524887171
-        time_string = db.sec_to_iso8601(time_sec0)
+        time_string = db.sec_to_iso8601(time_sec0) # 2018-04-27 20:46:11
         time_sec = db.iso8601_to_sec(time_string)
 
         self.assertTrue(time_sec==time_sec0)
 
     def test_select_by_age(self):
-        #pu.db
-        db = datastore.Datastore()
-        dirwalk.walk_dir_and_load_db(db, 'testdata/FTP')
+        """
+        for FTP-culled,
+        select * from pano where ctime_unix between 1519614800 and 1519614862
+        yields 4 rows
 
-        row_list = db.select_by_age(baseline_time='2018-02-26', max_age_days=1)
-        print(len(row_list))
-        self.assertTrue(len(row_list)==1153)
+        where 1519614862==2018-02-25T19:14:22
+        """
+        pu.db
+        db = datastore.Datastore(drop_table_flag=True)
+        dirwalk.walk_dir_and_load_db(db, 'testdata/FTP-culled')
 
-        row_list = db.select_by_age(baseline_time='2018-02-26', max_age_days=1.75)
+        row_list = db.select_by_age_range(baseline_time='2018-02-25T19:14:22', max_age_days=0.0007)  # ~ 1 min
         print(len(row_list))
-        self.assertTrue(len(row_list)==123)
-        
+        self.assertTrue(len(row_list)==4)
+
+        row_list = db.select_by_age_range(baseline_time='2018-02-26', max_age_days=0.25)
+        print(len(row_list))
+        self.assertTrue(len(row_list)==27)
+
+        row_list = db.select_by_age_range(baseline_time='2018-02-26', max_age_days=0.33)
+        print(len(row_list))
+        self.assertTrue(len(row_list)==423)
+
         db.close()
 
     def test_cull_files_by_age(self):
-        #pu.db
-        db = datastore.Datastore()
-        num_entries = dirwalk.walk_dir_and_load_db(db, base_data_dir='testdata/FTP')
+        pu.db
+        db = datastore.Datastore(drop_table_flag=True)
+        num_entries = dirwalk.walk_dir_and_load_db(db, base_data_dir='testdata/FTP-culled')
         
+        row_list = db.select_all()
+        num_before = len(row_list)
         num_deleted = dirwalk.cull_files_by_age(db,
                                                 baseline_time='2018-02-26',
-                                                max_age_days=1)
+                                                max_age_days=.33)
         row_list = db.select_all()
+        num_after=len(row_list)
+
+        print("num before = %d" % num_before)
+        print("num deleted = %d" % num_deleted)
+        print("num after = %d" % num_after)
         
-        self.assertTrue(num_deleted==1153)
-        self.assertTrue(len(row_list) + num_deleted==num_entries)
+        self.assertTrue(num_deleted==2219)
+        self.assertTrue(num_after + num_deleted==num_before)
         db.close()
 
     def test_update_row(self):
         #pu.db
-        db = datastore.Datastore()
-        dirwalk.walk_dir_and_load_db(db, 'testdata/FTP')
+        db = datastore.Datastore(drop_table_flag=True)
+        dirwalk.walk_dir_and_load_db(db, 'testdata/FTP-culled')
         row_list = db.select_all()
         id = row_list[-1].d['id']
         db.update_row(id, 'derived_fname', 'foo')
@@ -238,30 +273,53 @@ class TestPano(unittest.TestCase):
         db.close()
 
 
-    def test_make_derived_files(self):
+    def test_make_derived_files_multi_even(self):
         #pu.db
         try:
-            shutil.rmtree(derived_dir)
+            shutil.rmtree(self.derived_dir)
         except:
             pass
-        db = datastore.Datastore()
-        dirwalk.walk_dir_and_load_db(db, 'testdata/FTP')
+        db = datastore.Datastore(drop_table_flag=True)
+        dirwalk.walk_dir_and_load_db(db, 'testdata/FTP-culled')
         num_deleted = dirwalk.cull_files_by_age(db,
                                                 baseline_time='2018-02-26',
-                                                max_age_days=0.25)
-        derived.make_derived_files(db, base_data_dir='testdata/FTP')
+                                                max_age_days=0.33)
+        count_success, count_failed = derived.make_derived_files(db,
+                                                                 derived_dir=self.derived_dir,
+                                                                 num_workers = 4)
+        self.assertTrue (count_success==418)
+        self.assertTrue(count_failed==5)
         db.close()
 
+    def test_make_derived_files_multi_odd(self):
+        #pu.db
+        try:
+            shutil.rmtree(self.derived_dir)
+        except:
+            pass
+        db = datastore.Datastore(drop_table_flag=True)
+        dirwalk.walk_dir_and_load_db(db, 'testdata/FTP-culled')
+        num_deleted = dirwalk.cull_files_by_age(db,
+                                                baseline_time='2018-02-26',
+                                                max_age_days=0.33)
+        count_success, count_failed = derived.make_derived_files(db,
+                                                                 derived_dir=self.derived_dir,
+                                                                 num_workers = 3)
+        self.assertTrue (count_success==418)
+        self.assertTrue(count_failed==5)
+        db.close()
+        
     def test_string_to_sec(self):
         #pu.db
-        db = datastore.Datastore()
-        start_sec = db.iso8601_to_sec('2018-03-27T03:03:00')
+        db = datastore.Datastore(drop_table_flag=True)
+        timestring = '2018-02-25T19:14:22'
+        start_sec = db.iso8601_to_sec(timestring)
         print("%d" % start_sec)
         
-        self.assertTrue(start_sec==1522144980)
+        self.assertTrue(start_sec==1519614862)
 
     def test_time_iterate(self):
-        db = datastore.Datastore()
+        db = datastore.Datastore(drop_table_flag=True)
         incr_sec = 60 * 10   # 10 minutes
         
         
@@ -285,8 +343,8 @@ class TestPano(unittest.TestCase):
 
     def test_select_by_time(self):
         #pu.db
-        db = datastore.Datastore()
-        dirwalk.walk_dir_and_load_db(db, 'testdata/FTP')
+        db = datastore.Datastore(drop_table_flag=True)
+        dirwalk.walk_dir_and_load_db(db, 'testdata/FTP-culled')
         delta_sec = 60 * 10   # 10 minutes
         upper_time_sec = db.iso8601_to_sec('2018-02-25T19:14:22')
         lower_time_sec = upper_time_sec - delta_sec
@@ -302,12 +360,12 @@ class TestPano(unittest.TestCase):
 
         #
         # populate db and get rows corresponding to time interval
-        db = datastore.Datastore()
+        db = datastore.Datastore(drop_table_flag=True)
         dirwalk.walk_dir_and_load_db(db, 'testdata/FTP-culled')
         num_deleted = dirwalk.cull_files_by_age(db,
                                                 baseline_time='2018-02-26',
                                                 max_age_days=0.25)
-        derived.make_derived_files(db, base_data_dir='testdata/FTP-culled')
+        derived.make_derived_files(db)
         delta_sec = 60 * delta_min   # 10 minutes
         upper_time_sec = db.iso8601_to_sec(start_time)
         lower_time_sec = upper_time_sec - delta_sec
@@ -342,12 +400,12 @@ class TestPano(unittest.TestCase):
         #
         # populate db and get rows corresponding to time interval
         testdata_dir  = 'testdata/FTP-culled'
-        db = datastore.Datastore()
+        db = datastore.Datastore(drop_table_flag=True)
         dirwalk.walk_dir_and_load_db(db, testdata_dir)
         num_deleted = dirwalk.cull_files_by_age(db,
                                                 baseline_time='2018-02-26',
                                                 max_age_days=1)
-        derived.make_derived_files(db, testdata_dir)
+        derived.make_derived_files(db)
         fname_webpage = 'www/test_b0.html'
         camera_name = 'b0'
 
@@ -407,15 +465,15 @@ class TestPano(unittest.TestCase):
         #
         # populate db and get rows corresponding to time interval
         testdata_dir  = 'testdata/FTP-culled'
-        db = datastore.Datastore()
+        db = datastore.Datastore(drop_table_flag=True)
         dirwalk.walk_dir_and_load_db(db, testdata_dir)
 
         try:
-            shutil.rmtree(derived_dir)
+            shutil.rmtree(self.derived_dir)
         except:
             pass
         time_start = time.time()
-        derived.make_derived_files(db, testdata_dir, num_workers = 1, test_thread_flag=use_mock_test_fcn)
+        derived.make_derived_files(db, num_workers = 1, test_thread_flag=use_mock_test_fcn)
         time_stop = time.time()
         time_one_thread = time_stop - time_start
 
@@ -424,11 +482,11 @@ class TestPano(unittest.TestCase):
         db.delete_all_rows()
         dirwalk.walk_dir_and_load_db(db, testdata_dir)
         try:
-            shutil.rmtree(derived_dir)
+            shutil.rmtree(self.derived_dir)
         except:
             pass
         time_start = time.time()
-        derived.make_derived_files(db, testdata_dir, num_workers = 2, test_thread_flag=use_mock_test_fcn)
+        derived.make_derived_files(db, num_workers = 2, test_thread_flag=use_mock_test_fcn)
         time_stop = time.time()
         time_two_threads = time_stop - time_start
 
@@ -448,15 +506,15 @@ class TestPano(unittest.TestCase):
         #
         # populate db and get rows corresponding to time interval
         testdata_dir  = 'testdata/FTP-culled'
-        db = datastore.Datastore()
+        db = datastore.Datastore(drop_table_flag=True)
         dirwalk.walk_dir_and_load_db(db, testdata_dir)
 
         try:
-            shutil.rmtree(derived_dir)
+            shutil.rmtree(self.derived_dir)
         except:
             pass
         time_start = time.time()
-        derived.make_derived_files(db, testdata_dir, num_workers = 1, test_thread_flag=use_mock_test_fcn)
+        derived.make_derived_files(db, num_workers = 1, test_thread_flag=use_mock_test_fcn)
         time_stop = time.time()
         time_one_thread = time_stop - time_start
 
@@ -466,52 +524,61 @@ class TestPano(unittest.TestCase):
         dirwalk.walk_dir_and_load_db(db, testdata_dir)
 
         try:
-            shutil.rmtree(derived_dir)
+            shutil.rmtree(self.derived_dir)
         except:
             pass
         time_start = time.time()
-        derived.make_derived_files(db, testdata_dir, num_workers = 2, test_thread_flag=use_mock_test_fcn)
+        derived.make_derived_files(db, num_workers = 2, test_thread_flag=use_mock_test_fcn)
         time_stop = time.time()
         time_two_threads = time_stop - time_start
         print("time 1 thread=%f" % time_one_thread)
         print("time 2 thread2=%f" % time_two_threads)
         self.assertTrue(time_two_threads < time_one_thread)
 
-    def test_gen_derive_twice(self):
+    def test_derive_twice(self):
         """
         test elapsed time to generate derived files
         """
-        #pu.db
-
+        try:
+            shutil.rmtree(self.derived_dir)
+        except:
+            pass
         #
         # populate db and get rows corresponding to time interval
         testdata_dir  = 'testdata/FTP-culled'
-        db = datastore.Datastore()
+        db = datastore.Datastore(drop_table_flag=True)
         dirwalk.walk_dir_and_load_db(db, testdata_dir)
 
-        try:
-            shutil.rmtree(derived_dir)
-        except:
-            pass
+        num_deleted = dirwalk.cull_files_by_age(db,
+                                             baseline_time='2018-02-26',
+                                             derived_dir=self.derived_dir,
+                                             max_age_days = 0.5)
 
         #
         # process media files twice, make sure
         # the 2nd time it doesn't try to reprocess the failures
         time_start = time.time()
-        count_success0, count_failed0 = derived.make_derived_files(db, testdata_dir, num_workers = 2)
+        count_success0, count_failed0 = derived.make_derived_files(db,
+                                                                   derived_dir=self.derived_dir,
+                                                                   num_workers = 2)
         time_stop = time.time()
         time_trial0 = time_stop - time_start
 
         time_start = time.time()
-        count_success1, count_failed1 = derived.make_derived_files(db, testdata_dir, num_workers = 2)
+        count_success1, count_failed1 = derived.make_derived_files(db,
+                                                                   derived_dir=self.derived_dir,
+                                                                   num_workers = 2)
         time_stop = time.time()
         time_trial1 =  time_stop - time_start
 
         print("0: success=%d, fail=%d, time=%f" % (count_success0, count_failed0, time_trial0))
         print("1: success=%d, fail=%d, time=%f" % (count_success1, count_failed1, time_trial1))
 
-        self.assertTrue(count_success0==27)
+        self.assertTrue(count_success0==1481)
+        self.assertTrue(count_failed0==8)
+        
         self.assertTrue(count_success1==0)  # no files processed 2nd trial
+        self.assertTrue(count_failed1==0)  # no files processed 2nd trial
         
 
     def test_sleep(self):
@@ -542,33 +609,31 @@ class TestPano(unittest.TestCase):
         base_data_dir = 'testdata/FTP-culled'
         path = 'b0/AMC0028V_795UUB/2018-02-25/001/dav/18'
         fname = '18.15.48-18.16.11[M][0@0][0].dav'
-        derived_dir = './derived'
 
         try:
-            shutil.rmtree(derived_dir)
-            os.mkdir(os.path.join('.',derived_dir))
+            shutil.rmtree(self.derived_dir)
+            os.mkdir(self.derived_dir)
         except:
             pass
         
-        derived_fname = derived.convert_dav_to_mp4(base_data_dir, path, fname, derived_dir, print_cmd_flag=True)
+        derived_fname = derived.convert_dav_to_mp4(base_data_dir, path, fname, self.derived_dir, print_cmd_flag=True)
         print('derived_fname=%s' % derived_fname)
-        self.assertTrue(os.path.exists(os.path.join(derived_dir, derived_fname)))
+        self.assertTrue(os.path.exists(os.path.join(self.derived_dir, derived_fname)))
 
     def test_derive_subprocess_jpg(self):
-        derived_dir = 'derived'
         base_data_dir = 'testdata/FTP-culled'
         path = 'b1/AMC002A3_K2G7HH/2018-02-25/001/jpg/18/09'
         fname = '42[M][0@0][0].jpg'
 
         try:
-            shutil.rmtree(derived_dir)
-            os.mkdir(os.path.join('.',derived_dir))
+            shutil.rmtree(self.derived_dir)
+            os.mkdir(self.derived_dir)
         except:
             pass
 
-        derived_fname = derived.make_thumbnail(base_data_dir, path, fname, derived_dir, print_cmd_flag=True)
+        derived_fname = derived.make_thumbnail(base_data_dir, path, fname, self.derived_dir, print_cmd_flag=True)
         print('derived_fname=%s' % derived_fname)
-        self.assertTrue(os.path.exists(os.path.join(derived_dir, derived_fname)))
+        self.assertTrue(os.path.exists(os.path.join(self.derived_dir, derived_fname)))
 
     def test_subprocess(self):
         cmd = ['ls','-l']
