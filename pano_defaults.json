@@ -1,5 +1,6 @@
 {
     "database_fname" : "panodb.sqlite",
+    "drop_table_flag": 0,
     "base_data_dir" : "",
     "delta_min": 10,
     "max_age_days": 14,

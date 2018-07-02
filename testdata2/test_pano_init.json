@@ -1,6 +1,7 @@
 {
     "database_file" : "panodb.sqlite",
-    "base_data_dir" : "testdata/FTP-culldata",
+    "drop_table_flag":1,
+    "base_data_dir" : "testdata/FTP-culled",
     "delta_min": 10,
     "max_age_days": 0.25,
     "www_dir": "www",

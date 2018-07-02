@@ -220,7 +220,7 @@ class TestPano(unittest.TestCase):
 
         where 1519614862==2018-02-25T19:14:22
         """
-        pu.db
+        #pu.db
         db = datastore.Datastore(drop_table_flag=True)
         dirwalk.walk_dir_and_load_db(db, 'testdata/FTP-culled')
 
@@ -239,7 +239,7 @@ class TestPano(unittest.TestCase):
         db.close()
 
     def test_cull_files_by_age(self):
-        pu.db
+        #pu.db
         db = datastore.Datastore(drop_table_flag=True)
         num_entries = dirwalk.walk_dir_and_load_db(db, base_data_dir='testdata/FTP-culled')
         
@@ -375,7 +375,7 @@ class TestPano(unittest.TestCase):
         self.assertTrue(len(row_video_list)==2)
 
         fname_webpage = 'www/test_b0.html'
-        cam_webpage = webpage.Webpage(fname_webpage, camera_name, base_dir='./testdata/FTP-culled')
+        cam_webpage = webpage.Webpage(fname_webpage, camera_name, derived_dir='./derived',base_dir='./testdata/FTP-culled')
         cam_webpage.write_header()
 
         row_html = cam_webpage.make_html_image_list(row_image_list)
@@ -404,7 +404,7 @@ class TestPano(unittest.TestCase):
         dirwalk.walk_dir_and_load_db(db, testdata_dir)
         num_deleted = dirwalk.cull_files_by_age(db,
                                                 baseline_time='2018-02-26',
-                                                max_age_days=1)
+                                                max_age_days=0.33)
         derived.make_derived_files(db)
         fname_webpage = 'www/test_b0.html'
         camera_name = 'b0'
@@ -437,6 +437,7 @@ class TestPano(unittest.TestCase):
         #pu.db
         mypano = pano.Pano("testdata2/test_pano_init.json")
         num_files_added = mypano.slurp_images()
+        print("num_files_added=%d" % num_files_added)
         self.assertTrue(num_files_added==2642)
 
     def test_pano_make_pages(self):
@@ -552,7 +553,7 @@ class TestPano(unittest.TestCase):
         num_deleted = dirwalk.cull_files_by_age(db,
                                              baseline_time='2018-02-26',
                                              derived_dir=self.derived_dir,
-                                             max_age_days = 0.5)
+                                                max_age_days = 0.33)
 
         #
         # process media files twice, make sure
@@ -574,8 +575,8 @@ class TestPano(unittest.TestCase):
         print("0: success=%d, fail=%d, time=%f" % (count_success0, count_failed0, time_trial0))
         print("1: success=%d, fail=%d, time=%f" % (count_success1, count_failed1, time_trial1))
 
-        self.assertTrue(count_success0==1481)
-        self.assertTrue(count_failed0==8)
+        self.assertTrue(count_success0==418)
+        self.assertTrue(count_failed0==5)
         
         self.assertTrue(count_success1==0)  # no files processed 2nd trial
         self.assertTrue(count_failed1==0)  # no files processed 2nd trial

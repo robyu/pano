@@ -38,7 +38,13 @@ class Pano:
     
     def __init__(self, config_fname):
         self.param_dict = self.init_param_dict(config_fname)
-        self.image_db = datastore.Datastore(self.param_dict['database_fname'])
+        if self.param_dict['drop_table_flag']==1:
+            drop_table_flag=True
+        else:
+            drop_table_flag=False
+        #end
+        self.image_db = datastore.Datastore(self.param_dict['database_fname'],
+                                            drop_table_flag=drop_table_flag)
 
     def init_param_dict(self, config_fname):
         """
