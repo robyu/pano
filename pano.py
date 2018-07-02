@@ -174,8 +174,8 @@ class Pano:
             cam_name = cam_list[index]['name']
             cam_page = webpage.Webpage(os.path.join(self.param_dict['www_dir'], cam_page_fname),
                                        cam_name,
-                                       base_dir=self.param_dict['base_data_dir'],
-                                       derived_dir = self.param_dict['derived_dir'])
+                                       self.param_dict['derived_dir'],
+                                       self.param_dict['base_data_dir'])
             cam_page.make_webpage(self.param_dict['baseline_datetime'],
                                   self.param_dict['max_age_days'],
                                   self.param_dict['delta_min'],

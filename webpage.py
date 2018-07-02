@@ -79,7 +79,7 @@ class Webpage:
     #<img alt="Bootstrap Image Preview" src="http://www.layoutit.com/img/sports-q-c-140-140-3.jpg">
     #
 
-    def __init__(self, dest_fname, camera_name, derived_dir='./derived', base_dir='.'):
+    def __init__(self, dest_fname, camera_name, derived_dir, base_dir):
         self.dest_fname = dest_fname
         self.dest_file = open(dest_fname, "wt")
         self.num_images_per_row = 4

@@ -375,7 +375,7 @@ class TestPano(unittest.TestCase):
         self.assertTrue(len(row_video_list)==2)
 
         fname_webpage = 'www/test_b0.html'
-        cam_webpage = webpage.Webpage(fname_webpage, camera_name, derived_dir='./derived',base_dir='./testdata/FTP-culled')
+        cam_webpage = webpage.Webpage(fname_webpage, camera_name, self.derived_dir,self.test_data_dir)
         cam_webpage.write_header()
 
         row_html = cam_webpage.make_html_image_list(row_image_list)
@@ -414,7 +414,7 @@ class TestPano(unittest.TestCase):
         except OSError:
             pass
 
-        cam_webpage = webpage.Webpage(fname_webpage, camera_name, base_dir=testdata_dir)
+        cam_webpage = webpage.Webpage(fname_webpage, camera_name, self.derived_dir, testdata_dir)
         cam_webpage.make_webpage(start_datetime, 1, delta_min, db)
 
         self.assertTrue(os.path.exists(fname_webpage))
