@@ -157,7 +157,6 @@ class Pano:
         print("*** make derived files")
         if (make_derived_files==True):
             derived.make_derived_files(self.image_db,
-                                       base_data_dir = self.param_dict['base_data_dir'],
                                        num_workers = self.param_dict['num_worker_threads'],
                                        derived_dir = self.param_dict['derived_dir'])
         #endif
