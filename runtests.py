@@ -241,7 +241,7 @@ class TestPano(unittest.TestCase):
     def test_cull_files_by_age(self):
         #pu.db
         db = datastore.Datastore(drop_table_flag=True)
-        num_entries = dirwalk.walk_dir_and_load_db(db, base_data_dir='testdata/FTP-culled')
+        num_entries = dirwalk.walk_dir_and_load_db(db, 'testdata/FTP-culled')
         
         row_list = db.select_all()
         num_before = len(row_list)
@@ -440,6 +440,13 @@ class TestPano(unittest.TestCase):
         print("num_files_added=%d" % num_files_added)
         self.assertTrue(num_files_added==2642)
 
+    def test_pano_slurp_b1_only(self):
+        #pu.db
+        mypano = pano.Pano("testdata2/test_pano_b1_only.json")
+        num_files_added = mypano.slurp_images()
+        print("num_files_added=%d" % num_files_added)
+        self.assertTrue(num_files_added==678)
+        
     def test_pano_make_pages(self):
         #pu.db
         mypano = pano.Pano("testdata2/test_pano_init.json")

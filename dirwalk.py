@@ -149,9 +149,11 @@ def cull_empty_dirs(base_data_dir):
 
 
 @timeit.timeit        
-def walk_dir_and_load_db(db, base_data_dir='.'):
+def walk_dir_and_load_db(db, base_data_dir, cam_name=''):
     """
-    add remaining files to the database
+    walk base_data_dir/cam_name
+    (or just base_data_dir, if cam_name not specified)
+    and add media files to database
 
     returns: number of files added
     """
@@ -159,8 +161,8 @@ def walk_dir_and_load_db(db, base_data_dir='.'):
     # how many entries in db?
     all_rows = db.select_all()
     num_start = len(all_rows)
-    
-    for dir_path, subdir_list, file_list in os.walk(base_data_dir):
+    cam_dir = os.path.join(base_data_dir, cam_name)
+    for dir_path, subdir_list, file_list in os.walk(cam_dir):
         for fname in file_list:
             # TODO: get mtime
             row = parse_info_amcrest(base_data_dir, dir_path, fname)

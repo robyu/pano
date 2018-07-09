@@ -36,9 +36,9 @@ class Pano:
     image_db = None
     cam_page_fname_list=[]
     
-    def __init__(self, config_fname):
+    def __init__(self, config_fname, drop_table_flag=False):
         self.param_dict = self.init_param_dict(config_fname)
-        if self.param_dict['drop_table_flag']==1:
+        if self.param_dict['drop_table_flag']==1 or drop_table_flag==True:
             drop_table_flag=True
         else:
             drop_table_flag=False
@@ -109,15 +109,24 @@ class Pano:
         returns
         number of files added
         """
+        total_files_added = 0
+        
         print("** slurp images")
         base_data_dir = self.param_dict['base_data_dir']
-        print("*** cull empty dirs")
-        dirwalk.cull_empty_dirs(base_data_dir)
-        print("*** cull files by ext")
-        num_deleted = dirwalk.cull_files_by_ext(base_data_dir=base_data_dir)
-        print("*** walk dir and load db")
-        num_files_added = dirwalk.walk_dir_and_load_db(self.image_db, base_data_dir)
-        return num_files_added
+        cam_list = self.get_cam_list()
+        for cam in cam_list:
+            cam_dir = os.path.join(base_data_dir, cam['name']) # "testdata/FTP-culled/b0"
+            print("*** processing camera dir %s" % cam_dir)
+            print("**** cull empty dirs")
+            dirwalk.cull_empty_dirs(cam_dir)
+            print("**** cull files by ext")
+            num_deleted = dirwalk.cull_files_by_ext(base_data_dir=cam_dir)
+            print("**** walk dir and load db")
+            num_files_added = dirwalk.walk_dir_and_load_db(self.image_db, base_data_dir,
+                                                           cam_name = cam['name'])
+            total_files_added += num_files_added
+        #end
+        return total_files_added
 
     def get_cam_list(self):
         """
@@ -194,10 +203,11 @@ class Pano:
 @click.command()
 @click.argument('config')
 @click.option('--loopcnt',default=-1,help='number of times to loop; -1 == forever')
-def pano_main(config, loopcnt):
+@click.option('--droptable/--no-droptable', default=False)
+def pano_main(config, loopcnt, droptable):
     print("config file=%s" % config)
     print("loopcnt=%d" % loopcnt)
-    mypano = Pano(config)
+    mypano = Pano(config, drop_table_flag=droptable)
     loop_flag = True
     loop_index=0
     while loop_flag:
