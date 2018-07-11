@@ -436,21 +436,25 @@ class TestPano(unittest.TestCase):
     def test_pano_slurp(self):
         #pu.db
         mypano = pano.Pano("testdata2/test_pano_init.json")
-        num_files_added = mypano.slurp_images()
+        num_files_added,num_deleted = mypano.slurp_images()
         print("num_files_added=%d" % num_files_added)
         self.assertTrue(num_files_added==2642)
 
     def test_pano_slurp_b1_only(self):
-        #pu.db
+        pu.db
         mypano = pano.Pano("testdata2/test_pano_b1_only.json")
-        num_files_added = mypano.slurp_images()
+
+        # make sure we're dropping existing table
+        self.assertTrue(mypano.param_dict['drop_table_flag']==1)
+        
+        num_files_added,num_deleted = mypano.slurp_images()
         print("num_files_added=%d" % num_files_added)
         self.assertTrue(num_files_added==678)
         
     def test_pano_make_pages(self):
         #pu.db
         mypano = pano.Pano("testdata2/test_pano_init.json")
-        num_files_added = mypano.slurp_images()
+        num_files_added,num_deleted = mypano.slurp_images()
         cam_page_fname_list = mypano.gen_camera_pages(make_derived_files=False)
 
         self.assertTrue(len(cam_page_fname_list)==2)
@@ -601,7 +605,7 @@ class TestPano(unittest.TestCase):
         
     def test_two_loops(self):
         mypano = pano.Pano("testdata2/test_pano_init.json")
-        num_files_added = mypano.slurp_images()
+        num_files_added,num_deleted = mypano.slurp_images()
         cam_page_fname_list = mypano.gen_camera_pages(make_derived_files=False)
 
         self.assertTrue(len(cam_page_fname_list)==2)
