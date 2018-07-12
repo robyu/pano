@@ -249,7 +249,7 @@ def pano_main(config, loopcnt):
         cam_page_fname_list = mypano.gen_camera_pages()
         index_fname = mypano.gen_index_page()
         mypano.print_summary(num_files_added, num_deleted_ext, num_deleted_age, num_entries_start)
-        print("sleeping...")
+        print("sleeping...%6.2f min" % mypano.param_dict['sleep_interval_min'])
         mypano.sleep()
 
         loop_index += 1
