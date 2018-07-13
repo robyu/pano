@@ -8,7 +8,7 @@ import os
 """
 class Webpage:
     #
-    # {row} = HTML of row class
+    # {cam_name} = camera name
     templ_header = unicode("""
 <!DOCTYPE html>
 <html lang="en">
@@ -17,7 +17,7 @@ class Webpage:
       <meta http-equiv="X-UA-Compatible" content="IE=edge">
       <meta name="viewport" content="width=device-width, initial-scale=1">
 
-      <title>Panopticon</title>
+      <title>Panopticon:{cam_name}</title>
 
       <meta name="description" content="panopticon">
       <meta name="author" content="Robert Yu, Buttersquid Inc">
@@ -80,8 +80,6 @@ class Webpage:
     #
 
     def __init__(self, dest_fname, camera_name, derived_dir, base_dir):
-        self.dest_fname = dest_fname
-        self.dest_file = open(dest_fname, "wt")
         self.num_images_per_row = 4
         self.base_dir = os.path.abspath(base_dir)
         assert os.path.exists(self.base_dir)
@@ -96,12 +94,20 @@ class Webpage:
         assert os.path.exists(self.derived_dir)
 
         self.camera_name = camera_name
+
+        #
+        # composing the webpage can take substantial time, so
+        # compose HTML in a temporary file, then
+        # rename it to final dest fname.
+        self.temp_fname = "tmp_camera.html"
+        self.dest_fname = dest_fname
+        self.dest_file = open(self.temp_fname, "wt")
         
     def write_header(self):
         """
         write html header to webpage
         """
-        self.dest_file.write(Webpage.templ_header)
+        self.dest_file.write(Webpage.templ_header.format(cam_name=self.camera_name))
         return
 
     def write_row(self,camera_name, start_time, delta_min, row_image_list, row_video_list):
@@ -118,6 +124,13 @@ class Webpage:
         self.dest_file.write(Webpage.templ_footer)
         self.dest_file.close()
 
+        #
+        # remove existing dest_fname, rename temp to dest_fname
+        if os.path.exists(self.dest_fname):
+            os.remove(self.dest_fname)
+        #end
+
+        os.rename(self.temp_fname, self.dest_fname)
 
     def get_thumb_path(self, row):
         """
