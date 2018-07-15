@@ -6,6 +6,9 @@ import multiprocessing as mp
 import sys
 import timeit
 
+
+DEFAULT_DERIVED_DIR = './derived'
+
 def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir,print_cmd_flag=False):
     src_fname = os.path.join(base_data_dir, path, fname)
     dest_path = os.path.join(derived_dir, path)
@@ -227,7 +230,7 @@ def derive_with_single_thread(db, derived_dir, row_list, test_thread_flag):
     return (count_success, count_failed)
 
 @timeit.timeit
-def make_derived_files(db, derived_dir='./derived', num_workers = -1, test_thread_flag=False):
+def make_derived_files(db, derived_dir=DEFAULT_DERIVED_DIR, num_workers = -1, test_thread_flag=False):
     """
     create directory for derived files.
     for each entry in database, create derived files (thumbnails, converted video)

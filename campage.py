@@ -6,7 +6,7 @@ import os
 
   
 """
-class Webpage:
+class CamPage:
     #
     # {cam_name} = camera name
     templ_header = unicode("""
@@ -24,6 +24,12 @@ class Webpage:
 
       <link href="css/bootstrap.min.css" rel="stylesheet">
       <link href="css/style.css" rel="stylesheet">
+
+      <META HTTP-EQUIV="refresh" CONTENT="300"> 
+
+      <FORM>
+      <INPUT TYPE="button" onClock="history.go(0)" VALUE="Refresh">
+      </FORM>
 
    </head>
    <div class="container-fluid">
@@ -79,19 +85,17 @@ class Webpage:
     #<img alt="Bootstrap Image Preview" src="http://www.layoutit.com/img/sports-q-c-140-140-3.jpg">
     #
 
-    def __init__(self, dest_fname, camera_name, derived_dir, base_dir):
+    def __init__(self, camera_name, db, derived_dir, base_dir, www_dir):
+        self.db = db  # pointer to datastore
+        self.derived_dir = derived_dir
+        self.base_dir = base_dir
         self.num_images_per_row = 4
-        self.base_dir = os.path.abspath(base_dir)
-        assert os.path.exists(self.base_dir)
 
-        self.www_dir = os.path.join(os.getcwd(), "www")
+        self.www_dir = www_dir
         assert os.path.exists(self.www_dir)
 
         self.default_image_fname = os.path.join(self.www_dir, 'mryuck.png')
         assert os.path.exists(self.default_image_fname)
-
-        self.derived_dir = os.path.abspath(derived_dir)
-        assert os.path.exists(self.derived_dir)
 
         self.camera_name = camera_name
 
@@ -99,38 +103,40 @@ class Webpage:
         # composing the webpage can take substantial time, so
         # compose HTML in a temporary file, then
         # rename it to final dest fname.
-        self.temp_fname = "tmp_camera.html"
-        self.dest_fname = dest_fname
-        self.dest_file = open(self.temp_fname, "wt")
+        self.temp_fname = os.path.join(self.www_dir, "tmp_camera.html")
+
+        self.fname_index=0
+
+    def calc_dest_fname(self):
+        dest_fname = "%s-%04d.html" % (self.camera_name, self.fname_index)
+        self.fname_index += 1
+        return dest_fname
         
-    def write_header(self):
+    def write_header(self, dest_file):
         """
         write html header to webpage
         """
-        self.dest_file.write(Webpage.templ_header.format(cam_name=self.camera_name))
+        dest_file.write(CamPage.templ_header.format(cam_name=self.camera_name))
         return
 
-    def write_row(self,camera_name, start_time, delta_min, row_image_list, row_video_list):
-        """
-        write a row (corresponding to time interval)
-        with image list and video list
-        """
-        return
-
-    def close(self):
+    def write_footer_and_close(self, dest_file):
         """
         write html footer and close file 
         """
-        self.dest_file.write(Webpage.templ_footer)
-        self.dest_file.close()
+        dest_file.write(CamPage.templ_footer)
+        dest_file.close()
 
+    def move_temp_to_dest_fname(self, temp_fname, dest_fname):
+        
         #
         # remove existing dest_fname, rename temp to dest_fname
-        if os.path.exists(self.dest_fname):
-            os.remove(self.dest_fname)
+        full_dest_fname = os.path.join(self.www_dir, dest_fname)
+        if os.path.exists(full_dest_fname):
+            os.remove(full_dest_fname)
         #end
 
-        os.rename(self.temp_fname, self.dest_fname)
+        os.rename(temp_fname, full_dest_fname)
+
 
     def get_thumb_path(self, row):
         """
@@ -236,26 +242,32 @@ class Webpage:
 
         write a "row" to the webpage
         """
-        html = Webpage.templ_row.format(upper_datetime = upper_datetime,
+        html = CamPage.templ_row.format(upper_datetime = upper_datetime,
                                         lower_datetime = lower_datetime,
                                         html_images = html_images,
                                         html_videos = html_videos)
         self.dest_file.write(html)
         return
         
-    def make_webpage(self, upper_datetime, max_age_days, interval_min, db):
+    def generate(self, upper_datetime, max_age_days, interval_min):
         """
         given
         upper_datetime: starting datetime string
         max_age_days: maximum number of days to include in webpage
         interval_min: time interval for each row in webpage
-        db: a datastore object
-        
+
         generate a complete webpage
+
+        RETURNS
+        list of generated HTML webpages NOT preceded with www_dir,
+        e.g.
+        camera0_000.html
+        NOT www/camera0_000.html
         """
+        dest_fname_list = []
         #
         # convert and compute datetime intervals in seconds
-        upper_time_sec = db.iso8601_to_sec(upper_datetime)
+        upper_time_sec = self.db.iso8601_to_sec(upper_datetime)
         assert upper_time_sec > 0
 
         final_lower_time_sec = upper_time_sec - int(max_age_days * 24.0 * 60.0 * 60.0) # days * (hrs/day)(min/hrs)(sec/min)
@@ -263,37 +275,40 @@ class Webpage:
 
         assert interval_min > 0
         interval_sec = int(interval_min * 60.0)
-
-        #
         # generate webpage
-        self.write_header()
+        self.dest_file = open(self.temp_fname, "wt")
+        
+        self.write_header(self.dest_file)
         while(upper_time_sec > final_lower_time_sec):
             lower_time_sec = upper_time_sec - interval_sec
-            row_image_list = db.select_by_time_cam_media(self.camera_name,
+            row_image_list = self.db.select_by_time_cam_media(self.camera_name,
                                                          upper_time_sec,
                                                          lower_time_sec,
                                                          mediatype=datastore.MEDIA_IMAGE)
-            row_video_list = db.select_by_time_cam_media(self.camera_name,
+            row_video_list = self.db.select_by_time_cam_media(self.camera_name,
                                                          upper_time_sec,
                                                          lower_time_sec,
                                                          mediatype=datastore.MEDIA_VIDEO)
             if (len(row_image_list)>0) or (len(row_video_list)>0):
                 image_html = self.make_html_image_list(row_image_list)
                 video_html = self.make_html_video_list(row_video_list)
-                start_datetime = db.sec_to_iso8601(upper_time_sec)
-                stop_datetime = db.sec_to_iso8601(lower_time_sec)
+                start_datetime = self.db.sec_to_iso8601(upper_time_sec)
+                stop_datetime = self.db.sec_to_iso8601(lower_time_sec)
                 self.write_row(image_html, video_html, start_datetime, stop_datetime)
             #end
             upper_time_sec = lower_time_sec
         #end
-        self.close()
         
+        self.write_footer_and_close(self.dest_file)
+
+        dest_fname = self.calc_dest_fname()
+        self.move_temp_to_dest_fname(self.temp_fname, dest_fname)
+
+        dest_fname_list.append(dest_fname)
+
+        #
+        # for next time around, restart the suffix index
+        self.fname_index=0
         
-        
-        
-        
-        
-        
-        
-        
-        
+        return dest_fname_list
+    

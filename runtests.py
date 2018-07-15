@@ -9,7 +9,7 @@ import os
 import datastore
 import pudb
 import shutil
-import webpage
+import campage
 import datetime
 import tzlocal
 import json
@@ -28,6 +28,7 @@ python -m unittest testica.TestIca.test_smoketest   # works with #pu.db in code
 class TestPano(unittest.TestCase):
     test_data_dir = './testdata/FTP-culled'
     derived_dir = './derived'
+    www_dir = './www'
 
     def setUp(self):
         print("setup")
@@ -352,48 +353,46 @@ class TestPano(unittest.TestCase):
         row_list = db.select_by_time_cam_media('b0',upper_time_sec, lower_time_sec,mediatype=datastore.MEDIA_IMAGE)
         self.assertTrue(len(row_list)==6)
         
+    # def test_gen_webpage(self):
+    #     #pu.db
+    #     start_time = '2018-02-25T19:14:22'
+    #     delta_min = 10
+    #     camera_name = 'b0'
+
+    #     #
+    #     # populate db and get rows corresponding to time interval
+    #     db = datastore.Datastore(drop_table_flag=True)
+    #     dirwalk.walk_dir_and_load_db(db, 'testdata/FTP-culled')
+    #     # num_deleted = dirwalk.cull_files_by_age(db,
+    #     #                                         baseline_time='2018-02-26',
+    #     #                                         max_age_days=0.25)
+    #     derived.make_derived_files(db)
+    #     delta_sec = 60 * delta_min   # 10 minutes
+    #     upper_time_sec = db.iso8601_to_sec(start_time)
+    #     lower_time_sec = upper_time_sec - delta_sec
+    #     row_image_list = db.select_by_time_cam_media(camera_name,upper_time_sec, lower_time_sec,mediatype=datastore.MEDIA_IMAGE)
+    #     row_video_list = db.select_by_time_cam_media(camera_name,upper_time_sec, lower_time_sec,mediatype=datastore.MEDIA_VIDEO)
+    #     self.assertTrue(len(row_image_list)==6)
+    #     self.assertTrue(len(row_video_list)==2)
+    #     fname_webpage = 'www/test_b0.html'
+    #     cam_webpage = webpage.Webpage(fname_webpage, camera_name, self.derived_dir,self.test_data_dir)
+    #     cam_webpage.write_header()
+
+    #     row_html = cam_webpage.make_html_image_list(row_image_list)
+    #     video_html = cam_webpage.make_html_video_list(row_video_list)
+    #     upper_datetime = db.sec_to_iso8601(upper_time_sec)
+    #     lower_datetime = db.sec_to_iso8601(lower_time_sec)
+    #     cam_webpage.write_row(row_html, video_html, upper_datetime, lower_datetime)
+    #     cam_webpage.write_row(row_html, video_html, upper_datetime, lower_datetime)
+    #     cam_webpage.write_row(row_html, video_html, upper_datetime, lower_datetime)
+        
+    #     cam_webpage.close()
+    #     db.close()
+        
+    #     self.assertTrue(os.path.exists(fname_webpage))
+
+
     def test_gen_webpage(self):
-        #pu.db
-        start_time = '2018-02-25T19:14:22'
-        delta_min = 10
-        camera_name = 'b0'
-
-        #
-        # populate db and get rows corresponding to time interval
-        db = datastore.Datastore(drop_table_flag=True)
-        dirwalk.walk_dir_and_load_db(db, 'testdata/FTP-culled')
-        num_deleted = dirwalk.cull_files_by_age(db,
-                                                baseline_time='2018-02-26',
-                                                max_age_days=0.25)
-        derived.make_derived_files(db)
-        delta_sec = 60 * delta_min   # 10 minutes
-        upper_time_sec = db.iso8601_to_sec(start_time)
-        lower_time_sec = upper_time_sec - delta_sec
-        row_image_list = db.select_by_time_cam_media(camera_name,upper_time_sec, lower_time_sec,mediatype=datastore.MEDIA_IMAGE)
-        row_video_list = db.select_by_time_cam_media(camera_name,upper_time_sec, lower_time_sec,mediatype=datastore.MEDIA_VIDEO)
-        self.assertTrue(len(row_image_list)==6)
-        self.assertTrue(len(row_video_list)==2)
-
-        fname_webpage = 'www/test_b0.html'
-        cam_webpage = webpage.Webpage(fname_webpage, camera_name, self.derived_dir,self.test_data_dir)
-        cam_webpage.write_header()
-
-        row_html = cam_webpage.make_html_image_list(row_image_list)
-        video_html = cam_webpage.make_html_video_list(row_video_list)
-        upper_datetime = db.sec_to_iso8601(upper_time_sec)
-        lower_datetime = db.sec_to_iso8601(lower_time_sec)
-        cam_webpage.write_row(row_html, video_html, upper_datetime, lower_datetime)
-        cam_webpage.write_row(row_html, video_html, upper_datetime, lower_datetime)
-        cam_webpage.write_row(row_html, video_html, upper_datetime, lower_datetime)
-        
-        cam_webpage.close()
-        db.close()
-        
-        self.assertTrue(os.path.exists(fname_webpage))
-
-
-    def test_gen_webpage2(self):
-        #pu.db
         start_datetime = '2018-02-25T19:14:22'
         delta_min = 10
 
@@ -402,22 +401,21 @@ class TestPano(unittest.TestCase):
         testdata_dir  = 'testdata/FTP-culled'
         db = datastore.Datastore(drop_table_flag=True)
         dirwalk.walk_dir_and_load_db(db, testdata_dir)
-        num_deleted = dirwalk.cull_files_by_age(db,
-                                                baseline_time='2018-02-26',
-                                                max_age_days=0.33)
+        # num_deleted = dirwalk.cull_files_by_age(db,
+        #                                         baseline_time='2018-02-26',
+        #                                         max_age_days=0.33)
         derived.make_derived_files(db)
-        fname_webpage = 'www/test_b0.html'
+
+        #
+        # name of camera as specified in database
         camera_name = 'b0'
 
-        try:
-            os.remove(fname_webpage)
-        except OSError:
-            pass
+        cam_pages = campage.CamPage(camera_name, db, derived.DEFAULT_DERIVED_DIR, testdata_dir, self.www_dir)
+        fname_webpage_list = cam_pages.generate(start_datetime, 1, delta_min)
 
-        cam_webpage = webpage.Webpage(fname_webpage, camera_name, self.derived_dir, testdata_dir)
-        cam_webpage.make_webpage(start_datetime, 1, delta_min, db)
+        for fname in fname_webpage_list:
+            self.assertTrue(os.path.exists(os.path.join(self.www_dir, fname)))
 
-        self.assertTrue(os.path.exists(fname_webpage))
 
     def test_read_json(self):
         #pu.db

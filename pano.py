@@ -3,7 +3,7 @@ import json
 import datastore
 import dirwalk
 import os
-import webpage
+import campage
 import derived
 import indexpage
 import click
@@ -191,16 +191,17 @@ class Pano:
         cam_page_fname_list=[]
         print("*** write webpages")
         for index in range(len(cam_list)):
-            cam_page_fname =  'cam_%02d.html' % index
+            cam_page_base_fname =  'cam_%02d' % index  # webpage generator will add suffix + .html
             cam_name = cam_list[index]['name']
-            cam_page = webpage.Webpage(os.path.join(self.param_dict['www_dir'], cam_page_fname),
-                                       cam_name,
-                                       self.param_dict['derived_dir'],
-                                       self.param_dict['base_data_dir'])
-            cam_page.make_webpage(self.param_dict['baseline_datetime'],
-                                  self.param_dict['max_age_days'],
-                                  self.param_dict['delta_min'],
-                                  self.image_db)
+            assert False
+            # cam_page = webpage.Webpage(os.path.join(self.param_dict['www_dir'], cam_page_fname),
+            #                            cam_name,
+            #                            self.param_dict['derived_dir'],
+            #                            self.param_dict['base_data_dir'])
+            # cam_page.make_webpage(self.param_dict['baseline_datetime'],
+            #                       self.param_dict['max_age_days'],
+            #                       self.param_dict['delta_min'],
+            #                       self.image_db)
             cam_page_fname_list.append(cam_page_fname)
         #end
         self.cam_page_fname_list = cam_page_fname_list
