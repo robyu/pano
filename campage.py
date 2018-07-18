@@ -104,7 +104,7 @@ class CamPage:
         # compose HTML in a temporary file, then
         # rename it to final dest fname.
         self.temp_fname = os.path.join(self.www_dir, "tmp_camera.html")
-
+        self.max_rows_per_file = 300
         self.fname_index=0
 
     def calc_dest_fname(self):
@@ -112,12 +112,16 @@ class CamPage:
         self.fname_index += 1
         return dest_fname
         
-    def write_header(self, dest_file):
+    def open_temp_file_write_header(self):
         """
+        open a temp file,
         write html header to webpage
+
+        returns opened file object
         """
+        dest_file = open(self.temp_fname, "wt")
         dest_file.write(CamPage.templ_header.format(cam_name=self.camera_name))
-        return
+        return dest_file
 
     def write_footer_and_close(self, dest_file):
         """
@@ -126,7 +130,9 @@ class CamPage:
         dest_file.write(CamPage.templ_footer)
         dest_file.close()
 
-    def move_temp_to_dest_fname(self, temp_fname, dest_fname):
+    def close_temp_file_move_dest(self, dest_fname):
+        
+        self.write_footer_and_close(self.dest_file)
         
         #
         # remove existing dest_fname, rename temp to dest_fname
@@ -135,7 +141,7 @@ class CamPage:
             os.remove(full_dest_fname)
         #end
 
-        os.rename(temp_fname, full_dest_fname)
+        os.rename(self.temp_fname, full_dest_fname)
 
 
     def get_thumb_path(self, row):
@@ -259,7 +265,7 @@ class CamPage:
         generate a complete webpage
 
         RETURNS
-        list of generated HTML webpages NOT preceded with www_dir,
+        dest_fname_list:  list of generated HTML webpages NOT preceded with www_dir,
         e.g.
         camera0_000.html
         NOT www/camera0_000.html
@@ -275,10 +281,12 @@ class CamPage:
 
         assert interval_min > 0
         interval_sec = int(interval_min * 60.0)
+
         # generate webpage
-        self.dest_file = open(self.temp_fname, "wt")
-        
-        self.write_header(self.dest_file)
+        self.dest_file = self.open_temp_file_write_header()
+
+        # iterate through all rows which fall into the time interval
+        num_rows_per_file = 0
         while(upper_time_sec > final_lower_time_sec):
             lower_time_sec = upper_time_sec - interval_sec
             row_image_list = self.db.select_by_time_cam_media(self.camera_name,
@@ -295,14 +303,26 @@ class CamPage:
                 start_datetime = self.db.sec_to_iso8601(upper_time_sec)
                 stop_datetime = self.db.sec_to_iso8601(lower_time_sec)
                 self.write_row(image_html, video_html, start_datetime, stop_datetime)
+
+                num_rows_per_file += max(len(row_image_list), len(row_video_list))
+                if num_rows_per_file >= self.max_rows_per_file:
+                    #
+                    # close current file
+                    dest_fname = self.calc_dest_fname()
+                    self.close_temp_file_move_dest(dest_fname)
+                    
+                    #
+                    # start a new file
+                    self.dest_file = self.open_temp_file_write_header()
+                    num_rows_per_file = 0  # reset count
+                #end 
             #end
             upper_time_sec = lower_time_sec
         #end
         
-        self.write_footer_and_close(self.dest_file)
-
+        # close current file
         dest_fname = self.calc_dest_fname()
-        self.move_temp_to_dest_fname(self.temp_fname, dest_fname)
+        self.close_temp_file_move_dest(dest_fname)
 
         dest_fname_list.append(dest_fname)
 

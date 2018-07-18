@@ -393,6 +393,7 @@ class TestPano(unittest.TestCase):
 
 
     def test_gen_webpage(self):
+        #pu.db
         start_datetime = '2018-02-25T19:14:22'
         delta_min = 10
 
@@ -410,7 +411,11 @@ class TestPano(unittest.TestCase):
         # name of camera as specified in database
         camera_name = 'b0'
 
-        cam_pages = campage.CamPage(camera_name, db, derived.DEFAULT_DERIVED_DIR, testdata_dir, self.www_dir)
+        cam_pages = campage.CamPage(camera_name,
+                                    db,
+                                    os.path.join(os.getcwd(), derived.DEFAULT_DERIVED_DIR),
+                                    os.path.join(os.getcwd(), testdata_dir),
+                                    os.path.join(self.www_dir))
         fname_webpage_list = cam_pages.generate(start_datetime, 1, delta_min)
 
         for fname in fname_webpage_list:
@@ -439,7 +444,7 @@ class TestPano(unittest.TestCase):
         self.assertTrue(num_files_added==2642)
 
     def test_pano_slurp_b1_only(self):
-        pu.db
+        #pu.db
         mypano = pano.Pano("testdata2/test_pano_b1_only.json")
 
         # make sure we're dropping existing table
@@ -453,15 +458,18 @@ class TestPano(unittest.TestCase):
         #pu.db
         mypano = pano.Pano("testdata2/test_pano_init.json")
         num_files_added,num_deleted = mypano.slurp_images()
-        cam_page_fname_list = mypano.gen_camera_pages(make_derived_files=False)
+        
+        cam_list = mypano.gen_camera_pages(make_derived_files=False)
 
-        self.assertTrue(len(cam_page_fname_list)==2)
-        for fname in cam_page_fname_list:
-            full_fname = os.path.join("www", fname)
-            self.assertTrue(os.path.exists(full_fname))
+        self.assertTrue(len(cam_list)==2)
+        for cam_info in cam_list:
+            for fname in cam_info['page_fnames_list']:
+                full_fname = os.path.join("www", fname)
+                self.assertTrue(os.path.exists(full_fname))
+            #end
         #end
 
-        index_fname = mypano.gen_index_page()
+        index_fname = mypano.gen_index_page(cam_list)
         self.assertTrue(os.path.exists(os.path.join("www", index_fname)))
         
 
@@ -604,15 +612,17 @@ class TestPano(unittest.TestCase):
     def test_two_loops(self):
         mypano = pano.Pano("testdata2/test_pano_init.json")
         num_files_added,num_deleted = mypano.slurp_images()
-        cam_page_fname_list = mypano.gen_camera_pages(make_derived_files=False)
+        cam_list = mypano.gen_camera_pages(make_derived_files=False)
 
-        self.assertTrue(len(cam_page_fname_list)==2)
-        for fname in cam_page_fname_list:
-            full_fname = os.path.join("www", fname)
-            self.assertTrue(os.path.exists(full_fname))
+        self.assertTrue(len(cam_list)==2)
+        for cam_info in cam_list:
+            for fname in cam_info['page_fnames_list']:
+                full_fname = os.path.join("www", fname)
+                self.assertTrue(os.path.exists(full_fname))
+            #end
         #end
     
-        index_fname = mypano.gen_index_page()
+        index_fname = mypano.gen_index_page(cam_list)
         self.assertTrue(os.path.exists(os.path.join("www", index_fname)))
         
     def test_derive_subprocess_mp4(self):

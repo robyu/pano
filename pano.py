@@ -34,7 +34,6 @@ class Pano:
     default_json_fname = "pano_defaults.json"
     param_dict = {}
     image_db = None
-    cam_page_fname_list=[]
     
     def __init__(self, config_fname):
         print("Pano: reading config file (%s)" % config_fname)
@@ -133,19 +132,21 @@ class Pano:
 
     def get_cam_list(self):
         """
-        return list of camera names extracted from param_dict
+        return list of camera info from param_dict
         """
         cam_list = self.param_dict['camera_list']
         return cam_list
     
-    def gen_index_page(self):
+    def gen_index_page(self, cam_list):
+        """
+        IN:
+        cam_list: list of per-camera dict objects
+        """
         print("** generate index page")
-        assert len(self.cam_page_fname_list) > 0, "you gotta run gen_camera_pages first"
-        cam_list = self.get_cam_list()
+        assert len(cam_list) > 0, "you gotta run gen_camera_pages first"
 
-        assert len(cam_list) == len(self.cam_page_fname_list)
         index_page = indexpage.IndexPage()
-        index_fname = index_page.make_index(self.cam_page_fname_list, cam_list)
+        index_fname = index_page.make_index(cam_list)
         return index_fname
 
     @timeit.timeit
@@ -173,7 +174,9 @@ class Pano:
         generate a webpage 
 
         returns:
-        list of camera webpage filenames
+        list of dictionary elements, where each element is
+        the camera-info list (see get_cam_list) plus an extra entry, "page_fnames_list,"
+        listing the web pages
         """
         print("** generate camera webpages")
         print("*** make derived files")
@@ -188,24 +191,26 @@ class Pano:
         if os.path.exists(self.param_dict['www_dir'])==False:
             os.mkdir(self.param_dict['www_dir'])
 
-        cam_page_fname_list=[]
         print("*** write webpages")
         for index in range(len(cam_list)):
             cam_page_base_fname =  'cam_%02d' % index  # webpage generator will add suffix + .html
             cam_name = cam_list[index]['name']
-            assert False
-            # cam_page = webpage.Webpage(os.path.join(self.param_dict['www_dir'], cam_page_fname),
-            #                            cam_name,
-            #                            self.param_dict['derived_dir'],
-            #                            self.param_dict['base_data_dir'])
-            # cam_page.make_webpage(self.param_dict['baseline_datetime'],
-            #                       self.param_dict['max_age_days'],
-            #                       self.param_dict['delta_min'],
-            #                       self.image_db)
-            cam_page_fname_list.append(cam_page_fname)
+            page_generator = campage.CamPage(cam_name,
+                                       self.image_db,
+                                       self.param_dict['derived_dir'],
+                                       self.param_dict['base_data_dir'],
+                                       self.param_dict['www_dir'])
+            # generate 1 or more HTML webpages
+            generated_fnames = page_generator.generate(self.param_dict['baseline_datetime'],
+                                                       self.param_dict['max_age_days'],
+                                                       self.param_dict['delta_min'])
+
+            #
+            # augment the existing dictionary list to add the filenames
+            cam_list[index]['page_fnames_list'] = generated_fnames
+            #end
         #end
-        self.cam_page_fname_list = cam_page_fname_list
-        return cam_page_fname_list
+        return cam_list
 
     def sleep(self):
         assert self.param_dict['sleep_interval_min'] > 0.0
@@ -247,8 +252,8 @@ def pano_main(config, loopcnt):
         num_entries_start = len(mypano.image_db.select_all())
         (num_files_added, num_deleted_ext) = mypano.slurp_images()
         num_deleted_age = mypano.cull_old_files()
-        cam_page_fname_list = mypano.gen_camera_pages()
-        index_fname = mypano.gen_index_page()
+        cam_list = mypano.gen_camera_pages()
+        index_fname = mypano.gen_index_page(cam_list)
         mypano.print_summary(num_files_added, num_deleted_ext, num_deleted_age, num_entries_start)
         print("sleeping...%6.2f min" % mypano.param_dict['sleep_interval_min'])
         mypano.sleep()
