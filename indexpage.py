@@ -90,6 +90,9 @@ class IndexPage:
     templ_cam_row = unicode("""
 				<tbody>
 					<tr class="table-active">
+                                                <td>
+                                                        {index}
+                                                </td>
 						<td>
 							{camera_name}
 						</td>
@@ -115,53 +118,13 @@ class IndexPage:
 
         self.dest_fname = dest_fname
 
-    def OLDmake_index(self, cam_list):
-        """
-        IN:
-        cam_list:  list of per-cam dictionary objects
-        """
-        rows_html = ''
-        for n in range(len(cam_list)):   # iterate for each camera name
-            cam_name = cam_info_list[n]['name']
-
-            #
-            # search through cam_page_list for corresponding camera name
-            page_fname_list = None
-            m = 0
-            while (cam_page_list==None):
-                if cam_page_list[m]['cam_name']==cam_name:
-                    page_fnames_list = cam_page_list[m]['page_fnames_list']
-                else:
-                    m += 1
-                #end
-            #end
-            assert page_fname_list != None, "cam_page %s not found in cam_page_list" % cam_name
-            # OK! we found the corresponding dictionary entry listing the webpages
-
-            # iterate through each webpage for current camera
-            for page_fname in page_fname_list:
-                full_cam_page_fname = os.path.join(self.www_dir, page_fname)
-                rows_html += IndexPage.templ_cam_row.format(camera_index=n,
-                                                            camera_name=cam_name,
-                                                            camera_descr=cam_info_list[n]['description'],
-                                                            webpage_url=full_cam_page_fname,
-                                                            admin_url=cam_info_list[n]['admin_url'],
-                                                            live_link_url=cam_info_list[n]['live_url'])
-            #end 
-                             
-        full_dest_fname = os.path.join(self.www_dir, self.dest_fname)
-        f = open(full_dest_fname, "wt")
-        f.write(IndexPage.templ_webpage.format(camera_rows = rows_html))
-        f.close()
-
-        return self.dest_fname
-
     def make_index(self, cam_list):
         """
         IN:
         cam_list:  list of per-cam dictionary objects
         """
         rows_html = ''
+        index=0
         for cam_info in cam_list:  # iterate for each camera name
             cam_name = cam_info['name']
 
@@ -169,11 +132,13 @@ class IndexPage:
             page_fnames_list = cam_info['page_fnames_list']
             for page_fname in page_fnames_list:
                 full_cam_page_fname = os.path.join(self.www_dir, page_fname)
-                rows_html += IndexPage.templ_cam_row.format(camera_name=cam_name,
+                rows_html += IndexPage.templ_cam_row.format(index=index,
+                                                            camera_name=cam_name,
                                                             camera_descr=cam_info['description'],
                                                             webpage_url=full_cam_page_fname,
                                                             admin_url=cam_info['admin_url'],
                                                             live_link_url=cam_info['live_url'])
+                index += 1
             #end
         #end 
                              

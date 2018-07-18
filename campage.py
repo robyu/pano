@@ -310,6 +310,7 @@ class CamPage:
                     # close current file
                     dest_fname = self.calc_dest_fname()
                     self.close_temp_file_move_dest(dest_fname)
+                    dest_fname_list.append(dest_fname)
                     
                     #
                     # start a new file
@@ -323,7 +324,6 @@ class CamPage:
         # close current file
         dest_fname = self.calc_dest_fname()
         self.close_temp_file_move_dest(dest_fname)
-
         dest_fname_list.append(dest_fname)
 
         #
