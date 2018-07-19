@@ -66,6 +66,14 @@ class Pano:
         f.close()
         
         merged_dict = self.merge_dicts(defaults_dict, user_param_dict)
+
+        #
+        # normalize directory paths by making them absolute
+        merged_dict['base_data_dir']  = os.path.realpath(merged_dict['base_data_dir'])
+        merged_dict['database_fname'] = os.path.realpath(merged_dict['database_fname'])
+        merged_dict['derived_dir']    = os.path.realpath(merged_dict['derived_dir'])
+        merged_dict['www_dir']        = os.path.realpath(merged_dict['www_dir'])
+        
         return merged_dict
         
     def merge_dicts(self, defaults_dict, user_dict):

@@ -1,15 +1,15 @@
 {
-    "database_fname" : "panodb.sqlite",
-    "drop_table_flag": 0,
     "base_data_dir" : "",
-    "delta_min": 10,
-    "max_age_days": 14,
-    "www_dir": "www",
-    "derived_dir": "derived",
     "baseline_datetime": "now",
     "cull_old_files": 1,
-    "sleep_interval_min": 5,
+    "database_fname" : "panodb.sqlite",
+    "delta_min": 10,
+    "derived_dir": "derived",
+    "drop_table_flag": 0,
+    "max_age_days": 14,
     "num_worker_threads": -1,
+    "sleep_interval_min": 5,
+    "www_dir": "www",
     "@camera_list (example)" : [
 	{
             "name": "b0",
