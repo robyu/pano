@@ -131,11 +131,10 @@ class IndexPage:
             # iterate through each webpage for current camera
             page_fnames_list = cam_info['page_fnames_list']
             for page_fname in page_fnames_list:
-                full_cam_page_fname = os.path.join(self.www_dir, page_fname)
                 rows_html += IndexPage.templ_cam_row.format(index=index,
                                                             camera_name=cam_name,
                                                             camera_descr=cam_info['description'],
-                                                            webpage_url=full_cam_page_fname,
+                                                            webpage_url=page_fname,
                                                             admin_url=cam_info['admin_url'],
                                                             live_link_url=cam_info['live_url'])
                 index += 1
