@@ -39,6 +39,8 @@ class Pano:
         print("Pano: reading config file (%s)" % config_fname)
         self.param_dict = self.init_param_dict(config_fname)
 
+        self.generate_sym_links()
+        
         if self.param_dict['drop_table_flag']==0:
             drop_table_flag=False
         else:
@@ -46,6 +48,32 @@ class Pano:
         #end 
         self.image_db = datastore.Datastore(self.param_dict['database_fname'],
                                             drop_table_flag=drop_table_flag)
+
+    def generate_sym_links(self):
+        """
+        generate links in www directory to data directories
+        """
+        assert os.path.exists(self.param_dict['www_dir'])
+
+        data_dir_abs_path = os.path.realpath(self.param_dict['base_data_dir'])
+        assert os.path.exists(data_dir_abs_path)
+
+        www_base_dir = os.path.join(self.param_dict['www_dir'], self.param_dict['www_base_dir'])
+        if os.path.exists(www_base_dir)==True:
+            os.unlink(www_base_dir)
+            
+        os.symlink(data_dir_abs_path, www_base_dir)
+
+        derived_dir_abs_path = os.path.realpath(self.param_dict['derived_dir'])
+        assert os.path.exists(derived_dir_abs_path)
+
+        www_derived_dir = os.path.join(self.param_dict['www_dir'], self.param_dict['www_derived_dir'])
+        if os.path.exists(www_derived_dir)==True:
+            os.unlink(www_derived_dir)
+            
+        os.symlink(derived_dir_abs_path, www_derived_dir)
+        
+        
 
     def init_param_dict(self, config_fname):
         """
@@ -69,10 +97,10 @@ class Pano:
 
         #
         # normalize directory paths by making them absolute
-        merged_dict['base_data_dir']  = os.path.realpath(merged_dict['base_data_dir'])
-        merged_dict['database_fname'] = os.path.realpath(merged_dict['database_fname'])
-        merged_dict['derived_dir']    = os.path.realpath(merged_dict['derived_dir'])
-        merged_dict['www_dir']        = os.path.realpath(merged_dict['www_dir'])
+        # merged_dict['base_data_dir']  = os.path.realpath(merged_dict['base_data_dir'])
+        # merged_dict['database_fname'] = os.path.realpath(merged_dict['database_fname'])
+        # merged_dict['derived_dir']    = os.path.realpath(merged_dict['derived_dir'])
+        # merged_dict['www_dir']        = os.path.realpath(merged_dict['www_dir'])
         
         return merged_dict
         
@@ -204,10 +232,13 @@ class Pano:
             cam_page_base_fname =  'cam_%02d' % index  # webpage generator will add suffix + .html
             cam_name = cam_list[index]['name']
             page_generator = campage.CamPage(cam_name,
-                                       self.image_db,
-                                       self.param_dict['derived_dir'],
-                                       self.param_dict['base_data_dir'],
-                                       self.param_dict['www_dir'])
+                                             self.image_db,
+                                             self.param_dict['derived_dir'],
+                                             self.param_dict['base_data_dir'],
+                                             self.param_dict['www_dir'],
+                                             self.param_dict['www_derived_dir'],
+                                             self.param_dict['www_base_dir'])
+                                             
             # generate 1 or more HTML webpages
             generated_fnames = page_generator.generate(self.param_dict['baseline_datetime'],
                                                        self.param_dict['max_age_days'],

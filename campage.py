@@ -85,10 +85,37 @@ class CamPage:
     #<img alt="Bootstrap Image Preview" src="http://www.layoutit.com/img/sports-q-c-140-140-3.jpg">
     #
 
-    def __init__(self, camera_name, db, derived_dir, base_dir, www_dir):
+    def __init__(self,
+                 camera_name,
+                 db,
+                 derived_dir,
+                 base_dir,
+                 www_dir,
+                 www_derived_dir,
+                 www_base_dir):
+        """
+        camera_name = "whatever"
+        db = the image datastore
+        derived_dir = the actual path to the "derived" media, e.g. "/media/derived"
+        base_dir = the actual path to the actual media, e.g. "/media/FTP"
+        www_dir = actual path to webserver directory, e.g. "www"
+        www_derived_dir = path to webserver directory for derived media, e.g. "www/derived"
+        www_base_dir = path to webserver directory for actual media, e.g. "www/FTP"
+        """
+        
         self.db = db  # pointer to datastore
         self.derived_dir = derived_dir
+        os.path.exists(derived_dir)
+        
         self.base_dir = base_dir
+        os.path.exists(base_dir)
+        
+        self.www_derived_dir = www_derived_dir
+        os.path.exists(www_derived_dir)
+        
+        self.www_base_dir = www_base_dir
+        os.path.exists(www_base_dir)
+        
         self.num_images_per_row = 4
 
         self.www_dir = www_dir
@@ -152,18 +179,27 @@ class CamPage:
         if len(row.d['derived_fname']) == 0:   # no thumbnail
             thumb_path = self.default_image_fname
         else:
-            thumb_path = os.path.join(self.derived_dir, row.d['derived_fname'])
+            thumb_path = row.d['derived_fname']
         #end
-        assert os.path.exists(thumb_path)
-        return thumb_path
+        print(type(self.derived_dir))
+        print(self.derived_dir)
+        print(self.www_derived_dir)
+        thumb_path2 = thumb_path.replace(self.derived_dir, self.www_derived_dir)
+        assert os.path.exists(thumb_path), "%s does not exist" % thumb_path
+        assert os.path.exists(thumb_path2), "%s does not exist" % thumb_path2
+        return thumb_path2
 
     def get_actual_path(self, row):
         """
         return the abs path to the actual image/video source file
         """
         actual_path = os.path.join(self.base_dir, row.d['path'], row.d['fname'])
+        actual_path2 = actual_path.replace(self.base_dir, self.www_base_dir)
+        
         assert os.path.exists(actual_path)
-        return actual_path
+        assert os.path.exists(actual_path2)
+        
+        return actual_path2
     
         
     # <a href="https://www.w3schools.com">
@@ -228,6 +264,7 @@ class CamPage:
             #else...
             html += "<p>\n"
             video_fname = row.d['derived_fname']
+            video_fname = video_fname.replace(self.derived_dir, self.www_derived_dir)
             assert os.path.exists(video_fname)
             html += """<a href="{actual_video}">{label}</a>\n"""\
                                 .format(actual_video=video_fname,

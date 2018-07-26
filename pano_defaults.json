@@ -1,5 +1,5 @@
 {
-    "base_data_dir" : "",
+    "base_data_dir" : "FTP",
     "baseline_datetime": "now",
     "cull_old_files": 1,
     "database_fname" : "panodb.sqlite",
@@ -10,6 +10,9 @@
     "num_worker_threads": -1,
     "sleep_interval_min": 5,
     "www_dir": "www",
+    "www_base_dir": "./FTP",
+    "www_derived_dir": "./derived",
+    
     "@camera_list (example)" : [
 	{
             "name": "b0",

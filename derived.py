@@ -14,7 +14,6 @@ def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir,print_cmd_flag=Fa
     dest_path = os.path.join(derived_dir, path)
     dest_fname = os.path.join(dest_path, fname)
     dest_fname = dest_fname.replace('.dav','.mp4')
-    dest_fname = os.path.abspath(dest_fname)
     assert os.path.exists(src_fname)
     try:
         os.makedirs(dest_path)
@@ -54,7 +53,6 @@ def make_thumbnail(base_data_dir, path, fname, derived_dir,print_cmd_flag=False)
     src_fname = os.path.join(base_data_dir, path, fname)
     dest_path = os.path.join(derived_dir, path)
     dest_fname = os.path.join(dest_path, fname)
-    dest_fname = os.path.abspath(dest_fname)
     assert os.path.exists(src_fname)
     try:
         os.makedirs(dest_path)
@@ -239,9 +237,14 @@ def make_derived_files(db, derived_dir=DEFAULT_DERIVED_DIR, num_workers = -1, te
     returns (count_success, count_failed)
     """
     try:
-        os.mkdir(os.path.join('.',derived_dir))
+        os.mkdir(derived_dir)
     except OSError:
-        print("derived dir (%s) already exists" % derived_dir)
+        pass
+
+    #
+    # previous mkdir could fail for a number of reasons, but make sure the directory
+    # actually exists
+    assert os.path.exists(derived_dir)
         
     row_list = db.select_all()
 
