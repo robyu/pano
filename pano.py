@@ -181,7 +181,7 @@ class Pano:
         print("** generate index page")
         assert len(cam_list) > 0, "you gotta run gen_camera_pages first"
 
-        index_page = indexpage.IndexPage()
+        index_page = indexpage.IndexPage(self.param_dict['www_dir'])
         index_fname = index_page.make_index(cam_list)
         return index_fname
 

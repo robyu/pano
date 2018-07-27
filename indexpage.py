@@ -112,8 +112,8 @@ class IndexPage:
 				</tbody>
     """)
 
-    def __init__(self, dest_fname="index.html"):
-        self.www_dir = os.path.join(os.getcwd(), "www")
+    def __init__(self, www_dir, dest_fname="index.html"):
+        self.www_dir = www_dir
         assert os.path.exists(self.www_dir)
 
         self.dest_fname = dest_fname

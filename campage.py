@@ -181,12 +181,8 @@ class CamPage:
         else:
             thumb_path = row.d['derived_fname']
         #end
-        print(type(self.derived_dir))
-        print(self.derived_dir)
-        print(self.www_derived_dir)
         thumb_path2 = thumb_path.replace(self.derived_dir, self.www_derived_dir)
         assert os.path.exists(thumb_path), "%s does not exist" % thumb_path
-        assert os.path.exists(thumb_path2), "%s does not exist" % thumb_path2
         return thumb_path2
 
     def get_actual_path(self, row):
@@ -197,7 +193,6 @@ class CamPage:
         actual_path2 = actual_path.replace(self.base_dir, self.www_base_dir)
         
         assert os.path.exists(actual_path)
-        assert os.path.exists(actual_path2)
         
         return actual_path2
     
@@ -265,7 +260,6 @@ class CamPage:
             html += "<p>\n"
             video_fname = row.d['derived_fname']
             video_fname = video_fname.replace(self.derived_dir, self.www_derived_dir)
-            assert os.path.exists(video_fname)
             html += """<a href="{actual_video}">{label}</a>\n"""\
                                 .format(actual_video=video_fname,
                                         label=row.d['ctime'])
