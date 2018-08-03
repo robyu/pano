@@ -2,7 +2,7 @@
     "database_fname" : "/media/wd1t/panodb.sqlite",
     "base_data_dir" : "/media/wd1t/FTP",
     "delta_min": 10,
-    "max_age_days": 1.0,
+    "max_age_days": 21.0,
     "www_dir": "/var/www",
     "derived_dir": "/media/wd1t/derived",
     "baseline_datetime": "now",

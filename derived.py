@@ -14,7 +14,11 @@ def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir,print_cmd_flag=Fa
     dest_path = os.path.join(derived_dir, path)
     dest_fname = os.path.join(dest_path, fname)
     dest_fname = dest_fname.replace('.dav','.mp4')
-    assert os.path.exists(src_fname)
+
+    #
+    # dont assert src existence--file may have been deleted?!
+    #assert os.path.exists(src_fname)
+    
     try:
         os.makedirs(dest_path)
     except os.error:
