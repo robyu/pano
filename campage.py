@@ -173,7 +173,7 @@ class CamPage:
 
     def get_thumb_path(self, row):
         """
-        return the abs path to the derived image/video file
+        return the path to the derived image/video file
         OR a default image (if the derived file does not exist)
         """
         if len(row.d['derived_fname']) == 0:   # no thumbnail
@@ -181,18 +181,28 @@ class CamPage:
         else:
             thumb_path = row.d['derived_fname']
         #end
+
+        if os.path.exists(thumb_path)==False:
+            print("%s does not exist" % thumb_path)
+            thumb_path = self.default_image_name
+        #end
         thumb_path2 = thumb_path.replace(self.derived_dir, self.www_derived_dir)
-        assert os.path.exists(thumb_path), "%s does not exist" % thumb_path
         return thumb_path2
 
     def get_actual_path(self, row):
         """
-        return the abs path to the actual image/video source file
+        return the path to the actual image/video source file
         """
         actual_path = os.path.join(self.base_dir, row.d['path'], row.d['fname'])
-        actual_path2 = actual_path.replace(self.base_dir, self.www_base_dir)
+
+        if os.path.exists(actual_path)==False:
+            print("%s does not exist" % actual_path)
+            actual_path = self.default_image_name
+        #end
         
-        assert os.path.exists(actual_path2, "DOES NOT EXIST: (%s)" % actual_path2)
+        # replace basedir with webpage-friendly path
+        # ./FTP/120/AMC0028V_795UUB/2018-08-24/001/jpg/22/27/22[M][0@0][0].jpg
+        actual_path2 = actual_path.replace(self.base_dir, self.www_base_dir)
         
         return actual_path2
     
