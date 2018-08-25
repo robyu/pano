@@ -35,15 +35,16 @@ class Pano:
     param_dict = {}
     image_db = None
     
-    def __init__(self, config_fname):
+    def __init__(self, config_fname,droptable=False):
         print("Pano: reading config file (%s)" % config_fname)
         self.param_dict = self.init_param_dict(config_fname)
 
         self.generate_sym_links()
         
-        if self.param_dict['drop_table_flag']==0:
+        if self.param_dict['drop_table_flag']==0 and droptable==False:
             drop_table_flag=False
         else:
+            print("drop existing table")
             drop_table_flag=True
         #end 
         self.image_db = datastore.Datastore(self.param_dict['database_fname'],
@@ -281,10 +282,11 @@ class Pano:
 @click.command()
 @click.argument('config')
 @click.option('--loopcnt',default=-1,help='number of times to loop; -1 == forever')
-def pano_main(config, loopcnt):
+@click.option('--droptable/--no-droptable', default=False,help='delete existing image database')
+def pano_main(config, loopcnt,droptable):
     print("config file=%s" % config)
     print("loopcnt=%d" % loopcnt)
-    mypano = Pano(config)
+    mypano = Pano(config,droptable)
     loop_flag = True
     loop_index=0
     while loop_flag:

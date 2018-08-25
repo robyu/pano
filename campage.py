@@ -192,7 +192,7 @@ class CamPage:
         actual_path = os.path.join(self.base_dir, row.d['path'], row.d['fname'])
         actual_path2 = actual_path.replace(self.base_dir, self.www_base_dir)
         
-        assert os.path.exists(actual_path)
+        assert os.path.exists(actual_path2, "DOES NOT EXIST: (%s)" % actual_path2)
         
         return actual_path2
     
