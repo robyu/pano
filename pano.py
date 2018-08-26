@@ -9,6 +9,7 @@ import indexpage
 import click
 import time
 import timeit
+import subprocess
 
 """
 data dict
@@ -181,7 +182,7 @@ class Pano:
         """
         print("** generate index page")
         assert len(cam_list) > 0, "you gotta run gen_camera_pages first"
-
+        
         index_page = indexpage.IndexPage(self.param_dict['www_dir'])
         index_fname = index_page.make_index(cam_list)
         return index_fname
@@ -202,7 +203,7 @@ class Pano:
                                   max_age_days = self.param_dict['max_age_days'])
         return num_deleted
     
-    @timeit.timeit
+
     def gen_camera_pages(self, make_derived_files=True):
         """
         for each camera listed in the json file, 
@@ -225,9 +226,12 @@ class Pano:
         
         cam_list = self.get_cam_list()
 
-        if os.path.exists(self.param_dict['www_dir'])==False:
-            os.mkdir(self.param_dict['www_dir'])
+        assert  os.path.exists(self.param_dict['www_dir'])
 
+        #
+        # delete old cam pages
+        subprocess.call(['find',self.param_dict['www_dir'],'-type','f','-name','cam*.html','-delete'])
+            
         print("*** write webpages")
         for index in range(len(cam_list)):
             cam_page_base_fname =  'cam_%02d' % index  # webpage generator will add suffix + .html
