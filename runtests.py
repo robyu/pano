@@ -22,7 +22,7 @@ run all unit tests
 python -m unittest runtests.py
 
 run an individual test
-python -m unittest testica.TestIca.test_smoketest   # works with #pu.db in code
+python -m unittest runtests.TestPano.test_create_table   # works with #pu.db in code
 """
 
 class TestPano(unittest.TestCase):
@@ -42,7 +42,7 @@ class TestPano(unittest.TestCase):
         #pu.db
         num_deleted = dirwalk.cull_files_by_ext(base_data_dir=self.test_data_dir)
         print("num_deleted = %d" % num_deleted)
-        self.assertTrue(num_deleted==290)
+        self.assertTrue(num_deleted==87)
         
     def test_cull_empty_dirs(self):
         dirwalk.cull_empty_dirs(self.test_data_dir)
@@ -108,14 +108,15 @@ class TestPano(unittest.TestCase):
         db = datastore.Datastore(drop_table_flag=True)
         num_added = dirwalk.walk_dir_and_load_db(db, 'testdata/FTP-culled')
         db.close()
-        self.assertTrue(num_added==2642)
+        print("num_added=%d" % num_added)
+        self.assertTrue(num_added==621)
 
     def test_walk_dir_and_load_twice(self):
         #pu.db
         db = datastore.Datastore(drop_table_flag=True)
         num_added = dirwalk.walk_dir_and_load_db(db, 'testdata/FTP-culled')
         db.close()
-        self.assertTrue(num_added==2642)
+        self.assertTrue(num_added==621)
 
         #
         # 2nd time around, do not drop table
@@ -227,15 +228,15 @@ class TestPano(unittest.TestCase):
 
         row_list = db.select_by_age_range(baseline_time='2018-02-25T19:14:22', max_age_days=0.0007)  # ~ 1 min
         print(len(row_list))
-        self.assertTrue(len(row_list)==4)
+        self.assertTrue(len(row_list)==0)
 
         row_list = db.select_by_age_range(baseline_time='2018-02-26', max_age_days=0.25)
         print(len(row_list))
-        self.assertTrue(len(row_list)==27)
+        self.assertTrue(len(row_list)==19)
 
         row_list = db.select_by_age_range(baseline_time='2018-02-26', max_age_days=0.33)
         print(len(row_list))
-        self.assertTrue(len(row_list)==423)
+        self.assertTrue(len(row_list)==214)
 
         db.close()
 
@@ -256,7 +257,7 @@ class TestPano(unittest.TestCase):
         print("num deleted = %d" % num_deleted)
         print("num after = %d" % num_after)
         
-        self.assertTrue(num_deleted==2219)
+        self.assertTrue(num_deleted==407)
         self.assertTrue(num_after + num_deleted==num_before)
         db.close()
 
@@ -288,8 +289,8 @@ class TestPano(unittest.TestCase):
         count_success, count_failed = derived.make_derived_files(db,
                                                                  derived_dir=self.derived_dir,
                                                                  num_workers = 4)
-        self.assertTrue (count_success==418)
-        self.assertTrue(count_failed==5)
+        self.assertTrue (count_success==211)
+        self.assertTrue(count_failed==3)
         db.close()
 
     def test_make_derived_files_multi_odd(self):
@@ -306,8 +307,8 @@ class TestPano(unittest.TestCase):
         count_success, count_failed = derived.make_derived_files(db,
                                                                  derived_dir=self.derived_dir,
                                                                  num_workers = 3)
-        self.assertTrue (count_success==418)
-        self.assertTrue(count_failed==5)
+        self.assertTrue (count_success==211)
+        self.assertTrue(count_failed==3)
         db.close()
         
     def test_string_to_sec(self):
@@ -343,15 +344,19 @@ class TestPano(unittest.TestCase):
         self.assertTrue(True)
 
     def test_select_by_time(self):
-        #pu.db
+        # equiv to :
+        # select * from pano where cam_name='b0' and (ctime_unix > 1519596800) and (ctime_unix <= 1519596844) and mediatype=1
+
+
         db = datastore.Datastore(drop_table_flag=True)
         dirwalk.walk_dir_and_load_db(db, 'testdata/FTP-culled')
         delta_sec = 60 * 10   # 10 minutes
-        upper_time_sec = db.iso8601_to_sec('2018-02-25T19:14:22')
+        upper_time_sec = db.iso8601_to_sec('2018-02-25T14:20:00')
         lower_time_sec = upper_time_sec - delta_sec
-
+        print("select images between upper=%d lower=%d" % (upper_time_sec, lower_time_sec))
         row_list = db.select_by_time_cam_media('b0',upper_time_sec, lower_time_sec,mediatype=datastore.MEDIA_IMAGE)
-        self.assertTrue(len(row_list)==6)
+        print("len(row_list)=%d" % len(row_list))
+        self.assertTrue(len(row_list)==18)
         
     # def test_gen_webpage(self):
     #     #pu.db
@@ -413,9 +418,11 @@ class TestPano(unittest.TestCase):
 
         cam_pages = campage.CamPage(camera_name,
                                     db,
-                                    os.path.join(os.getcwd(), derived.DEFAULT_DERIVED_DIR),
-                                    os.path.join(os.getcwd(), testdata_dir),
-                                    os.path.join(self.www_dir))
+                                    'derived',
+                                    testdata_dir,
+                                    'www',
+                                    'www/derived',
+                                    'www/FTP')
         fname_webpage_list = cam_pages.generate(start_datetime, 1, delta_min)
 
         for fname in fname_webpage_list:
@@ -441,7 +448,7 @@ class TestPano(unittest.TestCase):
         mypano = pano.Pano("testdata2/test_pano_init.json")
         num_files_added,num_deleted = mypano.slurp_images()
         print("num_files_added=%d" % num_files_added)
-        self.assertTrue(num_files_added==2642)
+        self.assertTrue(num_files_added==621)
 
     def test_pano_slurp_b1_only(self):
         #pu.db
@@ -452,7 +459,7 @@ class TestPano(unittest.TestCase):
         
         num_files_added,num_deleted = mypano.slurp_images()
         print("num_files_added=%d" % num_files_added)
-        self.assertTrue(num_files_added==678)
+        self.assertTrue(num_files_added==318)
         
     def test_pano_make_pages(self):
         #pu.db
@@ -592,8 +599,8 @@ class TestPano(unittest.TestCase):
         print("0: success=%d, fail=%d, time=%f" % (count_success0, count_failed0, time_trial0))
         print("1: success=%d, fail=%d, time=%f" % (count_success1, count_failed1, time_trial1))
 
-        self.assertTrue(count_success0==418)
-        self.assertTrue(count_failed0==5)
+        self.assertTrue(count_success0==211)
+        self.assertTrue(count_failed0==3)
         
         self.assertTrue(count_success1==0)  # no files processed 2nd trial
         self.assertTrue(count_failed1==0)  # no files processed 2nd trial
@@ -638,7 +645,8 @@ class TestPano(unittest.TestCase):
         
         derived_fname = derived.convert_dav_to_mp4(base_data_dir, path, fname, self.derived_dir, print_cmd_flag=True)
         print('derived_fname=%s' % derived_fname)
-        self.assertTrue(os.path.exists(os.path.join(self.derived_dir, derived_fname)))
+        #self.assertTrue(os.path.exists(os.path.join(self.derived_dir, derived_fname)))
+        self.assertTrue(os.path.exists(derived_fname))
 
     def test_derive_subprocess_jpg(self):
         base_data_dir = 'testdata/FTP-culled'
@@ -653,7 +661,8 @@ class TestPano(unittest.TestCase):
 
         derived_fname = derived.make_thumbnail(base_data_dir, path, fname, self.derived_dir, print_cmd_flag=True)
         print('derived_fname=%s' % derived_fname)
-        self.assertTrue(os.path.exists(os.path.join(self.derived_dir, derived_fname)))
+        #self.assertTrue(os.path.exists(os.path.join(self.derived_dir, derived_fname)))
+        self.assertTrue(os.path.exists(derived_fname))
 
     def test_subprocess(self):
         cmd = ['ls','-l']
