@@ -2,13 +2,15 @@
 import datastore
 import time
 import os
+import dtutils
 """
 
   
 """
 class IndexPage:
     #
-    # {camera_rows} = concatenated camera rows; see templ_camera_row
+    # cam_summary_rows
+    # cam_status_rows
     templ_webpage = unicode("""
 <!DOCTYPE html>
 <html lang="en">
@@ -17,7 +19,7 @@ class IndexPage:
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>Bootstrap 4, from LayoutIt!</title>
+    <title>Panopticon</title>
 
     <meta name="description" content="panopticon">
     <meta name="author" content="Robert Yu, Buttersquid Inc">
@@ -31,34 +33,55 @@ class IndexPage:
     <div class="container-fluid">
 	<div class="row">
 		<div class="col-md-12">
-			<h3>
-				Panopticon
-			</h3>
-			<table class="table table-sm">
-				<thead>
-					<tr>
-						<th>
-							#
-						</th>
-						<th>
-							Camera Name
-						</th>
-						<th>
-							Description
-						</th>
-						<th>
-							Status Page
-						</th>
- 				                <th>
-						        Admin Login
-						</th>
- 				                <th>
-						        Live Video
-						</th>
-					</tr>
-				</thead>
-{camera_rows}
-			</table>
+		    <h3>
+			Panopticon
+		    </h3>
+                    <!--  SUMMARY TABLE HEADER -->
+		    <table class="table table-sm">
+			<thead>
+			    <tr>
+				<th>
+				    Camera Name
+				</th>
+				<th>
+				    Description
+				</th>
+ 				<th>
+				    Admin Login
+				</th>
+ 				<th>
+				    Live Video
+				</th>
+			    </tr>
+			</thead>
+                        <!- summary rows go here ->
+                        {cam_summary_rows}
+		    </table>
+                    <!-- CAMERA STATUS HEADER -->
+		    <table class="table table-sm">
+			<thead>
+			    <tr>
+				<th>
+				    #
+				</th>
+				<th>
+				    Camera Name
+				</th>
+                                <th>
+                                    Start 
+                                </th>
+                                <th>
+                                    Stop
+                                </th>
+				<th>
+				    Status Page
+				</th>
+			    </tr>
+			</thead>
+                        <!- camera status rows go here ->
+                        {cam_status_rows}
+		    </table>
+                    
 		</div>
 	</div>
 	<div class="row">
@@ -80,36 +103,61 @@ class IndexPage:
     <script src="js/bootstrap.min.js"></script>
     <script src="js/scripts.js"></script>
   </body>
+
     """)
     #
     # templ_row placeholders:
-    # {upper_datetime} = upper  date and time, e.g. 2018-03-22 10:10:00
+    # {camera_name}
+    # {camera_descr}
+    # {admin_url}
+    # {live_url}
+    templ_summary_row = unicode("""
+                        <!-- SUMMARY ROW -->                        
+                        <tbody>
+                            <tr class="table-active" >
+                                <td>
+                                    {camera_name}
+                                </td>
+                                <td>
+                                    {camera_descr}
+                                </td>
+                                <td>
+                                    <a href="{admin_url}">admin_url</a>
+                                </td>
+                                <td>
+                                    <a href={live_url}>live-link</a>
+                                </td>
+                            </tr>
+                        </tbody>
+    """)
+    #
+    # templ_row placeholders:
+    # {index}
+    # {camera_name}
     # {lower_datetime} = lower date and time
-    # {html_images} = HTML of images
-    # {html_videos} = HTML of videos
-    templ_cam_row = unicode("""
-				<tbody>
-					<tr class="table-active">
-                                                <td>
-                                                        {index}
-                                                </td>
-						<td>
-							{camera_name}
-						</td>
-						<td>
-							{camera_descr}
-						</td>
-						<td>
-							<a href=\"{webpage_url}\">{camera_name}</a>
-						</td>
-						<td>
-							<a href=\"{admin_url}\">{camera_name}</a>
-						</td>
-						<td>
-						        <a href=\"{live_link_url}\">{live_link_url}</a>
-					        </td>
-					</tr>
-				</tbody>
+    # {upper_datetime} = upper  date and time
+    # {webpage_url} = status webpage URL
+    templ_status_row = unicode("""
+                        <!-- CAMERA STATUS ROW -->                        
+                        <tbody>
+                            <tr class="table-active" >
+                                <td>
+                                    {index}
+                                </td>
+                                <td>
+                                    {camera_name}
+                                </td>
+                                <td>
+                                    {lower_datetime}
+                                </td>
+                                <td>
+                                    {upper_datetime}
+                                </td>
+                                <td>
+                                    <a href="{webpage_url}">{webpage_url}</a>
+                                </td>
+                            </tr>
+                        </tbody>
     """)
 
     def __init__(self, www_dir, dest_fname="index.html"):
@@ -118,32 +166,63 @@ class IndexPage:
 
         self.dest_fname = dest_fname
 
+    def generate_summary_rows(self, cam_list):
+        """
+        generate HTML for summary table rows
+        """
+        rows_html = ''
+        for cam_info in cam_list:
+            rows_html += IndexPage.templ_summary_row.format(camera_name = cam_info['name'],
+                                                            camera_descr = cam_info['description'],
+                                                            admin_url=cam_info['admin_url'],
+                                                            live_url = cam_info['live_url'])
+        #end
+        return rows_html
+
+    def generate_status_rows(self, cam_list):
+        """
+        generate HTML for status table rows
+        """
+        rows_html = ''
+        index=0
+        for cam_info in cam_list:
+            for page_dict in cam_info['status_page_list']:
+                #
+                # each dict entry in status_page_list has these keys (see campage.py::generate)
+                # lower_time_sec
+                # upper_time_sec
+                # page_fname
+                page_fname = page_dict['page_fname']
+                
+                # STOPPED HERE
+                # sec to iso8601?
+                #lower_dt = str(page_dict['lower_time_sec']) #"Sun Aug 26 2018 14:00"
+                fmt = "%a %b %d %H:%M:%S"
+                lower_dt = dtutils.sec_to_str(page_dict['lower_time_sec'],fmt)
+                upper_dt = dtutils.sec_to_str(page_dict['upper_time_sec'],fmt)
+                rows_html += IndexPage.templ_status_row.format(index=index,
+                                                               camera_name=cam_info['name'],
+                                                               lower_datetime = lower_dt,
+                                                               upper_datetime = upper_dt,
+                                                               webpage_url=page_fname)
+                index += 1
+            #end
+        #end
+        return rows_html
+        
+        
     def make_index(self, cam_list):
         """
         IN:
         cam_list:  list of per-cam dictionary objects
         """
-        rows_html = ''
-        index=0
-        for cam_info in cam_list:  # iterate for each camera name
-            cam_name = cam_info['name']
+        summary_html = self.generate_summary_rows(cam_list)
+        status_html = self.generate_status_rows(cam_list)
 
-            # iterate through each webpage for current camera
-            page_fnames_list = cam_info['page_fnames_list']
-            for page_fname in page_fnames_list:
-                rows_html += IndexPage.templ_cam_row.format(index=index,
-                                                            camera_name=cam_name,
-                                                            camera_descr=cam_info['description'],
-                                                            webpage_url=page_fname,
-                                                            admin_url=cam_info['admin_url'],
-                                                            live_link_url=cam_info['live_url'])
-                index += 1
-            #end
-        #end 
-                             
         full_dest_fname = os.path.join(self.www_dir, self.dest_fname)
         f = open(full_dest_fname, "wt")
-        f.write(IndexPage.templ_webpage.format(camera_rows = rows_html))
+        f.write(IndexPage.templ_webpage.format(cam_summary_rows = summary_html,
+                                               cam_status_rows = status_html))
         f.close()
 
         return self.dest_fname

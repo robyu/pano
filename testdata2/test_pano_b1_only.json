@@ -3,7 +3,7 @@
     "drop_table_flag":1,
     "base_data_dir" : "testdata/FTP-culled",
     "delta_min": 10,
-    "max_age_days": 0.25,
+    "max_age_days": 2.0,
     "www_dir": "www",
     "baseline_datetime": "2018-02-25T19:14:22",
     "cull_old_files": 1,

@@ -10,6 +10,7 @@ import click
 import time
 import timeit
 import subprocess
+import pudb
 
 """
 data dict
@@ -213,7 +214,7 @@ class Pano:
 
         returns:
         list of dictionary elements, where each element is
-        the camera-info list (see get_cam_list) plus an extra entry, "page_fnames_list,"
+        the camera-info list (see get_cam_list) plus an extra entry, "status_page_list"
         listing the web pages
         """
         print("** generate camera webpages")
@@ -231,7 +232,7 @@ class Pano:
         #
         # delete old cam pages
         subprocess.call(['find',self.param_dict['www_dir'],'-type','f','-name','cam*.html','-delete'])
-            
+        #pu.db
         print("*** write webpages")
         for index in range(len(cam_list)):
             cam_page_base_fname =  'cam_%02d' % index  # webpage generator will add suffix + .html
@@ -245,13 +246,13 @@ class Pano:
                                              self.param_dict['www_base_dir'])
                                              
             # generate 1 or more HTML webpages
-            generated_fnames = page_generator.generate(self.param_dict['baseline_datetime'],
+            status_page_list = page_generator.generate(self.param_dict['baseline_datetime'],
                                                        self.param_dict['max_age_days'],
                                                        self.param_dict['delta_min'])
 
             #
             # augment the existing dictionary list to add the filenames
-            cam_list[index]['page_fnames_list'] = generated_fnames
+            cam_list[index]['status_page_list'] = status_page_list    # formerly page_fnames_list
             #end
         #end
         return cam_list
@@ -297,6 +298,7 @@ def pano_main(config, loopcnt,droptable):
         num_entries_start = len(mypano.image_db.select_all())
         (num_files_added, num_deleted_ext) = mypano.slurp_images()
         num_deleted_age = mypano.cull_old_files()
+        #pu.db
         cam_list = mypano.gen_camera_pages()
         index_fname = mypano.gen_index_page(cam_list)
         mypano.print_summary(num_files_added, num_deleted_ext, num_deleted_age, num_entries_start)

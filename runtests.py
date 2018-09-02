@@ -17,6 +17,7 @@ import pano
 import derived
 import glob
 
+
 """
 run all unit tests
 python -m unittest runtests.py
@@ -194,10 +195,14 @@ class TestPano(unittest.TestCase):
         -- result is 2018-04-27 20:46:11
         """
         #pu.db
+
         time_string0 = '2018-04-01 18:00:00'
         db = datastore.Datastore(drop_table_flag=True)
         time_sec = db.iso8601_to_sec(time_string0)
+        
         time_string = db.sec_to_iso8601(time_sec)
+        
+        print("%s %s" % (time_string0, time_string))
         #time_string = time_string.replace('T',' ')
         time_string = time_string.encode('utf8')    # convert from decode to plain
         self.assertTrue(time_string==time_string0)
@@ -668,6 +673,25 @@ class TestPano(unittest.TestCase):
         cmd = ['ls','-l']
         subprocess.call(cmd)
         self.assertTrue(True)
+
+    def test_datetime_epoch_to_local(self):
+        """
+        see https://docs.python.org/2/library/datetime.html#strftime-strptime-behavior
+        for formatting options
+
+        fmt = "%Y-%m-%d %H:%M:%S"
+        t = dt.datetime.fromtimestamp(float(time_sec))
+        time_str = t.strftime(fmt)
+
+        ctime: u'2018-02-25T18:49:48'
+        ctime_unix:     1519613388,
+        """
+        epoch = 1519613388
+        fmt = "%a %Y-%m-%d %H:%M:%S"
+        
+        stime = dtutils.sec_to_custom(epoch, fmt)
+        print("%s" % stime)
+        self.assertTrue(stime=="Sun 2018-02-25 18:49:48")
         
 if __name__ == '__main__':
     unittest.main()

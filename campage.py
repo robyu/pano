@@ -2,6 +2,7 @@
 import datastore
 import time
 import os
+import dtutils
 """
 
   
@@ -53,7 +54,7 @@ class CamPage:
 	<div class="row">
 	    <div class="col-md-6">
 		<h2>
-		    {upper_datetime}..{lower_datetime}
+		    {lower_datetime}..{upper_datetime}
 		</h2>
 		<p>
                     {html_images}
@@ -131,7 +132,7 @@ class CamPage:
         # compose HTML in a temporary file, then
         # rename it to final dest fname.
         self.temp_fname = os.path.join(self.www_dir, "tmp_camera.html")
-        self.max_rows_per_file = 300
+        self.max_rows_per_file = 50
         self.fname_index=0
 
     def calc_dest_fname(self):
@@ -295,7 +296,15 @@ class CamPage:
                                         html_videos = html_videos)
         self.dest_file.write(html)
         return
-        
+
+    def make_status_dict(self, dest_fname, upper_time_sec, lower_time_sec):
+        d={}
+        assert upper_time_sec >= lower_time_sec
+        d['page_fname'] = dest_fname
+        d['upper_time_sec'] = upper_time_sec
+        d['lower_time_sec'] = lower_time_sec
+        return d
+    
     def generate(self, upper_datetime, max_age_days, interval_min):
         """
         given
@@ -303,15 +312,18 @@ class CamPage:
         max_age_days: maximum number of days to include in webpage
         interval_min: time interval for each row in webpage
 
-        generate a complete webpage
+        generates 1 or more camera status webpages
 
         RETURNS
-        dest_fname_list:  list of generated HTML webpages NOT preceded with www_dir,
-        e.g.
-        camera0_000.html
-        NOT www/camera0_000.html
+        status_page_list:  list of dictionary elements
+        each dict has keys:
+        'page_fname' : NOT preceded with www_dir, e.g. camera0_000.html and NOT www/camera0_000.html
+        'upper_time_sec'
+        'lower_time_sec'
+
         """
-        dest_fname_list = []
+        timefmt = "%a %b %d %H:%M:%S"
+        status_page_list = []
         #
         # convert and compute datetime intervals in seconds
         upper_time_sec = self.db.iso8601_to_sec(upper_datetime)
@@ -327,7 +339,9 @@ class CamPage:
         self.dest_file = self.open_temp_file_write_header()
 
         # iterate through all rows which fall into the time interval
+        # iterate backwards through time, from latest (upper time) to oldest (lower time)
         num_rows_per_file = 0
+        curr_file_upper_time_sec = -1
         while(upper_time_sec > final_lower_time_sec):
             lower_time_sec = upper_time_sec - interval_sec
             row_image_list = self.db.select_by_time_cam_media(self.camera_name,
@@ -339,10 +353,17 @@ class CamPage:
                                                          lower_time_sec,
                                                          mediatype=datastore.MEDIA_VIDEO)
             if (len(row_image_list)>0) or (len(row_video_list)>0):
+                #
+                # if upper_time0 not yet recorded, then do so
+                if curr_file_upper_time_sec <= 0:
+                    curr_file_upper_time_sec = upper_time_sec
+                    
                 image_html = self.make_html_image_list(row_image_list)
                 video_html = self.make_html_video_list(row_video_list)
-                start_datetime = self.db.sec_to_iso8601(upper_time_sec)
-                stop_datetime = self.db.sec_to_iso8601(lower_time_sec)
+                # start_datetime = self.db.sec_to_iso8601(upper_time_sec)
+                # stop_datetime = self.db.sec_to_iso8601(lower_time_sec)
+                start_datetime = dtutils.sec_to_str(upper_time_sec, timefmt)
+                stop_datetime = dtutils.sec_to_str(lower_time_sec, timefmt)
                 self.write_row(image_html, video_html, start_datetime, stop_datetime)
 
                 num_rows_per_file += max(len(row_image_list), len(row_video_list))
@@ -351,12 +372,17 @@ class CamPage:
                     # close current file
                     dest_fname = self.calc_dest_fname()
                     self.close_temp_file_move_dest(dest_fname)
-                    dest_fname_list.append(dest_fname)
+                    status_page_list.append(self.make_status_dict(dest_fname, curr_file_upper_time_sec, lower_time_sec))
                     
                     #
                     # start a new file
                     self.dest_file = self.open_temp_file_write_header()
-                    num_rows_per_file = 0  # reset count
+
+                    # reset row count
+                    num_rows_per_file = 0
+
+                    # reset upper_time
+                    curr_file_upper_time_sec = -1
                 #end 
             #end
             upper_time_sec = lower_time_sec
@@ -365,11 +391,11 @@ class CamPage:
         # close current file
         dest_fname = self.calc_dest_fname()
         self.close_temp_file_move_dest(dest_fname)
-        dest_fname_list.append(dest_fname)
+        status_page_list.append(self.make_status_dict(dest_fname, upper_time_sec, lower_time_sec))
 
         #
         # for next time around, restart the suffix index
         self.fname_index=0
         
-        return dest_fname_list
+        return status_page_list
     
