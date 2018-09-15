@@ -3,6 +3,7 @@ import datastore
 import time
 import os
 import dtutils
+import pudb
 """
 
   
@@ -12,79 +13,103 @@ class CamPage:
     # {cam_name} = camera name
     templ_header = unicode("""
 <!DOCTYPE html>
-<html lang="en">
-   <head>
-      <meta charset="utf-8">
-      <meta http-equiv="X-UA-Compatible" content="IE=edge">
-      <meta name="viewport" content="width=device-width, initial-scale=1">
+<html>
+    <head>
+        <!-- Required meta tags -->
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-      <title>Panopticon:{cam_name}</title>
+        <title>Panopticon Media</title>
+        <meta name="description" content="panopticon">
+        <meta name="author" content="Robert Yu, Buttersquid Inc">
+        <META HTTP-EQUIV="refresh" CONTENT="300"> 
 
-      <meta name="description" content="panopticon">
-      <meta name="author" content="Robert Yu, Buttersquid Inc">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+	<link rel="stylesheet" href="css/styles.css">
 
-      <link href="css/bootstrap.min.css" rel="stylesheet">
-      <link href="css/style.css" rel="stylesheet">
-
-      <META HTTP-EQUIV="refresh" CONTENT="300"> 
-
-      <FORM>
-      <INPUT TYPE="button" onClock="history.go(0)" VALUE="Refresh">
-      </FORM>
-
-   </head>
-   <div class="container-fluid">
+    </head>
+    <body>
+        <nav class="navbar navbar-dark bg-dark sticky-top">
+            <!-- Navbar content -->
+            <a class="navbar-brand" href="index.html"><< status page</a>
+        </nav>
+        <div class="container-fluid"> <!-- container-fluid takes up 100% of viewport -->
     """)
+
     templ_footer=unicode("""
-   </div>
-   <script src="js/jquery.min.js"></script>
-   <script src="js/bootstrap.min.js"></script>
-   <script src="js/scripts.js"></script>
-   </body>
+        <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+        <script src="js/scripts.js"></script>
+    </body>
 </html>
     """)
 
-    #
-    # templ_row placeholders:
-    # {upper_datetime} = upper  date and time, e.g. 2018-03-22 10:10:00
-    # {lower_datetime} = lower date and time
-    # {html_images} = HTML of images
-    # {html_videos} = HTML of videos
-    templ_row = unicode("""
-	<div class="row">
-	    <div class="col-md-6">
-		<h2>
-		    {lower_datetime}..{upper_datetime}
-		</h2>
-		<p>
+            # <!-- TEMPLATE START media-row
+
+            #      placeholders:
+            #      {index} - preferably zero-padded two digit, e.g. 00, 01, 02
+            #      {upper_datetime}
+            #      {lower_datetime}
+            #      {html_images}
+            #      {html_videos}
+            # -->
+    templ_media_row = unicode("""
+            <div class="row" >
+                <!--
+                     this row spans the width of the container
+                     the video player div goes in this row 
+                     so that the video player spans the entire width
+                -->
+                <h3>
+                    {lower_datetime} .. {upper_datetime}
+                </h3>
+
+                <!-- put the video player in the div above the image and video columns  -->
+                <div class="video-pop-up" id="video_pop{index}" >
+                    div_video_pop{index}
+                </div>
+            </div>
+            
+            <div class="row">
+                <!-- thumbnail column -->
+                <div class="col-sm-10">
+                    <!-- insert image html here -->
                     {html_images}
-		</p>
-	    </div>
-	    <div class="col-md-6">
-		<h2>
-		    Col 2
-		</h2>
-		<p>
-                   <ul class="list-group">
-                       {html_videos}
-                   </ul>
-		</p>
-		<p>
-		    <a class="btn" href="#">View details</a>
-		</p>
-	    </div>
-	</div>
+                </div>
+                <!-- video column -->
+                <div class="col-sm-2">
+                    <!-- insert videos here  -->
+                    {html_videos}
+                </div>
+            </div>
     """)
 
-    templ_list_image=unicode("""
-    <li class="list-group-item">
-       {image_list}
-    </li>
+    
+                    # <!-- TEMPLATE START image_link
+                         
+                    #      placeholders:
+                    #      {thumb_image}
+                    #      {alt_txt}
+                    #      {actual_image}
+                    # -->
+    templ_image_link=unicode("""
+                    <a href="{actual_image}"><img class="thumbnail" alt="{alt_txt}" src="{thumb_image}" ></a>
     """)
 
-    #
-    #<img alt="Bootstrap Image Preview" src="http://www.layoutit.com/img/sports-q-c-140-140-3.jpg">
-    #
+                    # <!-- TEMPLATE START video_link
+                    #      placeholders:
+                    #      {index} - same index as parent div
+                    #      {actual_video}
+                    #      {lower_time}
+                    # -->
+    templ_video_link=unicode("""
+                    <p>
+                        <button class="btn btn-primary" type="button" onclick="onVideoClick('{actual_video}','video_pop{index}');">
+                            {lower_time}
+                        </button>
+                    </p>
+    """)
 
     def __init__(self,
                  camera_name,
@@ -132,7 +157,7 @@ class CamPage:
         # compose HTML in a temporary file, then
         # rename it to final dest fname.
         self.temp_fname = os.path.join(self.www_dir, "tmp_camera.html")
-        self.max_rows_per_file = 50
+        self.max_images_per_page = 50
         self.fname_index=0
 
     def calc_dest_fname(self):
@@ -222,39 +247,33 @@ class CamPage:
         #
         # make a single row of (num_images_per_row) images
         while n+self.num_images_per_row <= len(image_row_list):
-            html += "<p>\n"
             for m in range(self.num_images_per_row):
                 row = image_row_list[n+m]
                 thumb_path  = self.get_thumb_path(row)
                 actual_path = self.get_actual_path(row)
-                html += """<a href="{actual_image}"> <img alt="{alt_txt}" src="{thumb}"></a>\n"""\
-                                    .format(actual_image=actual_path,
-                                            alt_txt=row.d['ctime'],
-                                            thumb=thumb_path)
+                html += CamPage.templ_image_link.format(actual_image=actual_path,
+                                                        alt_txt=row.d['ctime'],
+                                                        thumb_image=thumb_path)
             #end
-            html += "</p>\n"
             n += self.num_images_per_row
         #end
         assert len(image_row_list) - n < self.num_images_per_row
 
         #
         # make a row of the remaining imagees
-        html += "<p>\n"
         while n < len(image_row_list):
             row = image_row_list[n]
             thumb_path  = self.get_thumb_path(row)
             actual_path = self.get_actual_path(row)
-            html += """<a href="{actual_image}"> <img alt="{alt_txt}" src="{thumb}"></a>\n"""\
-                                .format(actual_image=actual_path,
-                                        alt_txt=row.d['ctime'],
-                                        thumb=thumb_path)
+            html += CamPage.templ_image_link.format(actual_image=actual_path,
+                                                    alt_txt=row.d['ctime'],
+                                                    thumb_image=thumb_path)
             n += 1
         #end
-        html += "</p>\n"
         assert n==len(image_row_list)
         return html
 
-    def make_html_video_list(self, video_row_list):
+    def make_html_video_list(self, video_row_list,media_row_index):
         """
         given a list of row elements representing videos,
         return HTML for a single row
@@ -268,19 +287,17 @@ class CamPage:
                 n += 1
                 continue
             #else...
-            html += "<p>\n"
             video_fname = row.d['derived_fname']
             video_fname = video_fname.replace(self.derived_dir, self.www_derived_dir)
-            html += """<a href="{actual_video}">{label}</a>\n"""\
-                                .format(actual_video=video_fname,
-                                        label=row.d['ctime'])
-
-            html += "</p>\n"
+            lower_time = row.d['ctime_unix']
+            html += CamPage.templ_video_link.format(index=media_row_index,
+                                                    actual_video=video_fname,
+                                                    lower_time=lower_time)
             n += 1
         #end
         return html
 
-    def write_row(self, html_images, html_videos, upper_datetime, lower_datetime):
+    def write_row(self, html_images, html_videos, upper_datetime, lower_datetime,media_row_index):
         """
         given 
         html_images: html listing images
@@ -290,10 +307,11 @@ class CamPage:
 
         write a "row" to the webpage
         """
-        html = CamPage.templ_row.format(upper_datetime = upper_datetime,
-                                        lower_datetime = lower_datetime,
-                                        html_images = html_images,
-                                        html_videos = html_videos)
+        html = CamPage.templ_media_row.format(upper_datetime = upper_datetime,
+                                              lower_datetime = lower_datetime,
+                                              html_images = html_images,
+                                              html_videos = html_videos,
+                                              index=media_row_index)
         self.dest_file.write(html)
         return
 
@@ -322,6 +340,7 @@ class CamPage:
         'lower_time_sec'
 
         """
+        pu.db
         timefmt = "%a %b %d %H:%M:%S"
         status_page_list = []
         #
@@ -335,12 +354,13 @@ class CamPage:
         assert interval_min > 0
         interval_sec = int(interval_min * 60.0)
 
-        # generate webpage
+        # start a new web page
         self.dest_file = self.open_temp_file_write_header()
+        media_row_index = 0
 
         # iterate through all rows which fall into the time interval
         # iterate backwards through time, from latest (upper time) to oldest (lower time)
-        num_rows_per_file = 0
+        num_images_per_page = 0
         curr_file_upper_time_sec = -1
         while(upper_time_sec > final_lower_time_sec):
             lower_time_sec = upper_time_sec - interval_sec
@@ -357,29 +377,30 @@ class CamPage:
                 # if upper_time0 not yet recorded, then do so
                 if curr_file_upper_time_sec <= 0:
                     curr_file_upper_time_sec = upper_time_sec
-                    
+
                 image_html = self.make_html_image_list(row_image_list)
-                video_html = self.make_html_video_list(row_video_list)
-                # start_datetime = self.db.sec_to_iso8601(upper_time_sec)
-                # stop_datetime = self.db.sec_to_iso8601(lower_time_sec)
+                video_html = self.make_html_video_list(row_video_list, media_row_index)
+
                 start_datetime = dtutils.sec_to_str(upper_time_sec, timefmt)
                 stop_datetime = dtutils.sec_to_str(lower_time_sec, timefmt)
-                self.write_row(image_html, video_html, start_datetime, stop_datetime)
 
-                num_rows_per_file += max(len(row_image_list), len(row_video_list))
-                if num_rows_per_file >= self.max_rows_per_file:
+                self.write_row(image_html, video_html, start_datetime, stop_datetime, media_row_index)
+                media_row_index = media_row_index + 1
+
+                num_images_per_page += max(len(row_image_list), len(row_video_list))
+                if num_images_per_page >= self.max_images_per_page:
                     #
-                    # close current file
+                    # close current webpage
                     dest_fname = self.calc_dest_fname()
                     self.close_temp_file_move_dest(dest_fname)
                     status_page_list.append(self.make_status_dict(dest_fname, curr_file_upper_time_sec, lower_time_sec))
                     
                     #
-                    # start a new file
+                    # start a new webpage
                     self.dest_file = self.open_temp_file_write_header()
 
                     # reset row count
-                    num_rows_per_file = 0
+                    num_images_per_page = 0
 
                     # reset upper_time
                     curr_file_upper_time_sec = -1
