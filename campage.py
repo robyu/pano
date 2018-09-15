@@ -340,7 +340,6 @@ class CamPage:
         'lower_time_sec'
 
         """
-        pu.db
         timefmt = "%a %b %d %H:%M:%S"
         status_page_list = []
         #

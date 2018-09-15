@@ -26,7 +26,7 @@ want:
 /* video pop-up element */
 .video-pop-up {  /* select class */
     z-index: 9999;  /* on top of everything */
-    position: absolute;  /* keep position relative to 'ancestors' */
+    position: fixed; 
     top: 0px; 
     left: 0px; 
     width: 100%; 
@@ -41,7 +41,7 @@ want:
 /* actual video player */
 #the_Video { /* select ID */
     width: 50%;
-    position: absolute; /*relative;*/ /* put player inside video pop -up */
+    position: absolute; 
     top: 50%;
     left: 50%;
     -webkit-transform: translate(-50%, -50%);
