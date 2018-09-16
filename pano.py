@@ -169,11 +169,25 @@ class Pano:
         #end
         return (total_files_added, total_files_deleted)
 
+    def normalize_cam_name(self, name):
+        """
+        normalize camera name wrt white spaces, etc
+        idempotent!
+
+        returns: normalized cam name
+        """
+        name = name.replace(' ','-')
+        name = name.lower()
+
+        assert len(name) <= 20, "camera name (%s) > 20 chars" % name
+        return name
+    
     def get_cam_list(self):
         """
         return list of camera info from param_dict
         """
         cam_list = self.param_dict['camera_list']
+
         return cam_list
     
     def gen_index_page(self, cam_list):
@@ -236,7 +250,13 @@ class Pano:
         print("*** write webpages")
         for index in range(len(cam_list)):
             cam_page_base_fname =  'cam_%02d' % index  # webpage generator will add suffix + .html
+
+            #
+            # get camera name
+            # we dont normalize camera name until now because we assume the media
+            # file paths use the unnormalized camera names
             cam_name = cam_list[index]['name']
+            cam_name = self.normalize_cam_name(cam_name)
             page_generator = campage.CamPage(cam_name,
                                              self.image_db,
                                              self.param_dict['derived_dir'],
