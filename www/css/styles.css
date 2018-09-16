@@ -6,11 +6,26 @@ body {
 
 .thumbnail {
     border: 1px solid #ddd;
-    border-width: 4px;
+    border-width: 2px;
     border-color: #73AD21;   /* nice thick border */
     width: 150px;
+    margin-bottom: 8px;
 }
 
+
+
+.card {
+    background: rgba(0,0,0,0.9); 
+ }
+
+.row-date-range {
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.btn-outline-success {
+    color: #73AD21; 
+}
 
 /*
 styling for the pop up video 'window'
@@ -18,11 +33,6 @@ want:
 - window stays put in document 
 - differentiated background
 */
-
-.card {
-    background: rgba(0,0,0,0.9); 
- }
-
 /* video pop-up element */
 .video-pop-up {  /* select class */
     z-index: 9999;  /* on top of everything */

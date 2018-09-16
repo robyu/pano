@@ -61,7 +61,7 @@ class CamPage:
                      the video player div goes in this row 
                      so that the video player spans the entire width
                 -->
-                <h3>
+                <h3 class="row-date-range">
                     {lower_datetime} .. {upper_datetime}
                 </h3>
 
@@ -73,7 +73,7 @@ class CamPage:
             
             <div class="row">
                 <!-- thumbnail column -->
-                <div class="col-sm-10">
+                <div class="col-sm-10 border-right border-success">
                     <!-- insert image html here -->
                     {html_images}
                 </div>
@@ -105,7 +105,7 @@ class CamPage:
                     # -->
     templ_video_link=unicode("""
                     <p>
-                        <button class="btn btn-primary" type="button" onclick="onVideoClick('{actual_video}','video_pop{index}');">
+                        <button class="btn btn-outline-success" type="button" onclick="onVideoClick('{actual_video}','video_pop{index}');">
                             {lower_time}
                         </button>
                     </p>
