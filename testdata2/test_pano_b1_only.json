@@ -11,8 +11,8 @@
     "camera_list" : [
 	{
             "name": "b1",
-            "live_url": "rtsp://192.168.0.1",
-            "admin_url": "http://192.168.0.1",
+            "live_url": "rtsp://192.168.2.120",
+            "admin_url": "http://192.168.2.120",
             "description": "front pointing north"
 	}
     ]

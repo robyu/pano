@@ -98,7 +98,7 @@ class IndexPage:
                             <a href="{admin_url}">admin_url</a>
                         </td>
                         <td>
-                            <a href="live_url">live-link</a>
+                            <a href="{live_url}">live-link</a>
                         </td>
                     </tr>
                     <!--  TEMPLATE END -->
@@ -214,9 +214,10 @@ class IndexPage:
                 # STOPPED HERE
                 # sec to iso8601?
                 #lower_dt = str(page_dict['lower_time_sec']) #"Sun Aug 26 2018 14:00"
-                fmt = "%a %b %d %H:%M:%S"
-                lower_dt = dtutils.sec_to_str(page_dict['lower_time_sec'],fmt)
-                upper_dt = dtutils.sec_to_str(page_dict['upper_time_sec'],fmt)
+                lower_fmt = "%a %b %d %H:%M:%S"
+                upper_fmt = "%H:%M:%S"   # dont render date, only want time
+                lower_dt = dtutils.sec_to_str(page_dict['lower_time_sec'],lower_fmt)
+                upper_dt = dtutils.sec_to_str(page_dict['upper_time_sec'],upper_fmt)
                 rows_html += IndexPage.templ_camera_table_row.format(index=index,
                                                                lower_datetime = lower_dt,
                                                                upper_datetime = upper_dt,

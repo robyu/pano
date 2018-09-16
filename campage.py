@@ -31,7 +31,7 @@ class CamPage:
     <body>
         <nav class="navbar navbar-dark bg-dark sticky-top">
             <!-- Navbar content -->
-            <a class="navbar-brand" href="index.html"><< status page</a>
+            <a class="navbar-brand" href="index.html#collapse-{cam_name}"><< status page</a>
         </nav>
         <div class="container-fluid"> <!-- container-fluid takes up 100% of viewport -->
     """)
@@ -49,8 +49,8 @@ class CamPage:
 
             #      placeholders:
             #      {index} - preferably zero-padded two digit, e.g. 00, 01, 02
-            #      {upper_datetime}
-            #      {lower_datetime}
+            #      {upper_datetime} - stop time
+            #      {lower_datetime} - start time
             #      {html_images}
             #      {html_videos}
             # -->
@@ -289,7 +289,7 @@ class CamPage:
             #else...
             video_fname = row.d['derived_fname']
             video_fname = video_fname.replace(self.derived_dir, self.www_derived_dir)
-            lower_time = row.d['ctime_unix']
+            lower_time = dtutils.sec_to_str(row.d['ctime_unix'],"%H:%M:%S")
             html += CamPage.templ_video_link.format(index=media_row_index,
                                                     actual_video=video_fname,
                                                     lower_time=lower_time)
@@ -340,7 +340,8 @@ class CamPage:
         'lower_time_sec'
 
         """
-        timefmt = "%a %b %d %H:%M:%S"
+        upper_timefmt = "%a %b %d %H:%M:%S"
+        lower_timefmt = "%H:%M:%S"
         status_page_list = []
         #
         # convert and compute datetime intervals in seconds
@@ -380,8 +381,8 @@ class CamPage:
                 image_html = self.make_html_image_list(row_image_list)
                 video_html = self.make_html_video_list(row_video_list, media_row_index)
 
-                start_datetime = dtutils.sec_to_str(upper_time_sec, timefmt)
-                stop_datetime = dtutils.sec_to_str(lower_time_sec, timefmt)
+                start_datetime = dtutils.sec_to_str(upper_time_sec, lower_timefmt)
+                stop_datetime = dtutils.sec_to_str(lower_time_sec, upper_timefmt)
 
                 self.write_row(image_html, video_html, start_datetime, stop_datetime, media_row_index)
                 media_row_index = media_row_index + 1
