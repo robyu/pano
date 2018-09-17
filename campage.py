@@ -26,7 +26,7 @@ class CamPage:
         <title>Panopticon Media</title>
         <meta name="description" content="panopticon">
         <meta name="author" content="Robert Yu, Buttersquid Inc">
-        <META HTTP-EQUIV="refresh" CONTENT="300"> 
+        <META HTTP-EQUIV="refresh" CONTENT="30"> 
 
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 	<link rel="stylesheet" href="css/styles.css">

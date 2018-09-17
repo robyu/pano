@@ -23,7 +23,7 @@ class IndexPage:
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
         <meta charset="utf-8">
-        <META HTTP-EQUIV="refresh" CONTENT="300"> 
+        <META HTTP-EQUIV="refresh" CONTENT="30"> 
 
         <title>Panopticon</title>
 
