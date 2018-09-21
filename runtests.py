@@ -16,7 +16,7 @@ import json
 import pano
 import derived
 import glob
-
+import panoconfig
 
 """
 run all unit tests
@@ -692,6 +692,13 @@ class TestPano(unittest.TestCase):
         stime = dtutils.sec_to_custom(epoch, fmt)
         print("%s" % stime)
         self.assertTrue(stime=="Sun 2018-02-25 18:49:48")
+
+    def test_pano_config(self):
+        config_fname = "testdata2/test_pano_b1_only.json"
+        dict = panoconfig.get_param_dict(config_fname)
+
+        self.assertTrue(dict['database_fname']=="panodb.sqlite")
+        
         
 if __name__ == '__main__':
     unittest.main()

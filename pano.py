@@ -11,6 +11,7 @@ import time
 import timeit
 import subprocess
 import pudb
+import panoconfig
 
 """
 data dict
@@ -39,7 +40,7 @@ class Pano:
     
     def __init__(self, config_fname,droptable=False):
         print("Pano: reading config file (%s)" % config_fname)
-        self.param_dict = self.init_param_dict(config_fname)
+        self.param_dict = panoconfig.get_param_dict(config_fname)
 
         self.generate_sym_links()
         
@@ -75,68 +76,6 @@ class Pano:
             os.unlink(www_derived_dir)
             
         os.symlink(derived_dir_abs_path, www_derived_dir)
-        
-        
-
-    def init_param_dict(self, config_fname):
-        """
-        read user-specified config file, default config file,
-        merge the two parameters
-
-        returns:
-        merged parameter dict
-        """
-        #
-        # read config json, store in dict
-        f = open(self.default_json_fname)
-        defaults_dict = json.load(f)
-        f.close()
-
-        f = open(config_fname)
-        user_param_dict = json.load(f)
-        f.close()
-        
-        merged_dict = self.merge_dicts(defaults_dict, user_param_dict)
-
-        #
-        # normalize directory paths by making them absolute
-        # merged_dict['base_data_dir']  = os.path.realpath(merged_dict['base_data_dir'])
-        # merged_dict['database_fname'] = os.path.realpath(merged_dict['database_fname'])
-        # merged_dict['derived_dir']    = os.path.realpath(merged_dict['derived_dir'])
-        # merged_dict['www_dir']        = os.path.realpath(merged_dict['www_dir'])
-        
-        return merged_dict
-        
-    def merge_dicts(self, defaults_dict, user_dict):
-        """
-        given defaults_dict and user_dict,
-        compare keys and pick appropriate value.
-        assert if value is bogus.
-
-        return merged dict
-        """
-        merged_dict={}
-        for k, default_val in defaults_dict.items():
-            if k[0]=='@':
-                #
-                # the key is a comment
-                continue
-            
-            if k in user_dict:
-                final_val = user_dict[k]
-            else:
-                final_val = default_val
-            #end
-            assert (final_val != "") , "parameter (%s) not assigned" % k
-            merged_dict[k] = final_val
-        #end
-
-        assert len(merged_dict['camera_list']) > 0, "no cameras listed"
-        assert len(merged_dict['base_data_dir']) > 0, "no base_data_dir specified"
-        assert merged_dict['delta_min'] > 0, "delta min < 0"
-        assert merged_dict['max_age_days'] > 0, "max_age_days < 0"
-
-        return merged_dict
 
     @timeit.timeit
     def slurp_images(self):
@@ -212,10 +151,15 @@ class Pano:
         num entries deleted
         """
         print("** cull files by age")
-        num_deleted = dirwalk.cull_files_by_age(self.image_db,
-                                  derived_dir = self.param_dict['derived_dir'],
-                                  baseline_time = self.param_dict['baseline_datetime'],
-                                  max_age_days = self.param_dict['max_age_days'])
+        if self.param_dict['cull_old_files']==1:
+            num_deleted = dirwalk.cull_files_by_age(self.image_db,
+                                                    derived_dir = self.param_dict['derived_dir'],
+                                                    baseline_time = self.param_dict['baseline_datetime'],
+                                                    max_age_days = self.param_dict['max_age_days'])
+        else:
+            num_deleted = 0
+        #END
+        
         return num_deleted
     
 
