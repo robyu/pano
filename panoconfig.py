@@ -51,6 +51,7 @@ def merge_dicts(defaults_dict, user_dict):
         
         if k in user_dict:
             final_val = user_dict[k]
+            del user_dict[k]
         else:
             final_val = default_val
         #end
@@ -58,6 +59,12 @@ def merge_dicts(defaults_dict, user_dict):
         merged_dict[k] = final_val
     #end
 
+    # any keys left in user_dict?
+    print(user_dict)
+    
+    assert len(user_dict)==0, "Entries in user-specified JSON did not match entries in default JSON file"
+
+    # sanity checks
     assert len(merged_dict['camera_list']) > 0, "no cameras listed"
     assert len(merged_dict['base_data_dir']) > 0, "no base_data_dir specified"
     assert merged_dict['delta_min'] > 0, "delta min < 0"

@@ -30,7 +30,7 @@
     "camera_list" : [],
 
     "watchdog_dir": "./",
-    "watchdog_max_misses": 2,
+    "watchdog_max_faults": 3,
     "watchdog_enable_reboot": 1,
     "watchdog_interval_min": 2
 }
