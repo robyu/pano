@@ -17,7 +17,6 @@
 	}
     ],
 
-    "watchdog_interval_min": 0.1,
     "watchdog_enable_reboot": 0
     
 }
