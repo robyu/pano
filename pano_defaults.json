@@ -29,7 +29,6 @@
     ],
     "camera_list" : [],
 
-    "watchdog_dir": "./",
     "watchdog_max_faults": 3,
     "watchdog_enable_reboot": 1,
     "watchdog_check_httpd": 1,

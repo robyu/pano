@@ -17,6 +17,8 @@
 	}
     ],
 
-    "watchdog_enable_reboot": 0
+    "watchdog_enable_reboot": 0,
+    "watchdog_check_httpd": 0,
+    "watchdog_check_ftpd" : 0
     
 }

@@ -12,6 +12,7 @@ import timeit
 import subprocess
 import pudb
 import panoconfig
+import datetime
 
 """
 data dict
@@ -247,6 +248,16 @@ class Pano:
         print("Num Entries after processing: %d" % len(all_rows))
         
         return
+
+
+    def write_breadcrumb(self):
+        """
+        write breadcrumb file for watchdog
+        """
+        f = open("pano-breadcrumb.txt","wt")
+        now_string = str(datetime.datetime.now())
+        f.write(now_string)
+        f.close()
     
 @click.command()
 @click.argument('config')
@@ -259,6 +270,7 @@ def pano_main(config, loopcnt,droptable):
     loop_flag = True
     loop_index=0
     while loop_flag:
+        mypano.write_breadcrumb()
         num_entries_start = len(mypano.image_db.select_all())
         (num_files_added, num_deleted_ext) = mypano.slurp_images()
         num_deleted_age = mypano.cull_old_files()
