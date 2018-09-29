@@ -52,10 +52,11 @@ class Watchdog:
         #end
     
         retval = False
-        out = get_process_list()
+        out = self.get_process_list()
         linecount = 0
         for line in out:
             if line.find('ftpd') > 0:
+                self.logger.debug(line)
                 linecount += 1
             #end
         #end
@@ -94,10 +95,11 @@ class Watchdog:
             return True
 
         retval = False
-        out = get_process_list()
+        out = self.get_process_list()
         linecount = 0
         for line in out:
             if line.find('httpd') > 0:
+                self.logger.debug(line)
                 linecount += 1
 
         if linecount >= 2:
@@ -126,8 +128,10 @@ class Watchdog:
             raise ValueError('Invalid log level: %s' % loglevel)
 
         if logfname=='stdout':
+            print("logging to stdout")
             handler = logging.StreamHandler(sys.stdout)
         else:
+            print("logging to %s" % logfname)
             handler = logging.handlers.RotatingFileHandler(logfname, maxBytes=128, backupCount=4)
         #end
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -161,12 +165,15 @@ class Watchdog:
             self.logger.info("watchdog sleeping: %6.2f min ( %d faults)" % (sleep_interval_min, num_faults))
             self.wd_sleep(sleep_interval_min)
             
-            miss_flag = False
-            miss_flag = miss_flag or (self.check_http_server(self.wd_dict['watchdog_check_httpd'])  ==False)
-            miss_flag = miss_flag or (self.check_ftp_server( self.wd_dict['watchdog_check_ftpd'])   ==False)
-            miss_flag = miss_flag or (self.check_breadcrumb( self.wd_dict['watchdog_check_breadcrumb']) ==False)
+            # I originally implemented this with bool logic, but
+            # python bools short-circuit, so as soon as one check failed,
+            # none of the other checks were executed.  Did not want that.
+            miss_count = 0
+            miss_count += int(self.check_http_server(self.wd_dict['watchdog_check_httpd'])  ==False)
+            miss_count += int(self.check_ftp_server( self.wd_dict['watchdog_check_ftpd'])   ==False)
+            miss_count += int(self.check_breadcrumb( self.wd_dict['watchdog_check_breadcrumb']) ==False)
             
-            if miss_flag == True:
+            if miss_count > 0:
                 num_faults+=1
             else:
                 num_faults = 0
