@@ -12,6 +12,9 @@ import sys
 ./watchdog.py --logfname=stdout  --loglevel=debug testdata2/test_pano_b1_only.json
 """
 class Watchdog:
+    logger = None
+    wd_dict = {}
+    
     def __init__(self, config, loglevel, logfname):
         self.logger = self.configure_logging(loglevel,logfname)
         self.wd_dict = panoconfig.get_param_dict(config)

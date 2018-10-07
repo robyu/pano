@@ -13,6 +13,9 @@ import subprocess
 import pudb
 import panoconfig
 import datetime
+import logging
+import logging.handlers
+import sys
 
 """
 data dict
@@ -38,9 +41,11 @@ class Pano:
     default_json_fname = "pano_defaults.json"
     param_dict = {}
     image_db = None
+    logger = None
     
-    def __init__(self, config_fname,droptable=False):
+    def __init__(self, config_fname,droptable=False, loglevel='warning', logfname='stdout'):
         print("Pano: reading config file (%s)" % config_fname)
+        self.logger = self.configure_logging(loglevel, logfname)
         self.param_dict = panoconfig.get_param_dict(config_fname)
 
         self.generate_sym_links()
@@ -54,6 +59,57 @@ class Pano:
         self.image_db = datastore.Datastore(self.param_dict['database_fname'],
                                             drop_table_flag=drop_table_flag)
 
+    def configure_logging(self, loglevel,logfname):
+        """
+        see https://docs.python.org/2/howto/logging.html
+        
+        but see also
+        https://stackoverflow.com/questions/20240464/python-logging-file-is-not-working-when-using-logging-basicconfig
+        """
+        #logger = logging.getLogger("app")
+        logger = logging.getLogger()
+
+        #
+        # normalize loglevel arg
+        #
+        # assuming loglevel is bound to the string value obtained from the
+        # command line argument. Convert to upper case to allow the user to
+        # specify --log=DEBUG or --log=debug
+        numeric_level = getattr(logging, loglevel.upper(), None)
+        if not isinstance(numeric_level, int):
+            raise ValueError('Invalid log level: %s' % loglevel)
+
+        if logfname=='stdout':
+            print("logging to stdout")
+            handler = logging.StreamHandler(sys.stdout)
+        else:
+            print("logging to %s" % logfname)
+            handler = logging.handlers.RotatingFileHandler(logfname, maxBytes=128, backupCount=4)
+        #end
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
+        handler.setFormatter(formatter)        
+        logger.addHandler(handler)
+
+        # because of how logging is imported,    
+        # can't set level of root logger using basicConfig
+        # see stackoverflow question above
+        logger.setLevel(numeric_level)
+
+
+        logger.debug("test debug")
+        logger.info("test info")
+        logger.warning("test warning")
+        logger.error("test error")
+        logger.critical("test critical")
+
+
+        import testlogger
+        tester = testlogger.TestLogger()
+        tester.test()
+        
+        sys.exit(0)
+        return logger
+        
     def generate_sym_links(self):
         """
         generate links in www directory to data directories
@@ -91,17 +147,17 @@ class Pano:
         """
         total_files_added = 0
         total_files_deleted = 0
-        print("** slurp images")
+        self.logger.info("** slurp images")
         base_data_dir = self.param_dict['base_data_dir']
         cam_list = self.get_cam_list()
         for cam in cam_list:
             cam_dir = os.path.join(base_data_dir, cam['name']) # "testdata/FTP-culled/b0"
-            print("*** processing camera dir %s" % cam_dir)
-            print("**** cull empty dirs")
+            self.logger.info("*** processing camera dir %s" % cam_dir)
+            self.logger.info("**** cull empty dirs")
             dirwalk.cull_empty_dirs(cam_dir)
-            print("**** cull files by ext")
+            self.logger.info("**** cull files by ext")
             num_deleted = dirwalk.cull_files_by_ext(base_data_dir=cam_dir)
-            print("**** walk dir and load db")
+            self.logger.info("**** walk dir and load db")
             num_added = dirwalk.walk_dir_and_load_db(self.image_db, base_data_dir,
                                                            cam_name = cam['name'])
             total_files_added += num_added
@@ -135,7 +191,7 @@ class Pano:
         IN:
         cam_list: list of per-camera dict objects
         """
-        print("** generate index page")
+        self.logger.info("** generate index page")
         assert len(cam_list) > 0, "you gotta run gen_camera_pages first"
         
         index_page = indexpage.IndexPage(self.param_dict['www_dir'])
@@ -151,7 +207,7 @@ class Pano:
         returns:
         num entries deleted
         """
-        print("** cull files by age")
+        self.logger.info("** cull files by age")
         if self.param_dict['cull_old_files']==1:
             num_deleted = dirwalk.cull_files_by_age(self.image_db,
                                                     derived_dir = self.param_dict['derived_dir'],
@@ -176,8 +232,8 @@ class Pano:
         the camera-info list (see get_cam_list) plus an extra entry, "status_page_list"
         listing the web pages
         """
-        print("** generate camera webpages")
-        print("*** make derived files")
+        self.logger.info("** generate camera webpages")
+        self.logger.info("*** make derived files")
         if (make_derived_files==True):
             derived.make_derived_files(self.image_db,
                                        num_workers = self.param_dict['num_worker_threads'],
@@ -192,7 +248,7 @@ class Pano:
         # delete old cam pages
         subprocess.call(['find',self.param_dict['www_dir'],'-type','f','-name','cam*.html','-delete'])
         #pu.db
-        print("*** write webpages")
+        self.logger.info("*** write webpages")
         for index in range(len(cam_list)):
             cam_page_base_fname =  'cam_%02d' % index  # webpage generator will add suffix + .html
 
@@ -230,22 +286,22 @@ class Pano:
 
 
     def print_summary(self, num_added, num_deleted_ext, num_deleted_age,num_entries_start):
-        print("== SUMMARY ==")
-        print("CAMERAS:")
+        self.logger.info("== SUMMARY ==")
+        self.logger.info("CAMERAS:")
         cam_list = self.get_cam_list()
         for cam in cam_list:
-            print("%s" % cam['name'])
+            self.logger.info("%s" % cam['name'])
         #end
-        print("")
-        print("FILE PROCESSING:")
-        print("Files Deleted (wrong extension): %d" % num_deleted_ext)
-        print("Files Added: %d" % num_added)
-        print("")
-        print("DATASTORE:")
-        print("Num Entries before processing: %d" % num_entries_start)
-        print("Num Entries deleted (age): %d" % num_deleted_age)
+        self.logger.info("")
+        self.logger.info("FILE PROCESSING:")
+        self.logger.info("Files Deleted (wrong extension): %d" % num_deleted_ext)
+        self.logger.info("Files Added: %d" % num_added)
+        self.logger.info("")
+        self.logger.info("DATASTORE:")
+        self.logger.info("Num Entries before processing: %d" % num_entries_start)
+        self.logger.info("Num Entries deleted (age): %d" % num_deleted_age)
         all_rows = self.image_db.select_all()
-        print("Num Entries after processing: %d" % len(all_rows))
+        self.logger.info("Num Entries after processing: %d" % len(all_rows))
         
         return
 
@@ -263,10 +319,12 @@ class Pano:
 @click.argument('config')
 @click.option('--loopcnt',default=-1,help='number of times to loop; -1 == forever')
 @click.option('--droptable/--no-droptable', default=False,help='delete existing image database')
-def pano_main(config, loopcnt,droptable):
+@click.option('--logfname', default='pano.log',help='specify \'stdout\' for sys.stdout')
+@click.option('--loglevel',default='warning',help='valid values: \'debug\'|\'info\'|\'warning\'|\'error\'|\'critical\'')
+def pano_main(config, loopcnt,droptable,loglevel,logfname):
     print("config file=%s" % config)
     print("loopcnt=%d" % loopcnt)
-    mypano = Pano(config,droptable)
+    mypano = Pano(config,droptable,loglevel,logfname)
     loop_flag = True
     loop_index=0
     while loop_flag:
@@ -278,7 +336,7 @@ def pano_main(config, loopcnt,droptable):
         cam_list = mypano.gen_camera_pages()
         index_fname = mypano.gen_index_page(cam_list)
         mypano.print_summary(num_files_added, num_deleted_ext, num_deleted_age, num_entries_start)
-        print("sleeping...%6.2f min" % mypano.param_dict['sleep_interval_min'])
+        mypano.logger.info("sleeping...%6.2f min" % mypano.param_dict['sleep_interval_min'])
         mypano.sleep()
 
         loop_index += 1
