@@ -29,25 +29,9 @@
             "description": "north"
 	}
     ],
-    "@camera_list" : [
-	{
-            "name": "120",
-            "live_url": "rtsp://admin:jiggy001@192.168.2.120:80/cam/realmonitor?channel=1&subtype=0",
-	    "admin_url": "http://192.168.2.120",
-            "description": "south"
-	},
-	{
-            "name": "121",
-            "live_url": "rtsp://admin:jiggy001@192.168.2.121:80/cam/realmonitor?channel=1&subtype=0",
-	    "admin_url": "http://192.168.2.121",
-            "description": "porch"
-	},
-	{
-            "name": "122",
-            "live_url": "rtsp://admin:jiggy001@192.168.2.120:80/cam/realmonitor?channel=1&subtype=0",
-	    "admin_url": "http://192.168.2.122",
-            "description": "north"
-	}
-	
-    ]
+
+
+    "watchdog_enable_reboot": 0,
+    "watchdog_check_httpd": 1,
+    "watchdog_check_ftpd" : 1
 }
