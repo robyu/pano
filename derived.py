@@ -5,7 +5,9 @@ import datastore
 import multiprocessing as mp
 import sys
 import timeit
+import logging
 
+logger = logging.getLogger(__name__)
 
 DEFAULT_DERIVED_DIR = './derived'
 
@@ -25,24 +27,24 @@ def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir,print_cmd_flag=Fa
         pass
 
     if os.path.exists(dest_fname)==True:
-        print("%s -> %s already exists" % (src_fname, dest_fname))
+        logger.info("%s -> %s already exists" % (src_fname, dest_fname))
     else:        
         capture_file = open("ffmpeg_out.txt","wt")
         # ffmpeg -i 21.18.33-21.26.00\[M\]\[0\@0\]\[0\].dav -vcodec copy -preset veryfast out2.avi
         cmd = ['ffmpeg', '-y','-i',src_fname, '-vcodec', 'copy', '-preset', 'veryfast', dest_fname]
         if print_cmd_flag==True:
-            print(cmd)
+            logger.info(cmd)
         #end
         subprocess.call(cmd,stdout=capture_file, stderr=capture_file)
         capture_file.close()
 
         # check again: conversion may have failed
         if os.path.exists(dest_fname)==False:
-            print("%s -> %s failed" % (src_fname, dest_fname))
+            logger.info("%s -> %s failed" % (src_fname, dest_fname))
             dest_fname=''  # if failed, then return empty string
             assert len(dest_fname)==0
         else:
-            print("%s -> %s success" % (src_fname, dest_fname))
+            logger.info("%s -> %s success" % (src_fname, dest_fname))
         #end 
     #end
     return dest_fname
@@ -64,24 +66,24 @@ def make_thumbnail(base_data_dir, path, fname, derived_dir,print_cmd_flag=False)
         pass
 
     if os.path.exists(dest_fname)==True:
-        print("%s -> %s already exists" % (src_fname, dest_fname))
+        logger.info("%s -> %s already exists" % (src_fname, dest_fname))
     else:        
         #
         # dont need to check beforehand if the dest_fname already exists,
         # because we wouldn't be calling this function if derived_failed == 1
 
         cmd = ['convert',src_fname, '-resize', '10%',dest_fname]
-        if print_cmd_flag==True:
-            print(cmd)
+        if logger.info_cmd_flag==True:
+            logger.info(cmd)
         #end
         subprocess.call(cmd)
 
         if os.path.exists(dest_fname)==False:
-            print("%s -> %s failed" % (src_fname, dest_fname))
+            logger.info("%s -> %s failed" % (src_fname, dest_fname))
             dest_fname=''  # if failed, then return empty string
             assert len(dest_fname)==0
         else:
-            print("%s -> %s success" % (src_fname, dest_fname))
+            logger.info("%s -> %s success" % (src_fname, dest_fname))
         #end
     #end    
     return dest_fname
@@ -93,7 +95,7 @@ def sleep_fcn(row, derived_dir):
     sleep a bit, then return bogus results
     """
     time.sleep(0.1)
-    print("%s -> %s...FAILED" % (row.d['fname'], os.path.join(derived_dir, row.d['fname'])))
+    logger.info("%s -> %s...FAILED" % (row.d['fname'], os.path.join(derived_dir, row.d['fname'])))
 
     return_dict={}
     return_dict['id'] = row.d['id']
@@ -117,7 +119,7 @@ def process_media_file(row, derived_dir):
     elif row.d['mediatype']==datastore.MEDIA_IMAGE:
         derived_fname=make_thumbnail(row.d['base_data_dir'], row.d['path'], row.d['fname'], derived_dir)
     else:
-        print("(%s) has unrecognized mediatype (%d)" % (media_fname, media_type))
+        logger.info("(%s) has unrecognized mediatype (%d)" % (media_fname, media_type))
         derived_fname = None
     #endif
     return_dict={}
@@ -254,7 +256,7 @@ def make_derived_files(db, derived_dir=DEFAULT_DERIVED_DIR, num_workers = -1, te
 
     if num_workers <= 0:
         num_workers = mp.cpu_count()
-    print("make_derived_files: num_workers=%d" % num_workers)
+    logger.info("make_derived_files: num_workers=%d" % num_workers)
 
     assert num_workers >= 1
     
@@ -263,7 +265,7 @@ def make_derived_files(db, derived_dir=DEFAULT_DERIVED_DIR, num_workers = -1, te
     else:
         count_success, count_failed = derive_with_single_thread(db, derived_dir, row_list, test_thread_flag)
         
-    print("success=%d failed=%d" % (count_success, count_failed))
-    print("done with make_derived_files")
+    logger.info("success=%d failed=%d" % (count_success, count_failed))
+    logger.info("done with make_derived_files")
     return (count_success, count_failed)
     

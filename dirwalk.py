@@ -5,6 +5,9 @@ import subprocess
 import datastore
 import derived
 import timeit
+import logging
+
+logger = logging.getLogger(__name__)
 
 def parse_info_amcrest_jpg(row, dir_element_list, fname):
     # ['b0', 'AMC0028V_795UUB', '2018-02-24', '001', 'jpg', '10', '35']
@@ -125,7 +128,7 @@ def cull_files_by_age(db, baseline_time='Now', derived_dir='derived',max_age_day
         #end
         db.delete_row(row)
     #end
-    print("cull_files_by_age: deleted (%d) files" % len(row_list))
+    logger.info("cull_files_by_age: deleted (%d) files" % len(row_list))
     return len(row_list)
 
 @timeit.timeit
@@ -137,7 +140,7 @@ def cull_empty_dirs(base_data_dir):
     returns:
     none
     """
-    print("culling %s" % base_data_dir)
+    logger.info("culling %s" % base_data_dir)
     # print empty dirs
     # print(['find',base_data_dir,'-type','d','-empty','-print'])
     # subprocess.call(['find',base_data_dir,'-type','d','-empty','-print'])

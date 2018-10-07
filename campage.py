@@ -4,6 +4,7 @@ import time
 import os
 import dtutils
 import pudb
+import logging
 """
 
   
@@ -160,6 +161,8 @@ class CamPage:
         self.max_images_per_page = 50
         self.fname_index=0
 
+        self.logger = logging.getLogger(__name__)
+
     def calc_dest_fname(self):
         dest_fname = "%s-%04d.html" % (self.camera_name, self.fname_index)
         self.fname_index += 1
@@ -209,7 +212,7 @@ class CamPage:
         #end
 
         if os.path.exists(thumb_path)==False:
-            print("%s does not exist" % thumb_path)
+            self.logger.info("%s does not exist" % thumb_path)
             thumb_path = self.default_image_name
         #end
         thumb_path2 = thumb_path.replace(self.derived_dir, self.www_derived_dir)
@@ -222,7 +225,7 @@ class CamPage:
         actual_path = os.path.join(self.base_dir, row.d['path'], row.d['fname'])
 
         if os.path.exists(actual_path)==False:
-            print("%s does not exist" % actual_path)
+            self.logger.info("%s does not exist" % actual_path)
             actual_path = self.default_image_name
         #end
         

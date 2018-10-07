@@ -53,7 +53,7 @@ class Pano:
         if self.param_dict['drop_table_flag']==0 and droptable==False:
             drop_table_flag=False
         else:
-            print("drop existing table")
+            self.logger.info("drop existing table")
             drop_table_flag=True
         #end 
         self.image_db = datastore.Datastore(self.param_dict['database_fname'],
@@ -84,7 +84,7 @@ class Pano:
             handler = logging.StreamHandler(sys.stdout)
         else:
             print("logging to %s" % logfname)
-            handler = logging.handlers.RotatingFileHandler(logfname, maxBytes=128, backupCount=4)
+            handler = logging.handlers.RotatingFileHandler(logfname, maxBytes=4096, backupCount=4)
         #end
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
         handler.setFormatter(formatter)        
@@ -102,12 +102,6 @@ class Pano:
         logger.error("test error")
         logger.critical("test critical")
 
-
-        import testlogger
-        tester = testlogger.TestLogger()
-        tester.test()
-        
-        sys.exit(0)
         return logger
         
     def generate_sym_links(self):

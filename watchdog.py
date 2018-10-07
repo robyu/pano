@@ -118,7 +118,7 @@ class Watchdog:
         but see also
         https://stackoverflow.com/questions/20240464/python-logging-file-is-not-working-when-using-logging-basicconfig
         """
-        logger = logging.getLogger("app")
+        logger = logging.getLogger()
 
         #
         # normalize loglevel arg
@@ -135,9 +135,9 @@ class Watchdog:
             handler = logging.StreamHandler(sys.stdout)
         else:
             print("logging to %s" % logfname)
-            handler = logging.handlers.RotatingFileHandler(logfname, maxBytes=128, backupCount=4)
+            handler = logging.handlers.RotatingFileHandler(logfname, maxBytes=4096, backupCount=4)
         #end
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
         handler.setFormatter(formatter)        
         logger.addHandler(handler)
 

@@ -1,4 +1,5 @@
 import sqlite3
+import logging
 
 """
 """    
@@ -53,6 +54,7 @@ class Datastore:
         self.dbconn = None
         self.tablename = "pano"
         self.cursor = None
+        self.logger = logging.getLogger(__name__)
         
         self.create_table(drop_table_flag)
 

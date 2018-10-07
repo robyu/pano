@@ -3,6 +3,8 @@ import datastore
 import time
 import os
 import dtutils
+import logging
+
 """
 
   
@@ -186,6 +188,7 @@ class IndexPage:
         assert os.path.exists(self.www_dir)
 
         self.dest_fname = dest_fname
+        self.logger = logging.getLogger(__name__)
 
     def generate_overview_rows(self, cam_list):
         """
