@@ -123,7 +123,7 @@ class IndexPage:
                 </div>  <!-- END of collapsible group header -->
 
                 <!-- START of collapsible data -->
-                <div id="collapse-{camera_name}" class="collapse show" aria-labelledby="heading-{camera_name}" data-parent="#accordion">
+                <div id="collapse-{camera_name}" class="collapse hide" aria-labelledby="heading-{camera_name}" data-parent="#accordion">
                     <div class="card-body p-0">
 	                <table class="table table-sm table-striped table-dark">
 		            <thead>
@@ -167,13 +167,13 @@ class IndexPage:
     templ_camera_table_row = unicode("""
                                 <tr class="table-active" >
                                     <td>
-                                        {index}
+                                        <a href="{webpage_url}">{index}</a>
                                     </td>
                                     <td>
-                                        {lower_datetime}
+                                        <a href="{webpage_url}">{lower_datetime}</a>
                                     </td>
                                     <td>
-                                        {upper_datetime}
+                                        <a href="{webpage_url}">{upper_datetime}</a>
                                     </td>
                                     <td>
                                         <a href="{webpage_url}">{webpage_url}</a>
