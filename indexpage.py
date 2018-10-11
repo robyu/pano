@@ -67,8 +67,10 @@ class IndexPage:
                     {camera_overview_rows}
                 </tbody>
 	    </table>
-
+            
+            <div class="accordion" id="accordionContainer">
             {camera_status_cards}
+            </div>
             
 	</div>
         
@@ -117,13 +119,13 @@ class IndexPage:
                 <div class="card-title m-0" id="heading-{camera_name}">
                     <button class="btn btn-link p-0 m-0" data-toggle="collapse" data-target="#collapse-{camera_name}" aria-expanded="true" aria-controls="collapse-{camera_name}">
                         <h3>
-                            {camera_name}
+                           {camera_name}
                         </h3>
                     </button>
                 </div>  <!-- END of collapsible group header -->
 
                 <!-- START of collapsible data -->
-                <div id="collapse-{camera_name}" class="collapse hide" aria-labelledby="heading-{camera_name}" data-parent="#accordion">
+                <div id="collapse-{camera_name}" class="collapse hide" aria-labelledby="heading-{camera_name}" data-parent="#accordionContainer">
                     <div class="card-body p-0">
 	                <table class="table table-sm table-striped table-dark">
 		            <thead>

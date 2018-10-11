@@ -73,7 +73,7 @@ def make_thumbnail(base_data_dir, path, fname, derived_dir,print_cmd_flag=False)
         # because we wouldn't be calling this function if derived_failed == 1
 
         cmd = ['convert',src_fname, '-resize', '10%',dest_fname]
-        if logger.info_cmd_flag==True:
+        if print_cmd_flag==True:
             logger.info(cmd)
         #end
         subprocess.call(cmd)
