@@ -30,9 +30,23 @@ class CamPage:
 
     </head>
     <body>
-        <nav class="navbar navbar-dark bg-dark sticky-top">
-            <!-- Navbar content -->
-            <a class="navbar-brand" href="index.html#collapse-{cam_name}"><< status page</a>
+        <!-- A grey horizontal navbar that becomes vertical on small screens -->
+        <nav class="navbar navbar-expand-sm bg-dark sticky-top">
+
+            <!-- Links -->
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link" href="#"> &lt&ltprev</a> <!-- can't use actual'lessthan' character -->
+                </li>
+                <li class="nav-item">
+                    <!-- TODO: figure out how to do collapse('show') after loading page -->
+                    <a class="nav-link" href="index.html#button-{cam_name}">^up^</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#">next>></a>
+                </li>
+            </ul>
+
         </nav>
         <div class="container-fluid"> <!-- container-fluid takes up 100% of viewport -->
     """)

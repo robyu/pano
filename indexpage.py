@@ -117,7 +117,7 @@ class IndexPage:
     templ_camera_card = unicode("""
             <div class="card">
                 <div class="card-title m-0" id="heading-{camera_name}">
-                    <button class="btn btn-link p-0 m-0" data-toggle="collapse" data-target="#collapse-{camera_name}" aria-expanded="true" aria-controls="collapse-{camera_name}">
+                    <button class="btn btn-link p-0 m-0" data-toggle="collapse" id="button-{camera_name}" data-target="#collapse-{camera_name}" aria-expanded="true" aria-controls="collapse-{camera_name}">
                         <h3>
                            {camera_name}
                         </h3>
