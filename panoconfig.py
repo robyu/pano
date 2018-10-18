@@ -61,8 +61,8 @@ def merge_dicts(defaults_dict, user_dict):
     #end
 
     # any keys left in user_dict?
-    logging.error("Remainder user_dict entries:")
-    logging.error(user_dict)
+    logging.info("Remainder user_dict entries:")
+    logging.info(user_dict)
     
     assert len(user_dict)==0, "Entries in user-specified JSON did not match entries in default JSON file"
 

@@ -29,7 +29,7 @@
     ],
     "camera_list" : [],
 
-    "watchdog_max_faults": 3,
+    "watchdog_max_faults": 5,
     "watchdog_enable_reboot": 1,
     "watchdog_check_httpd": 1,
     "watchdog_check_ftpd" : 1,
