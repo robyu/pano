@@ -5,6 +5,7 @@ import os
 import dtutils
 import pudb
 import logging
+import tempfile
 """
 
   
@@ -12,6 +13,8 @@ import logging
 class CamPage:
     #
     # {cam_name} = camera name
+    # {url_next_page} = URL of next cam page
+    # {url_prev_page} = URL of prev cam page
     templ_header = unicode("""
 <!DOCTYPE html>
 <html>
@@ -36,14 +39,14 @@ class CamPage:
             <!-- Links -->
             <ul class="navbar-nav">
                 <li class="nav-item">
-                    <a class="nav-link" href="#"> &lt&ltprev</a> <!-- can't use actual'lessthan' character -->
+                    <a class="nav-link" href="{url_prev_page}"> &lt&ltprev</a> <!-- can't use actual'lessthan' character -->
                 </li>
                 <li class="nav-item">
                     <!-- TODO: figure out how to do collapse('show') after loading page -->
                     <a class="nav-link" href="index.html#button-{cam_name}">^up^</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="#">next>></a>
+                    <a class="nav-link" href="{url_next_page}">next>></a>
                 </li>
             </ul>
 
@@ -171,17 +174,28 @@ class CamPage:
         # composing the webpage can take substantial time, so
         # compose HTML in a temporary file, then
         # rename it to final dest fname.
-        self.temp_fname = os.path.join(self.www_dir, "tmp_camera.html")
         self.max_images_per_page = 50
         self.fname_index=0
 
         self.logger = logging.getLogger(__name__)
 
-    def calc_dest_fname(self):
+    def calc_dest_fname(self, last_flag=False):
         dest_fname = "%s-%04d.html" % (self.camera_name, self.fname_index)
+
+        if self.fname_index==0:
+            prev_fname = ""
+        else:
+            prev_fname = "%s-%04d.html" % (self.camera_name, self.fname_index - 1)
+
+        if last_flag==False:
+            next_fname = "%s-%04d.html" % (self.camera_name, self.fname_index + 1)
+        else:
+            next_fname = ""
+            
         self.fname_index += 1
-        return dest_fname
+        return dest_fname, prev_fname, next_fname
         
+    # todo: delete?
     def open_temp_file_write_header(self):
         """
         open a temp file,
@@ -193,16 +207,11 @@ class CamPage:
         dest_file.write(CamPage.templ_header.format(cam_name=self.camera_name))
         return dest_file
 
-    def write_footer_and_close(self, dest_file):
-        """
-        write html footer and close file 
-        """
-        dest_file.write(CamPage.templ_footer)
-        dest_file.close()
-
-    def close_temp_file_move_dest(self, dest_fname):
-        
-        self.write_footer_and_close(self.dest_file)
+    def write_html(self,dest_fname, html_doc):
+        temp_fname = os.path.join(self.www_dir, tempfile.mktemp('.html'))
+        f = open(temp_fname, "wt")
+        f.write(html_doc)
+        f.close()
         
         #
         # remove existing dest_fname, rename temp to dest_fname
@@ -211,9 +220,30 @@ class CamPage:
             os.remove(full_dest_fname)
         #end
 
-        os.rename(self.temp_fname, full_dest_fname)
+        os.rename(temp_fname, full_dest_fname)
+        
+    
+    # TODO: delete?
+    def write_footer_and_close(self, dest_file):
+        """
+        write html footer and close file 
+        """
+        dest_file.write(CamPage.templ_footer)
+        dest_file.close()
 
+    # todo: delete?
+    def close_temp_file_move_dest(self, dest_fname):
+        
+        self.write_footer_and_close(self.dest_file)
 
+    def add_html_header_footer(self, html_doc, url_prev_page, url_next_page):
+        new_html =CamPage.templ_header.format(cam_name=self.camera_name,
+                                              url_next_page = url_next_page,
+                                              url_prev_page = url_prev_page) + html_doc
+        new_html = new_html + CamPage.templ_footer
+        return new_html
+        
+        
     def get_thumb_path(self, row):
         """
         return the path to the derived image/video file
@@ -314,7 +344,7 @@ class CamPage:
         #end
         return html
 
-    def write_row(self, html_images, html_videos, upper_datetime, lower_datetime,media_row_index):
+    def gen_row_html(self, html_images, html_videos, upper_datetime, lower_datetime,media_row_index):
         """
         given 
         html_images: html listing images
@@ -322,15 +352,14 @@ class CamPage:
         upper_datetime:  string specifying start datetime
         lower_datetime: string specifying stop datetime
 
-        write a "row" to the webpage
+        return HTML for a single row
         """
         html = CamPage.templ_media_row.format(upper_datetime = upper_datetime,
                                               lower_datetime = lower_datetime,
                                               html_images = html_images,
                                               html_videos = html_videos,
                                               index=media_row_index)
-        self.dest_file.write(html)
-        return
+        return html
 
     def make_status_dict(self, dest_fname, upper_time_sec, lower_time_sec):
         d={}
@@ -372,7 +401,7 @@ class CamPage:
         interval_sec = int(interval_min * 60.0)
 
         # start a new web page
-        self.dest_file = self.open_temp_file_write_header()
+        html_doc = ""    
         media_row_index = 0
 
         # iterate through all rows which fall into the time interval
@@ -401,20 +430,22 @@ class CamPage:
                 start_datetime = dtutils.sec_to_str(upper_time_sec, lower_timefmt)
                 stop_datetime = dtutils.sec_to_str(lower_time_sec, upper_timefmt)
 
-                self.write_row(image_html, video_html, start_datetime, stop_datetime, media_row_index)
+                html_doc = html_doc + self.gen_row_html(image_html, video_html, start_datetime, stop_datetime, media_row_index)
+
                 media_row_index = media_row_index + 1
 
                 num_images_per_page += max(len(row_image_list), len(row_video_list))
                 if num_images_per_page >= self.max_images_per_page:
                     #
                     # close current webpage
-                    dest_fname = self.calc_dest_fname()
-                    self.close_temp_file_move_dest(dest_fname)
+                    dest_fname, prev_fname, next_fname = self.calc_dest_fname()
+                    html_doc = self.add_html_header_footer(html_doc, prev_fname, next_fname)
+                    self.write_html(dest_fname, html_doc)
                     status_page_list.append(self.make_status_dict(dest_fname, curr_file_upper_time_sec, lower_time_sec))
                     
                     #
                     # start a new webpage
-                    self.dest_file = self.open_temp_file_write_header()
+                    html_doc = ""
 
                     # reset row count
                     num_images_per_page = 0
@@ -427,8 +458,9 @@ class CamPage:
         #end
         
         # close current file
-        dest_fname = self.calc_dest_fname()
-        self.close_temp_file_move_dest(dest_fname)
+        dest_fname, prev_fname, next_fname = self.calc_dest_fname(last_flag=True)
+        html_doc = self.add_html_header_footer(html_doc, prev_fname, next_fname)
+        self.write_html(dest_fname, html_doc)
         status_page_list.append(self.make_status_dict(dest_fname, upper_time_sec, lower_time_sec))
 
         #
