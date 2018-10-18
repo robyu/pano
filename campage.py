@@ -180,6 +180,16 @@ class CamPage:
         self.logger = logging.getLogger(__name__)
 
     def calc_dest_fname(self, last_flag=False):
+        """
+        generate filenames of media pages
+        based on fname counter (self.fname_index)
+
+        IN: 
+        last_flag - True if this is the last media page
+        
+        RETURNS:
+        dest_fname, prev_fname, next_fname
+        """
         dest_fname = "%s-%04d.html" % (self.camera_name, self.fname_index)
 
         if self.fname_index==0:
@@ -195,19 +205,14 @@ class CamPage:
         self.fname_index += 1
         return dest_fname, prev_fname, next_fname
         
-    # todo: delete?
-    def open_temp_file_write_header(self):
-        """
-        open a temp file,
-        write html header to webpage
-
-        returns opened file object
-        """
-        dest_file = open(self.temp_fname, "wt")
-        dest_file.write(CamPage.templ_header.format(cam_name=self.camera_name))
-        return dest_file
-
     def write_html(self,dest_fname, html_doc):
+        """
+        given destination fname and html text,
+        write HTML file
+
+        returns:
+        none
+        """ 
         temp_fname = os.path.join(self.www_dir, tempfile.mktemp('.html'))
         f = open(temp_fname, "wt")
         f.write(html_doc)
@@ -223,20 +228,13 @@ class CamPage:
         os.rename(temp_fname, full_dest_fname)
         
     
-    # TODO: delete?
-    def write_footer_and_close(self, dest_file):
-        """
-        write html footer and close file 
-        """
-        dest_file.write(CamPage.templ_footer)
-        dest_file.close()
-
-    # todo: delete?
-    def close_temp_file_move_dest(self, dest_fname):
-        
-        self.write_footer_and_close(self.dest_file)
-
     def add_html_header_footer(self, html_doc, url_prev_page, url_next_page):
+        """
+        given html text, url of previous page, url of next page,
+        return html text with HTML header and footer
+
+        the header template is filled with the URLs of the previous and next media pages
+        """
         new_html =CamPage.templ_header.format(cam_name=self.camera_name,
                                               url_next_page = url_next_page,
                                               url_prev_page = url_prev_page) + html_doc
