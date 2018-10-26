@@ -85,6 +85,7 @@ class CamPage:
 """)
 
     #
+    # {cam_name}
     # {carousel_images_html}
     templ_carousel_body_html=unicode("""
         <!-- carousel -->
@@ -92,9 +93,7 @@ class CamPage:
             <div class="row">
                 <div class="col-sm">
                     <div class="card mt-2 mb-2" >
-                        <h5 class="card-title">Camera b1</h5>
-                        <h6 class="card-subtitle mb-2 text-muted">front porch</h6>
-                        <h6 class="card-subtitle mb-2 text-muted">sunday feb 25 18:44..18:54</h6>
+                        <h5 class="card-title">Camera {cam_name}</h5>
                     </div>
 		</div>
                 <div class="col-sm">
@@ -446,7 +445,8 @@ class CamPage:
     
     
     def make_html_doc(self, carousel_html, media_html, navbar_html):
-        carousel_body_html = CamPage.templ_carousel_body_html.format(carousel_images_html = carousel_html)
+        carousel_body_html = CamPage.templ_carousel_body_html.format(carousel_images_html = carousel_html,
+                                                                     cam_name = self.camera_name)
         html_doc = CamPage.templ_header_body_footer.format(navbar_html = navbar_html,
                                                            carousel_body_html = carousel_body_html,
                                                            media_rows_html = media_html)
