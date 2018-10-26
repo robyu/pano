@@ -12,10 +12,10 @@ import tempfile
 """
 class CamPage:
     #
-    # {cam_name} = camera name
-    # {url_next_page} = URL of next cam page
-    # {url_prev_page} = URL of prev cam page
-    templ_header = unicode("""
+    # {navbar_html}
+    # {carousel_body_html}
+    # {media_rows_html}
+    templ_header_body_footer = unicode("""
 <!DOCTYPE html>
 <html>
     <head>
@@ -26,13 +26,45 @@ class CamPage:
         <title>Panopticon Media</title>
         <meta name="description" content="panopticon">
         <meta name="author" content="Robert Yu, Buttersquid Inc">
-        <META HTTP-EQUIV="refresh" CONTENT="30"> 
+        <META HTTP-EQUIV="refresh" CONTENT="300"> 
 
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 	<link rel="stylesheet" href="css/styles.css">
 
     </head>
     <body>
+        
+        {navbar_html}
+
+        <!-- pop-up video player is always at top -->
+        <div class="container-fluid" id="display-container"> <!-- container-fluid takes up 100% of viewport -->
+            <!-- put the video player in the div above the image and video columns  -->
+            <div class="video-pop-up" id="video_pop0" >
+                div_video_pop0
+            </div>
+        </div>
+
+        {carousel_body_html}
+            
+        <!-- media rows -->
+        <div class="container-fluid"> <!-- container-fluid takes up 100% of viewport -->
+            {media_rows_html}
+        </div>
+            
+        <!-- footer -->
+        <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+        <script src="js/scripts.js"></script>
+    </body>
+</html>
+    """)
+
+    #
+    # {cam_name} = camera name
+    # {url_next_page} = URL of next cam page
+    # {url_prev_page} = URL of prev cam page
+    templ_navbar_html=unicode("""
         <!-- A grey horizontal navbar that becomes vertical on small screens -->
         <nav class="navbar navbar-expand-sm bg-dark sticky-top">
 
@@ -49,24 +81,72 @@ class CamPage:
                     <a class="nav-link" href="{url_next_page}">next>></a>
                 </li>
             </ul>
-
         </nav>
-        <div class="container-fluid"> <!-- container-fluid takes up 100% of viewport -->
+""")
+
+    #
+    # {carousel_images_html}
+    templ_carousel_body_html=unicode("""
+        <!-- carousel -->
+        <div class="container-fluid" >
+            <div class="row">
+                <div class="col-sm">
+                    <div class="card mt-2 mb-2" >
+                        <h5 class="card-title">Camera b1</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">front porch</h6>
+                        <h6 class="card-subtitle mb-2 text-muted">sunday feb 25 18:44..18:54</h6>
+                    </div>
+		</div>
+                <div class="col-sm">
+                    <div id="carouselThumbnails" class="carousel slide mt-2 mb-2" data-ride="carousel">
+                        <div class="carousel-inner">
+                           {carousel_images_html}
+                        </div>
+                        <a class="carousel-control-prev" href="#carouselThumbnails" role="button" data-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span class="sr-only">Previous</span>
+                        </a>
+                        <a class="carousel-control-next" href="#carouselThumbnails" role="button" data-slide="next" >
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="sr-only">Next</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="col-sm">
+
+                </div>
+            </div>
+        </div>
+""")
+
+    #
+    # "first" template has class "active" to indicate initial image
+    #
+    # {image_url}
+    # {image_date_time}
+    templ_carousel_image_first=unicode("""
+                            <div class="carousel-item active"> <!-- first item has class 'active' -->
+                                <img class="d-block w-100" src="{image_url}" alt="{image_date_time}">
+				<div class="carousel-caption" >
+				    <p>{image_date_time}</p>
+				</div>
+                            </div>
     """)
 
-    templ_footer=unicode("""
-        <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
-        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
-        <script src="js/scripts.js"></script>
-    </body>
-</html>
+    #{image_url}
+    #{image_date_time}
+    templ_carousel_image=unicode("""
+                            <div class="carousel-item">
+                                <img class="d-block w-100" src="{image_url}" alt="{image_date_time}">
+				<div class="carousel-caption d-none d-md-block" >
+				    <p>{image_date_time}</p>
+				</div>
+                            </div>
     """)
+
 
             # <!-- TEMPLATE START media-row
-
             #      placeholders:
-            #      {index} - preferably zero-padded two digit, e.g. 00, 01, 02
             #      {upper_datetime} - stop time
             #      {lower_datetime} - start time
             #      {html_images}
@@ -74,19 +154,9 @@ class CamPage:
             # -->
     templ_media_row = unicode("""
             <div class="row" >
-                <!--
-                     this row spans the width of the container
-                     the video player div goes in this row 
-                     so that the video player spans the entire width
-                -->
                 <h3 class="row-date-range">
                     {lower_datetime} .. {upper_datetime}
                 </h3>
-
-                <!-- put the video player in the div above the image and video columns  -->
-                <div class="video-pop-up" id="video_pop{index}" >
-                    div_video_pop{index}
-                </div>
             </div>
             
             <div class="row">
@@ -117,13 +187,12 @@ class CamPage:
 
                     # <!-- TEMPLATE START video_link
                     #      placeholders:
-                    #      {index} - same index as parent div
                     #      {actual_video}
                     #      {lower_time}
                     # -->
     templ_video_link=unicode("""
                     <p>
-                        <button class="btn btn-outline-success" type="button" onclick="onVideoClick('{actual_video}','video_pop{index}');">
+                        <button class="btn btn-outline-success" type="button" onclick="onVideoClick('{actual_video}','video_pop0');">
                             {lower_time}
                         </button>
                     </p>
@@ -318,7 +387,7 @@ class CamPage:
         assert n==len(image_row_list)
         return html
 
-    def make_html_video_list(self, video_row_list,media_row_index):
+    def make_html_video_list(self, video_row_list):
         """
         given a list of row elements representing videos,
         return HTML for a single row
@@ -335,8 +404,7 @@ class CamPage:
             video_fname = row.d['derived_fname']
             video_fname = video_fname.replace(self.derived_dir, self.www_derived_dir)
             lower_time = dtutils.sec_to_str(row.d['ctime_unix'],"%H:%M:%S")
-            html += CamPage.templ_video_link.format(index=media_row_index,
-                                                    actual_video=video_fname,
+            html += CamPage.templ_video_link.format(actual_video=video_fname,
                                                     lower_time=lower_time)
             n += 1
         #end
@@ -360,12 +428,101 @@ class CamPage:
         return html
 
     def make_status_dict(self, dest_fname, upper_time_sec, lower_time_sec):
+        """
+        make dictionary entry with generated HTML files and associated times
+        """
         d={}
         assert upper_time_sec >= lower_time_sec
         d['page_fname'] = dest_fname
         d['upper_time_sec'] = upper_time_sec
         d['lower_time_sec'] = lower_time_sec
         return d
+
+    def make_html_navbar(self, prev_fname, next_fname):
+        html = CamPage.templ_navbar_html.format(cam_name=self.camera_name,
+                                                url_next_page = next_fname,
+                                                url_prev_page = prev_fname)
+        return html
+    
+    
+    def make_html_doc(self, carousel_html, media_html, navbar_html):
+        carousel_body_html = CamPage.templ_carousel_body_html.format(carousel_images_html = carousel_html)
+        html_doc = CamPage.templ_header_body_footer.format(navbar_html = navbar_html,
+                                                           carousel_body_html = carousel_body_html,
+                                                           media_rows_html = media_html)
+        return html_doc
+
+
+    
+    def write_webpage(self, carousel_html, media_html, is_last):
+        """
+        write actual HTML file, return filename
+
+        in:
+        carousel_html - html for image carousel
+        media_html - html for image/video rows
+        is_last = True when this is final webpage for current camera
+
+        returns:
+        filename
+        """
+        dest_fname, prev_fname, next_fname = self.calc_dest_fname(last_flag=is_last)
+        navbar_html = self.make_html_navbar(prev_fname, next_fname)
+        html_doc = self.make_html_doc(carousel_html, media_html, navbar_html)
+        self.write_html(dest_fname, html_doc)
+
+        return dest_fname
+
+    def make_html_carousel(self, image_list, row_index):
+        """
+        given 
+        image_list - list of datastore image entries
+        row_index - integer indicating media row index
+
+        return HTML with carousel images
+
+        does NOT return the carousel body; carousel body is formed just prior to writing webpage
+        """
+        assert len(image_list) > 0
+
+        if row_index==0:
+            thumb_path = self.get_thumb_path(image_list[0])
+            image_dt = dtutils.sec_to_str(image_list[0].d['ctime_unix'],"%H:%M:%S")
+            rows_html = CamPage.templ_carousel_image_first.format(image_url = thumb_path,
+                                                                 image_date_time = image_dt)
+            startindex=1  # start index for remaining loop
+        else:
+            rows_html = ''
+            startindex=0  # start indx for remaining loop
+        #end
+
+        for m in range(startindex, len(image_list)):
+            thumb_path = self.get_thumb_path(image_list[m])
+            image_dt = dtutils.sec_to_str(image_list[m].d['ctime_unix'],"%H:%M:%S")
+            rows_html += CamPage.templ_carousel_image.format(image_url = thumb_path,
+                                                             image_date_time = image_dt)
+        #end
+
+        return rows_html
+    
+    def make_html_media_row(self, image_list, video_list, upper_time_sec, lower_time_sec):
+        """
+        return HTML for a single media row (images + video)
+        """
+        upper_timefmt = "%a %b %d %H:%M:%S"
+        lower_timefmt = "%H:%M:%S"
+
+        images_html  = self.make_html_image_list(image_list)
+        videos_html  = self.make_html_video_list(video_list)
+        upper_datetime = dtutils.sec_to_str(upper_time_sec, lower_timefmt)
+        lower_datetime = dtutils.sec_to_str(lower_time_sec, upper_timefmt)
+        row_html = CamPage.templ_media_row.format(upper_datetime = upper_datetime,
+                                                  lower_datetime = lower_datetime,
+                                                  html_images = images_html,
+                                                  html_videos = videos_html)
+
+        return row_html
+        
     
     def generate(self, upper_datetime, max_age_days, interval_min):
         """
@@ -384,8 +541,6 @@ class CamPage:
         'lower_time_sec'
 
         """
-        upper_timefmt = "%a %b %d %H:%M:%S"
-        lower_timefmt = "%H:%M:%S"
         status_page_list = []
         #
         # convert and compute datetime intervals in seconds
@@ -399,8 +554,9 @@ class CamPage:
         interval_sec = int(interval_min * 60.0)
 
         # start a new web page
-        html_doc = ""    
         media_row_index = 0
+        carousel_html = ''
+        media_html = ''
 
         # iterate through all rows which fall into the time interval
         # iterate backwards through time, from latest (upper time) to oldest (lower time)
@@ -421,31 +577,24 @@ class CamPage:
                 # if upper_time0 not yet recorded, then do so
                 if curr_file_upper_time_sec <= 0:
                     curr_file_upper_time_sec = upper_time_sec
-
-                image_html = self.make_html_image_list(row_image_list)
-                video_html = self.make_html_video_list(row_video_list, media_row_index)
-
-                start_datetime = dtutils.sec_to_str(upper_time_sec, lower_timefmt)
-                stop_datetime = dtutils.sec_to_str(lower_time_sec, upper_timefmt)
-
-                html_doc = html_doc + self.gen_row_html(image_html, video_html, start_datetime, stop_datetime, media_row_index)
-
-                media_row_index = media_row_index + 1
-
+                if len(row_image_list) > 0:
+                    carousel_html += self.make_html_carousel(row_image_list, media_row_index)
+                #end
+                media_html += self.make_html_media_row(row_image_list, row_video_list, upper_time_sec, lower_time_sec)
+                media_row_index += 1
                 num_images_per_page += max(len(row_image_list), len(row_video_list))
+                
                 if num_images_per_page >= self.max_images_per_page:
                     #
                     # close current webpage
-                    dest_fname, prev_fname, next_fname = self.calc_dest_fname()
-                    html_doc = self.add_html_header_footer(html_doc, prev_fname, next_fname)
-                    self.write_html(dest_fname, html_doc)
+                    dest_fname = self.write_webpage(carousel_html, media_html, False)
                     status_page_list.append(self.make_status_dict(dest_fname, curr_file_upper_time_sec, lower_time_sec))
                     
                     #
                     # start a new webpage
-                    html_doc = ""
-
-                    # reset row count
+                    media_row_index=0
+                    carousel_html = ''
+                    media_html = ''
                     num_images_per_page = 0
 
                     # reset upper_time
@@ -456,14 +605,12 @@ class CamPage:
         #end
         
         # close current file
-        dest_fname, prev_fname, next_fname = self.calc_dest_fname(last_flag=True)
-        html_doc = self.add_html_header_footer(html_doc, prev_fname, next_fname)
-        self.write_html(dest_fname, html_doc)
-        status_page_list.append(self.make_status_dict(dest_fname, upper_time_sec, lower_time_sec))
+        dest_fname = self.write_webpage(carousel_html, media_html, True)
+        status_page_list.append(self.make_status_dict(dest_fname, curr_file_upper_time_sec, lower_time_sec))
 
         #
         # for next time around, restart the suffix index
         self.fname_index=0
         
         return status_page_list
-    
+
