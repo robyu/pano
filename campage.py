@@ -431,7 +431,7 @@ class CamPage:
         make dictionary entry with generated HTML files and associated times
         """
         d={}
-        assert upper_time_sec >= lower_time_sec
+        assert upper_time_sec >= lower_time_sec, "assert upper %d > lower %d failed" % (upper_time_sec,lower_time_sec)
         d['page_fname'] = dest_fname
         d['upper_time_sec'] = upper_time_sec
         d['lower_time_sec'] = lower_time_sec
@@ -605,8 +605,10 @@ class CamPage:
         #end
         
         # close current file
-        dest_fname = self.write_webpage(carousel_html, media_html, True)
-        status_page_list.append(self.make_status_dict(dest_fname, curr_file_upper_time_sec, lower_time_sec))
+        if len(media_html) > 0:
+            dest_fname = self.write_webpage(carousel_html, media_html, True)
+            status_page_list.append(self.make_status_dict(dest_fname, curr_file_upper_time_sec, lower_time_sec))
+        #end
 
         #
         # for next time around, restart the suffix index
