@@ -197,9 +197,17 @@ class IndexPage:
     """)
     
 
-    def __init__(self, www_dir, db, dest_fname="index.html"):
+    def __init__(self,
+                 db,
+                 www_dir,
+                 derived_dir,
+                 www_derived_dir,
+                 dest_fname="index.html"):
         self.www_dir = www_dir
-        assert os.path.exists(self.www_dir)
+        assert os.path.exists(self.www_dir), "www_dir does not exist: %s" % www_dir
+        
+        self.derived_dir = derived_dir
+        self.www_derived_dir = www_derived_dir
 
         self.dest_fname = dest_fname
         self.logger = logging.getLogger(__name__)
@@ -218,6 +226,20 @@ class IndexPage:
         #end
         return rows_html
 
+    def get_latest_thumb_url(self, cam_name):
+        """
+        given a camera name,
+        get the URL (the www path) of the latest thumbnail
+        """
+        latest_image_entry = self.db.select_latest_image_per_camera(cam_name)
+        thumb_path=latest_image_entry[0].d['derived_fname']
+        if os.path.exists(thumb_path)==False:
+            self.logger.info("%s does not exist" % thumb_path)
+            thumb_path = self.default_image_name
+        #end
+        thumb_path2 = thumb_path.replace(self.derived_dir, self.www_derived_dir)
+        return thumb_path2
+    
     def generate_status_rows(self, cam_list):
         """
         generate HTML for status table rows
@@ -254,12 +276,12 @@ class IndexPage:
             assert earliest_time_sec < latest_time_sec
             earliest_dt = dtutils.sec_to_str(earliest_time_sec,earlier_fmt)
             latest_dt = dtutils.sec_to_str(latest_time_sec,later_fmt)
-            latest_image_entry = self.db.select_latest_image_per_camera(cam_info['name'])
+            latest_thumbnail_url = self.get_latest_thumb_url(cam_info['name'])
             cards_html += IndexPage.templ_camera_card.format(camera_name=cam_info['name'],
                                                              all_table_rows = rows_html,
                                                              earliest_dt = earliest_dt,
                                                              latest_dt = latest_dt,
-                                                             recent_thumbnail=latest_image_entry[0].d['derived_fname'])
+                                                             recent_thumbnail=latest_thumbnail_url)
         #end
         return cards_html
         

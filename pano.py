@@ -188,7 +188,10 @@ class Pano:
         self.logger.info("** generate index page")
         assert len(cam_list) > 0, "you gotta run gen_camera_pages first"
         
-        index_page = indexpage.IndexPage(self.param_dict['www_dir'],self.image_db)
+        index_page = indexpage.IndexPage(self.image_db,
+                                         self.param_dict['www_dir'],
+                                         self.param_dict['derived_dir'],
+                                         self.param_dict['www_derived_dir'])
         index_fname = index_page.make_index(cam_list)
         return index_fname
 
@@ -328,7 +331,11 @@ def pano_main(config, loopcnt,droptable,loglevel,logfname):
         num_deleted_age = mypano.cull_old_files()
         #pu.db
         cam_list = mypano.gen_camera_pages()
+        mypano.logger.info("generated camera pages")
+
         index_fname = mypano.gen_index_page(cam_list)
+        mypano.logger.info("generated index page")
+
         mypano.print_summary(num_files_added, num_deleted_ext, num_deleted_age, num_entries_start)
         mypano.logger.info("sleeping...%6.2f min" % mypano.param_dict['sleep_interval_min'])
         mypano.sleep()

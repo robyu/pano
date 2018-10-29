@@ -217,21 +217,18 @@ class CamPage:
         
         self.db = db  # pointer to datastore
         self.derived_dir = derived_dir
-        os.path.exists(derived_dir)
+        assert os.path.exists(derived_dir), "derived_dir does not exist: %s" % derived_dir
         
         self.base_dir = base_dir
-        os.path.exists(base_dir)
+        assert os.path.exists(base_dir), "base_dir does not exist: %s" % base_dir
         
         self.www_derived_dir = www_derived_dir
-        os.path.exists(www_derived_dir)
         
         self.www_base_dir = www_base_dir
-        os.path.exists(www_base_dir)
         
         self.num_images_per_row = 4
 
         self.www_dir = www_dir
-        assert os.path.exists(self.www_dir)
 
         self.default_image_fname = os.path.join(self.www_dir, 'mryuck.png')
         assert os.path.exists(self.default_image_fname)
