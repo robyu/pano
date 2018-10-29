@@ -146,15 +146,15 @@ class CamPage:
 
             # <!-- TEMPLATE START media-row
             #      placeholders:
-            #      {upper_datetime} - stop time
-            #      {lower_datetime} - start time
+            #      {later_datetime} - stop time
+            #      {earlier_datetime} - start time
             #      {html_images}
             #      {html_videos}
             # -->
     templ_media_row = unicode("""
             <div class="row" >
                 <h3 class="row-date-range">
-                    {lower_datetime} .. {upper_datetime}
+                    {earlier_datetime} .. {later_datetime}
                 </h3>
             </div>
             
@@ -187,12 +187,12 @@ class CamPage:
                     # <!-- TEMPLATE START video_link
                     #      placeholders:
                     #      {actual_video}
-                    #      {lower_time}
+                    #      {earlier_time}
                     # -->
     templ_video_link=unicode("""
                     <p>
                         <button class="btn btn-outline-success" type="button" onclick="onVideoClick('{actual_video}','video_pop0');">
-                            {lower_time}
+                            {earlier_time}
                         </button>
                     </p>
     """)
@@ -402,39 +402,39 @@ class CamPage:
             #else...
             video_fname = row.d['derived_fname']
             video_fname = video_fname.replace(self.derived_dir, self.www_derived_dir)
-            lower_time = dtutils.sec_to_str(row.d['ctime_unix'],"%H:%M:%S")
+            earlier_time = dtutils.sec_to_str(row.d['ctime_unix'],"%H:%M:%S")
             html += CamPage.templ_video_link.format(actual_video=video_fname,
-                                                    lower_time=lower_time)
+                                                    earlier_time=earlier_time)
             n += 1
         #end
         return html
 
-    def gen_row_html(self, html_images, html_videos, upper_datetime, lower_datetime,media_row_index):
+    def gen_row_html(self, html_images, html_videos, later_datetime, earlier_datetime,media_row_index):
         """
         given 
         html_images: html listing images
         html_videos: html listing videos
-        upper_datetime:  string specifying start datetime
-        lower_datetime: string specifying stop datetime
+        later_datetime:  string specifying start datetime
+        earlier_datetime: string specifying stop datetime
 
         return HTML for a single row
         """
-        html = CamPage.templ_media_row.format(upper_datetime = upper_datetime,
-                                              lower_datetime = lower_datetime,
+        html = CamPage.templ_media_row.format(later_datetime = later_datetime,
+                                              earlier_datetime = earlier_datetime,
                                               html_images = html_images,
                                               html_videos = html_videos,
                                               index=media_row_index)
         return html
 
-    def make_status_dict(self, dest_fname, upper_time_sec, lower_time_sec):
+    def make_status_dict(self, dest_fname, later_time_sec, earlier_time_sec):
         """
         make dictionary entry with generated HTML files and associated times
         """
         d={}
-        assert upper_time_sec >= lower_time_sec, "assert upper %d > lower %d failed" % (upper_time_sec,lower_time_sec)
+        assert later_time_sec >= earlier_time_sec, "assert later %d > earlier %d failed" % (later_time_sec,earlier_time_sec)
         d['page_fname'] = dest_fname
-        d['upper_time_sec'] = upper_time_sec
-        d['lower_time_sec'] = lower_time_sec
+        d['later_time_sec'] = later_time_sec
+        d['earlier_time_sec'] = earlier_time_sec
         return d
 
     def make_html_navbar(self, prev_fname, next_fname):
@@ -505,29 +505,29 @@ class CamPage:
 
         return rows_html
     
-    def make_html_media_row(self, image_list, video_list, upper_time_sec, lower_time_sec):
+    def make_html_media_row(self, image_list, video_list, later_time_sec, earlier_time_sec):
         """
         return HTML for a single media row (images + video)
         """
-        upper_timefmt = "%a %b %d %H:%M:%S"
-        lower_timefmt = "%H:%M:%S"
+        later_timefmt = "%a %b %d %H:%M:%S"
+        earlier_timefmt = "%H:%M:%S"
 
         images_html  = self.make_html_image_list(image_list)
         videos_html  = self.make_html_video_list(video_list)
-        upper_datetime = dtutils.sec_to_str(upper_time_sec, lower_timefmt)
-        lower_datetime = dtutils.sec_to_str(lower_time_sec, upper_timefmt)
-        row_html = CamPage.templ_media_row.format(upper_datetime = upper_datetime,
-                                                  lower_datetime = lower_datetime,
+        later_datetime = dtutils.sec_to_str(later_time_sec, earlier_timefmt)
+        earlier_datetime = dtutils.sec_to_str(earlier_time_sec, later_timefmt)
+        row_html = CamPage.templ_media_row.format(later_datetime = later_datetime,
+                                                  earlier_datetime = earlier_datetime,
                                                   html_images = images_html,
                                                   html_videos = videos_html)
 
         return row_html
         
     
-    def generate(self, upper_datetime, max_age_days, interval_min):
+    def generate(self, later_datetime, max_age_days, interval_min):
         """
         given
-        upper_datetime: starting datetime string
+        later_datetime: starting datetime string
         max_age_days: maximum number of days to include in webpage
         interval_min: time interval for each row in webpage
 
@@ -537,18 +537,18 @@ class CamPage:
         status_page_list:  list of dictionary elements
         each dict has keys:
         'page_fname' : NOT preceded with www_dir, e.g. camera0_000.html and NOT www/camera0_000.html
-        'upper_time_sec'
-        'lower_time_sec'
+        'later_time_sec'
+        'earlier_time_sec'
 
         """
         status_page_list = []
         #
         # convert and compute datetime intervals in seconds
-        upper_time_sec = self.db.iso8601_to_sec(upper_datetime)
-        assert upper_time_sec > 0
+        later_time_sec = self.db.iso8601_to_sec(later_datetime)
+        assert later_time_sec > 0
 
-        final_lower_time_sec = upper_time_sec - int(max_age_days * 24.0 * 60.0 * 60.0) # days * (hrs/day)(min/hrs)(sec/min)
-        assert (final_lower_time_sec > 0)
+        final_earlier_time_sec = later_time_sec - int(max_age_days * 24.0 * 60.0 * 60.0) # days * (hrs/day)(min/hrs)(sec/min)
+        assert (final_earlier_time_sec > 0)
 
         assert interval_min > 0
         interval_sec = int(interval_min * 60.0)
@@ -559,28 +559,28 @@ class CamPage:
         media_html = ''
 
         # iterate through all rows which fall into the time interval
-        # iterate backwards through time, from latest (upper time) to oldest (lower time)
+        # iterate backwards through time, from latest (later time) to oldest (earlier time)
         num_images_per_page = 0
-        curr_file_upper_time_sec = -1
-        while(upper_time_sec > final_lower_time_sec):
-            lower_time_sec = upper_time_sec - interval_sec
+        curr_file_later_time_sec = -1
+        while(later_time_sec > final_earlier_time_sec):
+            earlier_time_sec = later_time_sec - interval_sec
             row_image_list = self.db.select_by_time_cam_media(self.camera_name,
-                                                         upper_time_sec,
-                                                         lower_time_sec,
+                                                         later_time_sec,
+                                                         earlier_time_sec,
                                                          mediatype=datastore.MEDIA_IMAGE)
             row_video_list = self.db.select_by_time_cam_media(self.camera_name,
-                                                         upper_time_sec,
-                                                         lower_time_sec,
+                                                         later_time_sec,
+                                                         earlier_time_sec,
                                                          mediatype=datastore.MEDIA_VIDEO)
             if (len(row_image_list)>0) or (len(row_video_list)>0):
                 #
-                # if upper_time0 not yet recorded, then do so
-                if curr_file_upper_time_sec <= 0:
-                    curr_file_upper_time_sec = upper_time_sec
+                # if later_time0 not yet recorded, then do so
+                if curr_file_later_time_sec <= 0:
+                    curr_file_later_time_sec = later_time_sec
                 if len(row_image_list) > 0:
                     carousel_html += self.make_html_carousel(row_image_list, media_row_index)
                 #end
-                media_html += self.make_html_media_row(row_image_list, row_video_list, upper_time_sec, lower_time_sec)
+                media_html += self.make_html_media_row(row_image_list, row_video_list, later_time_sec, earlier_time_sec)
                 media_row_index += 1
                 num_images_per_page += max(len(row_image_list), len(row_video_list))
                 
@@ -588,7 +588,7 @@ class CamPage:
                     #
                     # close current webpage
                     dest_fname = self.write_webpage(carousel_html, media_html, False)
-                    status_page_list.append(self.make_status_dict(dest_fname, curr_file_upper_time_sec, lower_time_sec))
+                    status_page_list.append(self.make_status_dict(dest_fname, curr_file_later_time_sec, earlier_time_sec))
                     
                     #
                     # start a new webpage
@@ -597,17 +597,17 @@ class CamPage:
                     media_html = ''
                     num_images_per_page = 0
 
-                    # reset upper_time
-                    curr_file_upper_time_sec = -1
+                    # reset later_time
+                    curr_file_later_time_sec = -1
                 #end 
             #end
-            upper_time_sec = lower_time_sec
+            later_time_sec = earlier_time_sec
         #end
         
         # close current file
         if len(media_html) > 0:
             dest_fname = self.write_webpage(carousel_html, media_html, True)
-            status_page_list.append(self.make_status_dict(dest_fname, curr_file_upper_time_sec, lower_time_sec))
+            status_page_list.append(self.make_status_dict(dest_fname, curr_file_later_time_sec, earlier_time_sec))
         #end
 
         #

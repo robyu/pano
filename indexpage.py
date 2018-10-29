@@ -117,14 +117,19 @@ class IndexPage:
             #      {camera_name}
             #      {all_table_rows}
             #      {recent_thumbnail}
+            #      {earliest_dt} - earliest date-time string
+            #      {latest_dt} - latest date-time string
             # -->
     templ_camera_card = unicode("""
             <div class="card">
                 <div class="card-title m-0" id="heading-{camera_name}">
                     <button class="btn btn-link p-0 m-0" data-toggle="collapse" id="button-{camera_name}" data-target="#collapse-{camera_name}" aria-expanded="true" aria-controls="collapse-{camera_name}">
-                        <h3>
+                        <h3 class="text-left">
                             {camera_name}
                         </h3>
+                        <p clas="text-left">
+                            {earliest_dt}..{latest_dt}
+                        </p>
                     </button>
                     <button class="btn btn-link p-1 m-1 border border-success" data-toggle="collapse" id="button-{camera_name}" data-target="#collapse-{camera_name}" aria-expanded="true" aria-controls="collapse-{camera_name}">
                         <img src="{recent_thumbnail}" alt="latest_image">
@@ -169,8 +174,8 @@ class IndexPage:
                                      
                                 #      placeholders:
                                 #      {index}
-                                #      {lower_datetime} - start date
-                                #      {upper_datetime} - stop date
+                                #      {earlier_datetime} - start date
+                                #      {later_datetime} - stop date
                                 #      {webpage_url} - URL to media page
                                 # -->
     templ_camera_table_row = unicode("""
@@ -179,10 +184,10 @@ class IndexPage:
                                         <a href="{webpage_url}">{index}</a>
                                     </td>
                                     <td>
-                                        <a href="{webpage_url}">{lower_datetime}</a>
+                                        <a href="{webpage_url}">{earlier_datetime}</a>
                                     </td>
                                     <td>
-                                        <a href="{webpage_url}">{upper_datetime}</a>
+                                        <a href="{webpage_url}">{later_datetime}</a>
                                     </td>
                                     <td>
                                         <a href="{webpage_url}">{webpage_url}</a>
@@ -217,29 +222,43 @@ class IndexPage:
         """
         generate HTML for status table rows
         """
+        earlier_fmt = "%a %b %d %H:%M:%S"
+        later_fmt = "%a %b %d %H:%M:%S"   
         cards_html = ''
         for cam_info in cam_list:
-            index=0
             rows_html = ''
-            for page_dict in cam_info['status_page_list']:
+            #for page_dict in cam_info['status_page_list']:
+            for index in range(len(cam_info['status_page_list'])):
+                page_dict = cam_info['status_page_list'][index]
                 page_fname = page_dict['page_fname']
                 
                 # sec to iso8601?
-                #lower_dt = str(page_dict['lower_time_sec']) #"Sun Aug 26 2018 14:00"
-                lower_fmt = "%a %b %d %H:%M:%S"
-                upper_fmt = "%H:%M:%S"   # dont render date, only want time
-                lower_dt = dtutils.sec_to_str(page_dict['lower_time_sec'],lower_fmt)
-                upper_dt = dtutils.sec_to_str(page_dict['upper_time_sec'],upper_fmt)
+                #earlier_dt = str(page_dict['earlier_time_sec']) #"Sun Aug 26 2018 14:00"
+                earlier_dt = dtutils.sec_to_str(page_dict['earlier_time_sec'],earlier_fmt)
+                later_dt = dtutils.sec_to_str(page_dict['later_time_sec'],later_fmt)
                 rows_html += IndexPage.templ_camera_table_row.format(index=index,
-                                                               lower_datetime = lower_dt,
-                                                               upper_datetime = upper_dt,
+                                                               earlier_datetime = earlier_dt,
+                                                               later_datetime = later_dt,
                                                                webpage_url=page_fname)
-                index += 1
+
+                #
+                # note time of first and last rows
+                # status rows are backwards in time, so first row is most recent in time
+                if index==0:
+                    latest_time_sec = page_dict['later_time_sec']
+                #end
+                if index==len(cam_info['status_page_list'])-1:
+                    earliest_time_sec = page_dict['earlier_time_sec']
+                #end
             #end
-            pu.db
+            assert earliest_time_sec < latest_time_sec
+            earliest_dt = dtutils.sec_to_str(earliest_time_sec,earlier_fmt)
+            latest_dt = dtutils.sec_to_str(latest_time_sec,later_fmt)
             latest_image_entry = self.db.select_latest_image_per_camera(cam_info['name'])
             cards_html += IndexPage.templ_camera_card.format(camera_name=cam_info['name'],
                                                              all_table_rows = rows_html,
+                                                             earliest_dt = earliest_dt,
+                                                             latest_dt = latest_dt,
                                                              recent_thumbnail=latest_image_entry[0].d['derived_fname'])
         #end
         return cards_html
