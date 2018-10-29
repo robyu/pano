@@ -23,7 +23,7 @@ class IndexPage:
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
         <meta charset="utf-8">
-        <META HTTP-EQUIV="refresh" CONTENT="30"> 
+        <META HTTP-EQUIV="refresh" CONTENT="60"> 
 
         <title>Panopticon</title>
 
@@ -93,7 +93,10 @@ class IndexPage:
     templ_overview_row = unicode("""
                     <tr class="table-active" >
                         <td>
-                            {camera_name}
+                            <!-- this href allows us to expand/collapse associated media rows  -->
+                            <a href="collapse-{camera_name}" data-toggle="collapse" id="button-{camera_name}"  data-target="#collapse-{camera_name}" aria-expanded="true" aria-controls="collapse-{camera_name}">
+                                {camera_name}
+                            </a>
                         </td>
                         <td>
                             {camera_descr}
@@ -113,14 +116,18 @@ class IndexPage:
             #      placeholders:
             #      {camera_name}
             #      {all_table_rows}
+            #      {recent_thumbnail}
             # -->
     templ_camera_card = unicode("""
             <div class="card">
                 <div class="card-title m-0" id="heading-{camera_name}">
                     <button class="btn btn-link p-0 m-0" data-toggle="collapse" id="button-{camera_name}" data-target="#collapse-{camera_name}" aria-expanded="true" aria-controls="collapse-{camera_name}">
                         <h3>
-                           {camera_name}
+                            {camera_name}
                         </h3>
+                    </button>
+                    <button class="btn btn-link p-1 m-1 border border-success" data-toggle="collapse" id="button-{camera_name}" data-target="#collapse-{camera_name}" aria-expanded="true" aria-controls="collapse-{camera_name}">
+                        <img src="{recent_thumbnail}" alt="latest_image">
                     </button>
                 </div>  <!-- END of collapsible group header -->
 
@@ -185,12 +192,13 @@ class IndexPage:
     """)
     
 
-    def __init__(self, www_dir, dest_fname="index.html"):
+    def __init__(self, www_dir, db, dest_fname="index.html"):
         self.www_dir = www_dir
         assert os.path.exists(self.www_dir)
 
         self.dest_fname = dest_fname
         self.logger = logging.getLogger(__name__)
+        self.db = db 
 
     def generate_overview_rows(self, cam_list):
         """
@@ -216,7 +224,6 @@ class IndexPage:
             for page_dict in cam_info['status_page_list']:
                 page_fname = page_dict['page_fname']
                 
-                # STOPPED HERE
                 # sec to iso8601?
                 #lower_dt = str(page_dict['lower_time_sec']) #"Sun Aug 26 2018 14:00"
                 lower_fmt = "%a %b %d %H:%M:%S"
@@ -229,8 +236,11 @@ class IndexPage:
                                                                webpage_url=page_fname)
                 index += 1
             #end
+            pu.db
+            latest_image_entry = self.db.select_latest_image_per_camera(cam_info['name'])
             cards_html += IndexPage.templ_camera_card.format(camera_name=cam_info['name'],
-                                                     all_table_rows = rows_html)
+                                                             all_table_rows = rows_html,
+                                                             recent_thumbnail=latest_image_entry[0].d['derived_fname'])
         #end
         return cards_html
         

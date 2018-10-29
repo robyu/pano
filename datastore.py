@@ -239,7 +239,23 @@ class Datastore:
         row_list = self.entries_to_rows(entry_list)
 
         return row_list
+
+    def select_latest_image_per_camera(self,cam_name):
+        """
+        get latest entry, 1 per camera
         
+        returns list of row entries
+        """
+        cmd = "select *, max(ctime_unix) from {tn} where cam_name='{cam_name}'" \
+        " AND mediatype={mediatype}" \
+        " AND derive_failed==0".format(tn=self.tablename,
+                                       cam_name=cam_name,
+                                       mediatype=MEDIA_IMAGE)
+        self.cursor.execute(cmd)
+        entry_list = self.cursor.fetchall()
+        row_list = self.entries_to_rows(entry_list)
+        assert len(row_list)==1
+        return row_list
     
     def select_by_age_range(self, baseline_time=None, max_age_days=14):
         """

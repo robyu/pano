@@ -188,7 +188,7 @@ class Pano:
         self.logger.info("** generate index page")
         assert len(cam_list) > 0, "you gotta run gen_camera_pages first"
         
-        index_page = indexpage.IndexPage(self.param_dict['www_dir'])
+        index_page = indexpage.IndexPage(self.param_dict['www_dir'],self.image_db)
         index_fname = index_page.make_index(cam_list)
         return index_fname
 
