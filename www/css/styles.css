@@ -37,7 +37,7 @@ want:
 - differentiated background
 */
 /* video pop-up element */
-.video-pop-up {  /* select class */
+.display-pop-up {  /* select class */
     z-index: 9999;  /* on top of everything */
     position: fixed; 
     top: 0px; 
@@ -52,7 +52,7 @@ want:
 }
 
 /* actual video player */
-#the_Video { /* select ID */
+#pano_video_player { /* select ID */
     width: 50%;
     position: absolute; 
     top: 50%;
@@ -85,4 +85,9 @@ see https://github.com/twbs/bootstrap/issues/21985#issuecomment-281402443
 
 .carousel-item {
     border: 2px solid #73AD21;
+}
+
+.pano-image-button
+{
+    background-color:transparent;
 }
