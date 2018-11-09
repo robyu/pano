@@ -1,4 +1,8 @@
 /*
+2018 Robert Yu
+*/
+
+/*
 pop up video player with download link
 
 assign onclick handler to close the window
@@ -34,22 +38,35 @@ function onVideoClick(theLink,popname) {
 
 } 
 
-function onImageClick(popname, btn_index, num_images, curr_image) {
+/*
+
+button onclick function to unhide the image display element
+and display an image
+
+popname - name of pop-up image display element
+image_index - integer index of this image
+num_images - number of images on this webpage
+image_url - image to display 
+*/
+function onImageClick(popname, image_index, num_images, image_url) {
     pop_element = document.getElementById(popname)
 
-    if (btn_index<=0) {
-        prev_onclick = "" 
+    if (image_index<=0) {
+        prev_onclick = "";
     }
     else {
-        prev_onclick = "navigateToImage(" + (btn_index-1).toString() + ");"
+        prev_onclick = "navigateToImage(" + (image_index-1).toString() + ");";
     }
 
-    if (btn_index>=num_images-1) {
-        next_onclick = ""
+    if (image_index>=num_images-1) {
+        next_onclick = "";
     }
     else {
-        next_onclick = "navigateToImage(" + (btn_index+1).toString() + ");"
+        next_onclick = "navigateToImage(" + (image_index+1).toString() + ");";
     }
+    console.info("== INDEX " + image_index);
+    console.info("prev_onclick=" + prev_onclick);
+    console.info("next_onclick=" + next_onclick);
     
     /*
       bootstrap classes:
@@ -65,7 +82,7 @@ function onImageClick(popname, btn_index, num_images, curr_image) {
     html = html + "        <p class=\"text-center\">"
 
     /* 
-       the prev and next button work by calling navigateToImage(), which simulates clicking on the previous or 
+       the prev and next buttons work by calling navigateToImage(), which simulates clicking on the previous or 
        next image's button
     */
     html = html + "          <button class=\"btn\" onclick=\"" + prev_onclick + "\"> (<< prev) </button>"
@@ -79,8 +96,8 @@ function onImageClick(popname, btn_index, num_images, curr_image) {
     html = html + "          <button class=\"btn\" onclick=\"" + next_onclick + "\"> (next >>)  </button>"
     html = html + "        </p>"
     html = html + "        <div class=\"container border border-primary\">"
-    html = html + "            <a href=\"" +curr_image+ "\">"
-    html = html + "                <img src=\" "+curr_image+ "\" class=\"img-fluid d-block mx-auto\">"
+    html = html + "            <a href=\"" +image_url+ "\">"
+    html = html + "                <img src=\" "+image_url+ "\" class=\"img-fluid d-block mx-auto\">"
     html = html + "            </a>"
     html = html + "        </div>"  // container
     html = html + "      </div>"
@@ -114,20 +131,9 @@ open specified image index in pop window
 same as clicking on an image's button to open it in the pop window
 */
 function navigateToImage(dest_index) {
-
-    /*
-      convert 3 -> 003
-    */
-    dest_index_str = dest_index.toString()
-    MAX_LEN = 3
-    len = dest_index_str.length
-    for (n=0;n<MAX_LEN - len;n++) {
-        dest_index_str = '0' + dest_index_str
-    }
-
-    dest_id = "btn-image-" + dest_index_str
-    button = document.getElementById(dest_id)
-    button.click()
+    dest_id = "btn-image-" + dest_index.toString()
+    button = document.getElementById(dest_id);
+    button.click();
 }
 
 /* 

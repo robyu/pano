@@ -26,7 +26,7 @@ class CamPage:
         <title>Panopticon Media</title>
         <meta name="description" content="panopticon">
         <meta name="author" content="Robert Yu, Buttersquid Inc">
-        <META HTTP-EQUIV="refresh" CONTENT="60"> 
+        <META HTTP-EQUIV="refresh" CONTENT="600"> 
 
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 	<link rel="stylesheet" href="css/styles.css">
@@ -39,8 +39,11 @@ class CamPage:
         <!-- pop-up video player is always at top -->
         <div class="container-fluid" id="display-container"> <!-- container-fluid takes up 100% of viewport -->
             <!-- put the video player in the div above the image and video columns  -->
-            <div class="video-pop-up" id="video_pop0" >
+            <div class="display-pop-up" id="video_pop0" >
                 div_video_pop0
+            </div>
+            <div class="display-pop-up" id="image_pop0" >
+                div_image_pop0
             </div>
         </div>
 
@@ -176,13 +179,21 @@ class CamPage:
                     # <!-- TEMPLATE START image_link
                          
                     #      placeholders:
+                    #      {image_index} - zero-padded 3 digit
+                    #      {max_num_images}
                     #      {thumb_image}
                     #      {alt_txt}
                     #      {actual_image}
                     # -->
+    # templ_image_link=unicode("""
+    #                 <a href="{actual_image}"><img class="thumbnail" alt="{alt_txt}" src="{thumb_image}" ></a>
+    # """)
     templ_image_link=unicode("""
-                    <a href="{actual_image}"><img class="thumbnail" alt="{alt_txt}" src="{thumb_image}" ></a>
+                    <button class="btn pano-image-button" type="button" id="btn-image-{image_index}" onclick="onImageClick('image_pop0', {image_index}, {max_num_images}, '{actual_image}');">
+                        <img class="thumbnail" alt="{alt_txt}" src="{thumb_image}" >
+                    </button>
     """)
+    
 
                     # <!-- TEMPLATE START video_link
                     #      placeholders:
@@ -346,7 +357,7 @@ class CamPage:
     # <a href="https://www.w3schools.com">
     # <img border="0" alt="W3Schools" src="logo_w3s.gif" width="100" height="100">
     # </a>
-    def make_html_image_list(self, image_row_list):
+    def make_html_image_list(self, image_row_list, image_index_offset):
         """
         given a list of row elements representing images,
         return HTML for a single row
@@ -355,34 +366,52 @@ class CamPage:
         n = 0
 
         #
-        # make a single row of (num_images_per_row) images
+        # augment image list with a running index
+        # index is used for in-page navigation
+        for m in range(len(image_row_list)):
+            image_row_list[m].d['image_index'] = m + image_index_offset
+        #end
+
+
+        #
+        # stupid javascript alert:
+        # the image_index CANNOT be specified as a zero-padded index,
+        # because javascript cleverly interprets integers of the form 0nnn
+        # as octal.  fuck Brendan Eich.
+        
+        #
+        # if there are enough images for a full row, then make a full row
         while n+self.num_images_per_row <= len(image_row_list):
             for m in range(self.num_images_per_row):
-                row = image_row_list[n+m]
-                thumb_path  = self.get_thumb_path(row)
-                actual_path = self.get_actual_path(row)
+                image = image_row_list[n+m]
+                thumb_path  = self.get_thumb_path(image)
+                actual_path = self.get_actual_path(image)
                 html += CamPage.templ_image_link.format(actual_image=actual_path,
-                                                        alt_txt=row.d['ctime'],
-                                                        thumb_image=thumb_path)
+                                                        alt_txt=image.d['ctime'],
+                                                        thumb_image=thumb_path,
+                                                        image_index=image.d['image_index'], # unique HTML ID for each image
+                                                        max_num_images="{max_index}")
             #end
             n += self.num_images_per_row
         #end
         assert len(image_row_list) - n < self.num_images_per_row
 
         #
-        # make a row of the remaining imagees
+        # make a row of the remaining images
         while n < len(image_row_list):
-            row = image_row_list[n]
-            thumb_path  = self.get_thumb_path(row)
-            actual_path = self.get_actual_path(row)
+            image = image_row_list[n]
+            thumb_path  = self.get_thumb_path(image)
+            actual_path = self.get_actual_path(image)
             html += CamPage.templ_image_link.format(actual_image=actual_path,
-                                                    alt_txt=row.d['ctime'],
-                                                    thumb_image=thumb_path)
+                                                    alt_txt=image.d['ctime'],
+                                                    thumb_image=thumb_path,
+                                                    image_index=image.d['image_index'], # unique HTML ID for each image
+                                                    max_num_images="{max_index}")  # replace later
             n += 1
         #end
         assert n==len(image_row_list)
         return html
-
+    
     def make_html_video_list(self, video_row_list):
         """
         given a list of row elements representing videos,
@@ -402,6 +431,7 @@ class CamPage:
             earlier_time = dtutils.sec_to_str(row.d['ctime_unix'],"%H:%M:%S")
             html += CamPage.templ_video_link.format(actual_video=video_fname,
                                                     earlier_time=earlier_time)
+
             n += 1
         #end
         return html
@@ -502,14 +532,15 @@ class CamPage:
 
         return rows_html
     
-    def make_html_media_row(self, image_list, video_list, later_time_sec, earlier_time_sec):
+    def make_html_media_row(self, image_list, video_list, later_time_sec, earlier_time_sec, image_start_index):
         """
         return HTML for a single media row (images + video)
         """
         later_timefmt = "%a %b %d %H:%M:%S"
         earlier_timefmt = "%H:%M:%S"
 
-        images_html  = self.make_html_image_list(image_list)
+        
+        images_html  = self.make_html_image_list(image_list, image_start_index)
         videos_html  = self.make_html_video_list(video_list)
         later_datetime = dtutils.sec_to_str(later_time_sec, earlier_timefmt)
         earlier_datetime = dtutils.sec_to_str(earlier_time_sec, later_timefmt)
@@ -557,7 +588,7 @@ class CamPage:
 
         # iterate through all rows which fall into the time interval
         # iterate backwards through time, from latest (later time) to oldest (earlier time)
-        num_images_per_page = 0
+        num_images_on_page = 0
         curr_file_later_time_sec = -1
         while(later_time_sec > final_earlier_time_sec):
             earlier_time_sec = later_time_sec - interval_sec
@@ -577,13 +608,14 @@ class CamPage:
                 if len(row_image_list) > 0:
                     carousel_html += self.make_html_carousel(row_image_list, media_row_index)
                 #end
-                media_html += self.make_html_media_row(row_image_list, row_video_list, later_time_sec, earlier_time_sec)
+                media_html += self.make_html_media_row(row_image_list, row_video_list, later_time_sec, earlier_time_sec, num_images_on_page)
                 media_row_index += 1
-                num_images_per_page += max(len(row_image_list), len(row_video_list))
+                num_images_on_page += len(row_image_list)
                 
-                if num_images_per_page >= self.max_images_per_page:
+                if num_images_on_page >= self.max_images_per_page:
                     #
                     # close current webpage
+                    media_html = media_html.format(max_index=num_images_on_page)
                     dest_fname = self.write_webpage(carousel_html, media_html, False)
                     status_page_list.append(self.make_status_dict(dest_fname, curr_file_later_time_sec, earlier_time_sec))
                     
@@ -592,7 +624,7 @@ class CamPage:
                     media_row_index=0
                     carousel_html = ''
                     media_html = ''
-                    num_images_per_page = 0
+                    num_images_on_page = 0
 
                     # reset later_time
                     curr_file_later_time_sec = -1
@@ -603,6 +635,7 @@ class CamPage:
         
         # close current file
         if len(media_html) > 0:
+            media_html = media_html.format(max_index=num_images_on_page)
             dest_fname = self.write_webpage(carousel_html, media_html, True)
             status_page_list.append(self.make_status_dict(dest_fname, curr_file_later_time_sec, earlier_time_sec))
         #end
