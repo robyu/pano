@@ -251,7 +251,7 @@ class CamPage:
         # composing the webpage can take substantial time, so
         # compose HTML in a temporary file, then
         # rename it to final dest fname.
-        self.max_images_per_page = 50
+        self.max_images_per_page = 200
         self.fname_index=0
 
         #
@@ -570,7 +570,7 @@ class CamPage:
         """
         return HTML for a single media row (images + video)
         """
-        row_html = " <p>  | </p>"
+        row_html = " <p>  &or; </p>"
 
         return row_html
     
@@ -622,11 +622,12 @@ class CamPage:
                                                          later_time_sec,
                                                          earlier_time_sec,
                                                          mediatype=datastore.MEDIA_VIDEO)
+            #
+            # if later_time0 not yet recorded, then do so
+            if curr_file_later_time_sec <= 0:
+                curr_file_later_time_sec = later_time_sec
+            #end
             if (len(row_image_list)>0) or (len(row_video_list)>0):
-                #
-                # if later_time0 not yet recorded, then do so
-                if curr_file_later_time_sec <= 0:
-                    curr_file_later_time_sec = later_time_sec
 
                 carousel_html += self.make_html_carousel(row_image_list, media_row_index)
                     
@@ -664,8 +665,8 @@ class CamPage:
             #end 
         #end
         
-        # close current file
-        if len(media_html) > 0:
+        # close last webpage (only if it has >= 1 image)
+        if num_images_on_page > 0:
             media_html = media_html.format(max_index=num_images_on_page) # replace last template token
             dest_fname = self.write_webpage(carousel_html, media_html, True)
             status_page_list.append(self.make_status_dict(dest_fname, curr_file_later_time_sec, earlier_time_sec))
