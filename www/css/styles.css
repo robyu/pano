@@ -91,3 +91,8 @@ see https://github.com/twbs/bootstrap/issues/21985#issuecomment-281402443
 {
     background-color:transparent;
 }
+
+.pop-nav-btn
+{
+    margin-top: 10px;
+}

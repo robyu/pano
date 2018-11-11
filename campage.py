@@ -73,14 +73,15 @@ class CamPage:
 
             <!-- Links -->
             <ul class="navbar-nav">
-                <li class="nav-item">
+                <!-- specify "border border-success rounded" to make links look button-ish -->
+                <li class="nav-item border border-success rounded">
                     <a class="nav-link" href="{url_prev_page}"> &lt&ltprev</a> <!-- can't use actual'lessthan' character -->
                 </li>
-                <li class="nav-item">
+                <li class="nav-item border border-success rounded">
                     <!-- TODO: figure out how to do collapse('show') after loading page -->
-                    <a class="nav-link" href="index.html#button-{cam_name}">^up^</a>
+                    <a class="nav-link" href="index.html#button-{cam_name}">^all cams^</a>
                 </li>
-                <li class="nav-item">
+                <li class="nav-item border border-success rounded">
                     <a class="nav-link" href="{url_next_page}">next>></a>
                 </li>
             </ul>
@@ -156,9 +157,9 @@ class CamPage:
             # -->
     templ_media_row = unicode("""
             <div class="row" >
-                <h3 class="row-date-range">
+                <h5 class="row-date-range">
                     {earlier_datetime} .. {later_datetime}
-                </h3>
+                </h5>
             </div>
             
             <div class="row">
@@ -252,6 +253,10 @@ class CamPage:
         # rename it to final dest fname.
         self.max_images_per_page = 50
         self.fname_index=0
+
+        #
+        # generate carousel html?
+        self.make_carousel=False
 
         self.logger = logging.getLogger(__name__)
 
@@ -472,8 +477,13 @@ class CamPage:
     
     
     def make_html_doc(self, carousel_html, media_html, navbar_html):
-        carousel_body_html = CamPage.templ_carousel_body_html.format(carousel_images_html = carousel_html,
-                                                                     cam_name = self.camera_name)
+        if self.make_carousel==True:
+            carousel_body_html = CamPage.templ_carousel_body_html.format(carousel_images_html = carousel_html,
+                                                                         cam_name = self.camera_name)
+        else:
+            carousel_body_html = ''
+        #end
+        
         html_doc = CamPage.templ_header_body_footer.format(navbar_html = navbar_html,
                                                            carousel_body_html = carousel_body_html,
                                                            media_rows_html = media_html)
@@ -510,7 +520,12 @@ class CamPage:
 
         does NOT return the carousel body; carousel body is formed just prior to writing webpage
         """
-        assert len(image_list) > 0
+
+        #
+        # dont generate carousel if disabled
+        if (self.make_carousel==False) or (len(image_list)==0):
+            return ''
+        #end
 
         if row_index==0:
             thumb_path = self.get_thumb_path(image_list[0])
@@ -550,7 +565,14 @@ class CamPage:
                                                   html_videos = videos_html)
 
         return row_html
-        
+
+    def make_html_media_row_blank(self):
+        """
+        return HTML for a single media row (images + video)
+        """
+        row_html = " <p>  | </p>"
+
+        return row_html
     
     def generate(self, later_datetime, max_age_days, interval_min):
         """
@@ -605,37 +627,46 @@ class CamPage:
                 # if later_time0 not yet recorded, then do so
                 if curr_file_later_time_sec <= 0:
                     curr_file_later_time_sec = later_time_sec
-                if len(row_image_list) > 0:
-                    carousel_html += self.make_html_carousel(row_image_list, media_row_index)
-                #end
-                media_html += self.make_html_media_row(row_image_list, row_video_list, later_time_sec, earlier_time_sec, num_images_on_page)
+
+                carousel_html += self.make_html_carousel(row_image_list, media_row_index)
+                    
+                media_html += self.make_html_media_row(row_image_list,
+                                                       row_video_list,
+                                                       later_time_sec,
+                                                       earlier_time_sec,
+                                                       num_images_on_page)
                 media_row_index += 1
                 num_images_on_page += len(row_image_list)
                 
-                if num_images_on_page >= self.max_images_per_page:
-                    #
-                    # close current webpage
-                    media_html = media_html.format(max_index=num_images_on_page)
-                    dest_fname = self.write_webpage(carousel_html, media_html, False)
-                    status_page_list.append(self.make_status_dict(dest_fname, curr_file_later_time_sec, earlier_time_sec))
-                    
-                    #
-                    # start a new webpage
-                    media_row_index=0
-                    carousel_html = ''
-                    media_html = ''
-                    num_images_on_page = 0
-
-                    # reset later_time
-                    curr_file_later_time_sec = -1
-                #end 
+            else:
+                #
+                # insert a blank row to indicate passage of time
+                media_html += self.make_html_media_row_blank()
             #end
             later_time_sec = earlier_time_sec
+            
+            if num_images_on_page >= self.max_images_per_page:
+                #
+                # close current webpage
+                media_html = media_html.format(max_index=num_images_on_page)  # replace last template token
+                dest_fname = self.write_webpage(carousel_html, media_html, False)
+                status_page_list.append(self.make_status_dict(dest_fname, curr_file_later_time_sec, earlier_time_sec))
+                
+                #
+                # start a new webpage
+                media_row_index=0
+                carousel_html = ''
+                media_html = ''
+                num_images_on_page = 0
+
+                # reset later_time
+                curr_file_later_time_sec = -1
+            #end 
         #end
         
         # close current file
         if len(media_html) > 0:
-            media_html = media_html.format(max_index=num_images_on_page)
+            media_html = media_html.format(max_index=num_images_on_page) # replace last template token
             dest_fname = self.write_webpage(carousel_html, media_html, True)
             status_page_list.append(self.make_status_dict(dest_fname, curr_file_later_time_sec, earlier_time_sec))
         #end

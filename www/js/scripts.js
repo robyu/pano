@@ -85,17 +85,16 @@ function onImageClick(popname, image_index, num_images, image_url) {
        the prev and next buttons work by calling navigateToImage(), which simulates clicking on the previous or 
        next image's button
     */
-    html = html + "          <button class=\"btn\" onclick=\"" + prev_onclick + "\"> (<< prev) </button>"
+    html = html + "          <button class=\"btn btn-outline-success pop-nav-btn\" onclick=\"" + prev_onclick + "\"> (<< prev) </button>"
     /*
       goddamn I hate javascript:
       can't embed escaped quotes in tags, need to replace quotes with &quot;
     */
-    //h =           "          <button class=\"btn\" onclick=\"console.info(&quot;goddamn&quot;)\" > (X close)  </button>"
-    h =           "          <button class=\"btn\" onclick=\"closePopWindow(&quot;" + popname + "&quot;)\" > (X close)  </button>"
+    h =           "          <button class=\"btn btn-outline-success pop-nav-btn\" onclick=\"closePopWindow(&quot;" + popname + "&quot;)\" > (X close)  </button>"
     html = html + h
-    html = html + "          <button class=\"btn\" onclick=\"" + next_onclick + "\"> (next >>)  </button>"
+    html = html + "          <button class=\"btn btn-outline-success pop-nav-btn\" onclick=\"" + next_onclick + "\"> (next >>)  </button>"
     html = html + "        </p>"
-    html = html + "        <div class=\"container border border-primary\">"
+    html = html + "        <div class=\"container border border-success\">"
     html = html + "            <a href=\"" +image_url+ "\">"
     html = html + "                <img src=\" "+image_url+ "\" class=\"img-fluid d-block mx-auto\">"
     html = html + "            </a>"
