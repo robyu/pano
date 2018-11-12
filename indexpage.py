@@ -248,40 +248,39 @@ class IndexPage:
         later_fmt = "%a %b %d %H:%M:%S"   
         cards_html = ''
         for cam_info in cam_list:
-            rows_html = ''
-            #for page_dict in cam_info['status_page_list']:
-            for index in range(len(cam_info['status_page_list'])):
-                page_dict = cam_info['status_page_list'][index]
-                page_fname = page_dict['page_fname']
-                
-                # sec to iso8601?
-                #earlier_dt = str(page_dict['earlier_time_sec']) #"Sun Aug 26 2018 14:00"
-                earlier_dt = dtutils.sec_to_str(page_dict['earlier_time_sec'],earlier_fmt)
-                later_dt = dtutils.sec_to_str(page_dict['later_time_sec'],later_fmt)
-                rows_html += IndexPage.templ_camera_table_row.format(index=index,
-                                                               earlier_datetime = earlier_dt,
-                                                               later_datetime = later_dt,
-                                                               webpage_url=page_fname)
+            num_status_pages = len(cam_info['status_page_list'])
+            self.logger.debug("cam (%s) has %d status pages" % (cam_info['name'], num_status_pages))
+            if num_status_pages > 0:  # at least one status page
+                # note earliest/latest times from first and last entries
+                latest_time_sec = cam_info['status_page_list'][0]['later_time_sec']
+                earliest_time_sec = cam_info['status_page_list'][num_status_pages-1]['earlier_time_sec']
 
-                #
-                # note time of first and last rows
-                # status rows are backwards in time, so first row is most recent in time
-                if index==0:
-                    latest_time_sec = page_dict['later_time_sec']
+                rows_html = ''
+                for index in range(len(cam_info['status_page_list'])):
+                    page_dict = cam_info['status_page_list'][index]
+                    page_fname = page_dict['page_fname']
+                
+                    # sec to iso8601?
+                    #earlier_dt = str(page_dict['earlier_time_sec']) #"Sun Aug 26 2018 14:00"
+                    earlier_dt = dtutils.sec_to_str(page_dict['earlier_time_sec'],earlier_fmt)
+                    later_dt = dtutils.sec_to_str(page_dict['later_time_sec'],later_fmt)
+                    rows_html += IndexPage.templ_camera_table_row.format(index=index,
+                                                                         earlier_datetime = earlier_dt,
+                                                                         later_datetime = later_dt,
+                                                                         webpage_url=page_fname)
+
                 #end
-                if index==len(cam_info['status_page_list'])-1:
-                    earliest_time_sec = page_dict['earlier_time_sec']
-                #end
+                assert earliest_time_sec < latest_time_sec, "earliest_time_sec (%d) < latest_time_sec (%d)" % (earliest_time_sec, latest_time_sec)
+                earliest_dt = dtutils.sec_to_str(earliest_time_sec,earlier_fmt)
+                latest_dt = dtutils.sec_to_str(latest_time_sec,later_fmt)
+                latest_thumbnail_url = self.get_latest_thumb_url(cam_info['name'])
+                cards_html += IndexPage.templ_camera_card.format(camera_name=cam_info['name'],
+                                                                 all_table_rows = rows_html,
+                                                                 earliest_dt = earliest_dt,
+                                                                 latest_dt = latest_dt,
+                                                                 recent_thumbnail=latest_thumbnail_url)
+                
             #end
-            assert earliest_time_sec < latest_time_sec
-            earliest_dt = dtutils.sec_to_str(earliest_time_sec,earlier_fmt)
-            latest_dt = dtutils.sec_to_str(latest_time_sec,later_fmt)
-            latest_thumbnail_url = self.get_latest_thumb_url(cam_info['name'])
-            cards_html += IndexPage.templ_camera_card.format(camera_name=cam_info['name'],
-                                                             all_table_rows = rows_html,
-                                                             earliest_dt = earliest_dt,
-                                                             latest_dt = latest_dt,
-                                                             recent_thumbnail=latest_thumbnail_url)
         #end
         return cards_html
         

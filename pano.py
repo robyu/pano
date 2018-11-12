@@ -84,7 +84,7 @@ class Pano:
             handler = logging.StreamHandler(sys.stdout)
         else:
             print("logging to %s" % logfname)
-            handler = logging.handlers.RotatingFileHandler(logfname, maxBytes=4096, backupCount=4)
+            handler = logging.handlers.RotatingFileHandler(logfname, maxBytes=32000, backupCount=4)
         #end
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
         handler.setFormatter(formatter)        

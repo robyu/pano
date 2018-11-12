@@ -577,7 +577,7 @@ class CamPage:
     def generate(self, later_datetime, max_age_days, interval_min):
         """
         given
-        later_datetime: starting datetime string
+        later_datetime: starting datetime string (can specify "now")
         max_age_days: maximum number of days to include in webpage
         interval_min: time interval for each row in webpage
 
