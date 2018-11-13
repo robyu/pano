@@ -188,7 +188,14 @@ class Datastore:
 
         see https://www.techonthenet.com/sqlite/functions/datetime.php
         """
-        cmd = "select strftime('%s','{strtime}','utc')".format(strtime=strtime)
+        if strtime=="now":
+            #
+            # requests for "now" are treated differently: do not specify "utc", otherwise we get
+            # the wrong timezone
+            cmd = "select strftime('%s','{strtime}')".format(strtime=strtime)
+        else:
+            cmd = "select strftime('%s','{strtime}','utc')".format(strtime=strtime)
+        #end
         self.cursor.execute(cmd)
         ret = self.cursor.fetchall()
         sec = int(ret[0][0])

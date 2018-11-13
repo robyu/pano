@@ -219,6 +219,40 @@ class TestPano(unittest.TestCase):
 
         self.assertTrue(time_sec==time_sec0)
 
+    def test_time_roundtrip_now(self):
+        """
+        iso8601 -> seconds -> iso8601
+        """
+        pu.db
+
+        #
+        # use mysql to determine local time
+        time_string0 = 'now'
+        db = datastore.Datastore(drop_table_flag=True)
+        time_sec = db.iso8601_to_sec(time_string0)
+        
+        time_string = db.sec_to_iso8601(time_sec)
+        time_string = time_string.encode('utf8')    # convert from decode to plain
+        print("%s -> %s" % (time_string0, time_string))
+        # ['2018', '11', '12 21:54:32']
+        time_string_split = time_string.split('-')
+        time_string_split[2:3] = time_string_split[2].split(' ')
+        time_string_split[3:6] = time_string_split[3].split(':')
+
+
+        #
+        # use python method to get local time
+        localtime = time.localtime(time.time())
+        print "Local current time :", localtime
+
+        #
+        # year, month, day, hour should match
+        self.assertTrue(int(time_string_split[0])==localtime.tm_year)
+        self.assertTrue(int(time_string_split[1])==localtime.tm_mon)
+        self.assertTrue(int(time_string_split[2])==localtime.tm_mday)
+        self.assertTrue(int(time_string_split[3])==localtime.tm_hour)
+
+
     def test_select_by_age(self):
         """
         for FTP-culled,
@@ -698,6 +732,8 @@ class TestPano(unittest.TestCase):
         dict = panoconfig.get_param_dict(config_fname)
 
         self.assertTrue(dict['database_fname']=="panodb.sqlite")
+
+
         
         
 if __name__ == '__main__':
