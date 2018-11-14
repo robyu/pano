@@ -75,14 +75,14 @@ class CamPage:
             <ul class="navbar-nav">
                 <!-- specify "border border-success rounded" to make links look button-ish -->
                 <li class="nav-item border border-success rounded">
-                    <a class="nav-link" href="{url_prev_page}"> &lt&ltprev</a> <!-- can't use actual'lessthan' character -->
+                    <a class="nav-link" href="{url_prev_page}"> &lt&lt later</a> <!-- can't use actual'lessthan' character -->
                 </li>
                 <li class="nav-item border border-success rounded">
                     <!-- TODO: figure out how to do collapse('show') after loading page -->
                     <a class="nav-link" href="index.html#button-{cam_name}">^all cams^</a>
                 </li>
                 <li class="nav-item border border-success rounded">
-                    <a class="nav-link" href="{url_next_page}">next>></a>
+                    <a class="nav-link" href="{url_next_page}">earlier >></a>
                 </li>
             </ul>
         </nav>
@@ -365,11 +365,15 @@ class CamPage:
     def make_html_image_list(self, image_row_list, image_index_offset):
         """
         given a list of row elements representing images,
-        return HTML for a single row
+        return HTML 
         """
         html = ''
         n = 0
 
+        # image_row_list images are arranged earliest to latest.
+        # flip list so images on webpage are arranged latest to earliest.
+        image_row_list.reverse()
+        
         #
         # augment image list with a running index
         # index is used for in-page navigation
