@@ -15,7 +15,7 @@ class CamPage:
     # {navbar_html}
     # {carousel_body_html}
     # {media_rows_html}
-    templ_header_body_footer = unicode("""
+    templ_header_body_footer = str("""
 <!DOCTYPE html>
 <html>
     <head>
@@ -67,7 +67,7 @@ class CamPage:
     # {cam_name} = camera name
     # {url_next_page} = URL of next cam page
     # {url_prev_page} = URL of prev cam page
-    templ_navbar_html=unicode("""
+    templ_navbar_html=str("""
         <!-- A grey horizontal navbar that becomes vertical on small screens -->
         <nav class="navbar navbar-expand-sm bg-dark sticky-top">
 
@@ -91,7 +91,7 @@ class CamPage:
     #
     # {cam_name}
     # {carousel_images_html}
-    templ_carousel_body_html=unicode("""
+    templ_carousel_body_html=str("""
         <!-- carousel -->
         <div class="container-fluid" >
             <div class="row">
@@ -127,7 +127,7 @@ class CamPage:
     #
     # {image_url}
     # {image_date_time}
-    templ_carousel_image_first=unicode("""
+    templ_carousel_image_first=str("""
                             <div class="carousel-item active"> <!-- first item has class 'active' -->
                                 <img class="d-block w-100" src="{image_url}" alt="{image_date_time}">
 				<div class="carousel-caption" >
@@ -138,7 +138,7 @@ class CamPage:
 
     #{image_url}
     #{image_date_time}
-    templ_carousel_image=unicode("""
+    templ_carousel_image=str("""
                             <div class="carousel-item">
                                 <img class="d-block w-100" src="{image_url}" alt="{image_date_time}">
 				<div class="carousel-caption d-none d-md-block" >
@@ -155,7 +155,7 @@ class CamPage:
             #      {html_images}
             #      {html_videos}
             # -->
-    templ_media_row = unicode("""
+    templ_media_row = str("""
             <div class="row" >
                 <h5 class="row-date-range">
                     {earlier_datetime} .. {later_datetime}
@@ -189,7 +189,7 @@ class CamPage:
     # templ_image_link=unicode("""
     #                 <a href="{actual_image}"><img class="thumbnail" alt="{alt_txt}" src="{thumb_image}" ></a>
     # """)
-    templ_image_link=unicode("""
+    templ_image_link=str("""
                     <button class="btn pano-image-button" type="button" id="btn-image-{image_index}" onclick="onImageClick('image_pop0', {image_index}, {max_num_images}, '{actual_image}');">
                         <img class="thumbnail" alt="{alt_txt}" src="{thumb_image}" >
                     </button>
@@ -201,7 +201,7 @@ class CamPage:
                     #      {actual_video}
                     #      {earlier_time}
                     # -->
-    templ_video_link=unicode("""
+    templ_video_link=str("""
                     <p>
                         <button class="btn btn-outline-success" type="button" onclick="onVideoClick('{actual_video}','video_pop0');">
                             {earlier_time}

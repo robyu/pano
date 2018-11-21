@@ -15,7 +15,7 @@ class IndexPage:
 #      {camera_overview_rows}
 #      {camera_status_cards}
 # -->
-    templ_webpage = unicode("""
+    templ_webpage = str("""
 <!DOCTYPE html>
 <html lang="en">
     <head>
@@ -90,7 +90,7 @@ class IndexPage:
                     #      {admin_url}
                     #      {live_url}
                     # -->
-    templ_overview_row = unicode("""
+    templ_overview_row = str("""
                     <tr class="table-active" >
                         <td>
                             <!-- this href allows us to expand/collapse associated media rows  -->
@@ -120,7 +120,7 @@ class IndexPage:
             #      {earliest_dt} - earliest date-time string
             #      {latest_dt} - latest date-time string
             # -->
-    templ_camera_card = unicode("""
+    templ_camera_card = str("""
             <div class="card">
                 <div class="card-title m-0" id="heading-{camera_name}">
                     <button class="btn btn-link p-0 m-0" data-toggle="collapse" id="button-{camera_name}" data-target="#collapse-{camera_name}" aria-expanded="true" aria-controls="collapse-{camera_name}">
@@ -178,7 +178,7 @@ class IndexPage:
                                 #      {later_datetime} - stop date
                                 #      {webpage_url} - URL to media page
                                 # -->
-    templ_camera_table_row = unicode("""
+    templ_camera_table_row = str("""
                                 <tr class="table-active" >
                                     <td>
                                         <a href="{webpage_url}">{index}</a>

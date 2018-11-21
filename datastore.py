@@ -310,7 +310,7 @@ class Datastore:
         """
         update database entry's column:value 
         """
-        if isinstance(val, basestring):
+        if isinstance(val, str):
             cmd = "update {tn} set {col}='{val}' where id={id}".format(tn=self.tablename, col=col,val=val,id=id)
         else:
             cmd = "update {tn} set {col}={val} where id={id}".format(tn=self.tablename, col=col,val=val,id=id)

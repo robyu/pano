@@ -17,6 +17,7 @@ import pano
 import derived
 import glob
 import panoconfig
+import dtutils
 
 """
 run all unit tests
@@ -110,14 +111,15 @@ class TestPano(unittest.TestCase):
         num_added = dirwalk.walk_dir_and_load_db(db, 'testdata/FTP-culled')
         db.close()
         print("num_added=%d" % num_added)
-        self.assertTrue(num_added==621)
+        self.assertTrue(num_added==605)
 
     def test_walk_dir_and_load_twice(self):
         #pu.db
         db = datastore.Datastore(drop_table_flag=True)
         num_added = dirwalk.walk_dir_and_load_db(db, 'testdata/FTP-culled')
         db.close()
-        self.assertTrue(num_added==621)
+        print("num_added=%d", num_added)
+        self.assertTrue(num_added==605)
 
         #
         # 2nd time around, do not drop table
@@ -397,45 +399,6 @@ class TestPano(unittest.TestCase):
         print("len(row_list)=%d" % len(row_list))
         self.assertTrue(len(row_list)==18)
         
-    # def test_gen_webpage(self):
-    #     #pu.db
-    #     start_time = '2018-02-25T19:14:22'
-    #     delta_min = 10
-    #     camera_name = 'b0'
-
-    #     #
-    #     # populate db and get rows corresponding to time interval
-    #     db = datastore.Datastore(drop_table_flag=True)
-    #     dirwalk.walk_dir_and_load_db(db, 'testdata/FTP-culled')
-    #     # num_deleted = dirwalk.cull_files_by_age(db,
-    #     #                                         baseline_time='2018-02-26',
-    #     #                                         max_age_days=0.25)
-    #     derived.make_derived_files(db)
-    #     delta_sec = 60 * delta_min   # 10 minutes
-    #     upper_time_sec = db.iso8601_to_sec(start_time)
-    #     lower_time_sec = upper_time_sec - delta_sec
-    #     row_image_list = db.select_by_time_cam_media(camera_name,upper_time_sec, lower_time_sec,mediatype=datastore.MEDIA_IMAGE)
-    #     row_video_list = db.select_by_time_cam_media(camera_name,upper_time_sec, lower_time_sec,mediatype=datastore.MEDIA_VIDEO)
-    #     self.assertTrue(len(row_image_list)==6)
-    #     self.assertTrue(len(row_video_list)==2)
-    #     fname_webpage = 'www/test_b0.html'
-    #     cam_webpage = webpage.Webpage(fname_webpage, camera_name, self.derived_dir,self.test_data_dir)
-    #     cam_webpage.write_header()
-
-    #     row_html = cam_webpage.make_html_image_list(row_image_list)
-    #     video_html = cam_webpage.make_html_video_list(row_video_list)
-    #     upper_datetime = db.sec_to_iso8601(upper_time_sec)
-    #     lower_datetime = db.sec_to_iso8601(lower_time_sec)
-    #     cam_webpage.write_row(row_html, video_html, upper_datetime, lower_datetime)
-    #     cam_webpage.write_row(row_html, video_html, upper_datetime, lower_datetime)
-    #     cam_webpage.write_row(row_html, video_html, upper_datetime, lower_datetime)
-        
-    #     cam_webpage.close()
-    #     db.close()
-        
-    #     self.assertTrue(os.path.exists(fname_webpage))
-
-
     def test_gen_webpage(self):
         #pu.db
         start_datetime = '2018-02-25T19:14:22'
@@ -465,7 +428,10 @@ class TestPano(unittest.TestCase):
         fname_webpage_list = cam_pages.generate(start_datetime, 1, delta_min)
 
         for fname in fname_webpage_list:
-            self.assertTrue(os.path.exists(os.path.join(self.www_dir, fname)))
+            #fname = os.path.join(self.www_dir, fname)
+            fname = os.path.join("www", fname)
+            print("check for existence: %s" % fname)
+            self.assertTrue(os.path.exists(fname))
 
 
     def test_read_json(self):
@@ -723,7 +689,7 @@ class TestPano(unittest.TestCase):
         epoch = 1519613388
         fmt = "%a %Y-%m-%d %H:%M:%S"
         
-        stime = dtutils.sec_to_custom(epoch, fmt)
+        stime = dtutils.sec_to_str(epoch, fmt)
         print("%s" % stime)
         self.assertTrue(stime=="Sun 2018-02-25 18:49:48")
 
