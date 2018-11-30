@@ -1,0 +1,151 @@
+#-*- mode: org -*-
+
+* intro
+Back in 2006, hoping to catch the thief who was stripping my apricot trees, I built a video surveillance
+system out of a security camera, a video card, and an old PC (link to camera obscura).  It didn't work
+very well, but I captured amusing animal photos and I learned a bit about home video surveillance.
+
+Now it's 2018, and suddenly we've got a cornucopia of home security products. Most of these products
+send the video to the cloud, and they charge a monthly fee for access to useful amounts of data
+(say, two weeks of video for multiple cameras). Wifi-enabled digital cameras have also become
+inexpensive. The time felt ripe to revisit home security.
+
+Being fundamentally opposed to spending money on anything I can make myself, I decided
+to roll my own.  "This will take a couple of months of weekends and evenings," I thought. I started in December 2017;
+it's now November 2018.
+
+
+* System Requirements
+
+The high-level requirements are simple: my system needs to provide continuous surveillance of the front and back of my
+house from multiple viewpoints. In the event that something happens, I also need to be able to easily review footage from 
+up to two weeks ago. The footage needs to be of sufficient quality to identify a face.
+
+Here are the lessons I learned from my previous surveillance system:
+- resolution is king; 1080p is a minimum useful resolution; any lower and faces at any distance appear as mere blurs.
+- Wifi is unreliable.  The combination of spotty coverage
+(at the corners of my property) and high-bandwdith content can really bring a surveillance
+system to its knees.
+- Motion detection is flawed, yet critical.  It's flawed, because traditional motion detection algorithms
+(non-neural net) simply threshold the sum of differences between frames. This works fine against
+a static background, but add a tree, a bit of breeze, and preso! you've got motion and false detects.
+- storage and review UI
+- live video ain't important.  It's nice, but unless you've got absolutely nothing to do except stare at video feeds, it's not necessary.
+
+additional requirements:associated with the storage: the camera manufacturer is selling you
+hardware in the hopes of selling a service.  Looking at the Logitech
+Circle service, Logitech gives you 24 hours of storage for free (which
+seems largely useless); 14-day storage is $69/year for one camera.
+Storing a month of images for five cameras is $179/year.  If you are
+cheap AND paranoid, like me, then this is too much.
+
+Second, there are the bandwidth issues.  My DSL connection at home
+supports a paltry 1 Mbps upstream; depending on how well your camera
+queues uploads, this may pose a large (read: insurmountable) problem.
+
+Finally, there is the question of depending on the camera's company
+for support. Obviously, cloud-based cameras require somebody to
+continue running a server for the cameras, which takes money and
+effort.  What happens when the company decides that it's no longer
+worthwhile?  Go ahead and google "google revolv": a startup called
+Revolv sold a home "Smart Hub" which did something which some early
+adopters found useful.  Unfortunately, the smart hub required a
+back-end server to operate. In 2014 Google bought Revolv for buckets
+of cash. Two years later, after the bean counters had stared deeply at
+their spreadsheets, Google decided to shut down the Revolv server.
+Suddenly, Revolv users were left with a $300 paperweight.  To their
+credit, Google apparently offered refunds.
+
+Or let's consider an even simpler case: my Amcrest cameras do not
+require a cloud service, but they still require software to configure
+the cameras, critical settings such as date/time, resolution, etc.  I
+need to install an Amcrest-specific browser plugin to configure the
+cameras. What happens when Amcrest goes out of business or they don't
+want to support the latest browser?
+
+So let's keep everything local.
+
+* Hardware
+raspberry pi
+external usb drive
+routers
+cameras: amcrest ip2m-842
+
+* A word about the cameras:
+The IP2M-842 is a digital camera in an IP66 housing (for outdoor use).  It can deliver 1080p HD video over Wifi or Ethernet, which is important because you cannot
+rely on wifi coverage.  Camera configuration is via a built-in webserver and webpage, which is surprisingly complete. 
+https://s3.amazonaws.com/amcrest-files/IP2M-842+Specifications+Sheet.pdf
+[picture of webpage]
+
+Unfortunately, the configuration also replies on a plugin to display live video, and this plugin is not available for the Chrome browser.
+There seems to be a non-browser specific client, but I never got this to work.
+
+The iPhone app works fairly well; it's useful for pointing the cameras during installation. Surprisingly, the app is able to connect to my cameras
+when outside my local network; I guess that's the magic of P2P.
+
+The viewing angle is 72 degrees, which is less than ideal; the solution is to be extra careful with camera placement, and to use multiple cameras.
+
+The mounting hardware consists of a mounting plate attached to the camera via a swivel joint. It turns out the swivel is frustratingly limited,
+especially when the plate is attached to a surface which is neither perfectly vertical nor horizontal (like the angled soffit under my eaves).
+sometimes it's simply not possible to point the camera in the desired direction.
+
+
+Fortunately, I found a 3D-printable mount on thingiverse, designed especially for amcrest cameras.  
+https://www.thingiverse.com/thing:2022254/#files
+
+Infrared illumination at night is provided by a ring of LEDs surrounding the lens. Though I expecting to buy a standalone infrared
+illuminator, the built-in LEDs are adequate.
+
+I would characterize Amcrest technical support as enthusiastic but generally hapless.
+
+The cameras come with 4 hours of storage on Amcrest's servers, though I don't plan to use this.
+
+The built-in software will take video and snapshots when it detects motion 
+[picture of motion-detection configuration]
+The video and snapshots can be stored in the camera, on an SD card, or sent via FTP--which is how I use it.
+[picture of FTP configuration]
+Snapshots are encoded as standard JPEG; videos, on the other hand, are encoded in a proprietary format (DAV).
+This proved to be a minor pain in the ass. Fortunately, ffmpeg converts this DAV format into MP4, albeit with complaints.
+The camera will also stream the video live, via RTSP. 
+
+** PROS
+
+** CONS 
+
+
+
+* Dicking around with the open sources
+short history
+shinobi
+blue iris
+experiments w/ cycle load & ffmpeg
+rebuilding ffmpeg for h264 support
+core i7 
+the revelation!
+
+* Network
+
+TP link AC1750 archer c7: same model number, different hardware.  who does that?
+RT-AC68U
+dd-wrt on all routers
+
+wds for wireless hop to my garage
+
+garage door and anti-rat metal screen effectively blocks Wifi
+
+* Rolling My Own
+Panopticon
+Bootstrap
+Python
+DFD
+github
+json 
+
+* final system
+[pictures]
+
+
+
+
+
+
