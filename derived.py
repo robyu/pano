@@ -11,7 +11,24 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_DERIVED_DIR = './derived'
 
-def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir,print_cmd_flag=False):
+def subprocess_with_logging(cmd_list):
+    """
+    invoke subprocess, send output to logger
+    https://stackoverflow.com/questions/18774476/subprocess-call-logger-info-and-error-for-stdout-and-stderr-respectively
+    """
+    logger.info(cmd_list)
+    
+    p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = p.communicate()
+
+    if stdout:
+        logger.info(stdout)
+    #end
+    if stderr:
+        logger.error(stderr)
+    #end
+
+def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir):
     src_fname = os.path.join(base_data_dir, path, fname)
     dest_path = os.path.join(derived_dir, path)
     dest_fname = os.path.join(dest_path, fname)
@@ -29,14 +46,9 @@ def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir,print_cmd_flag=Fa
     if os.path.exists(dest_fname)==True:
         logger.info("%s -> %s already exists" % (src_fname, dest_fname))
     else:        
-        capture_file = open("ffmpeg_out.txt","wt")
         # ffmpeg -i 21.18.33-21.26.00\[M\]\[0\@0\]\[0\].dav -vcodec copy -preset veryfast out2.avi
         cmd = ['ffmpeg', '-y','-i',src_fname, '-vcodec', 'copy', '-preset', 'veryfast', dest_fname]
-        if print_cmd_flag==True:
-            logger.info(cmd)
-        #end
-        subprocess.call(cmd,stdout=capture_file, stderr=capture_file)
-        capture_file.close()
+        subprocess_with_logging(cmd)
 
         # check again: conversion may have failed
         if os.path.exists(dest_fname)==False:
@@ -49,7 +61,7 @@ def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir,print_cmd_flag=Fa
     #end
     return dest_fname
 
-def make_thumbnail(base_data_dir, path, fname, derived_dir,print_cmd_flag=False):
+def make_thumbnail(base_data_dir, path, fname, derived_dir):
     """
     given the base_data_dir+path+fname of an image,
     generate a thumbnail image in derived_dir,
@@ -59,10 +71,17 @@ def make_thumbnail(base_data_dir, path, fname, derived_dir,print_cmd_flag=False)
     src_fname = os.path.join(base_data_dir, path, fname)
     dest_path = os.path.join(derived_dir, path)
     dest_fname = os.path.join(dest_path, fname)
-    assert os.path.exists(src_fname)
+
+    # sometimes the database is out of date and the source file doesn't actually exist
+    if os.path.exists(src_fname)==False:
+        logger.info("src file %s does not exist" % src_fname)
+        dest_fname = ''
+        return dest_fname
+    #end
     try:
         os.makedirs(dest_path)
     except os.error:
+        logger.info("could not create dest path (%s)" % dest_path)
         pass
 
     if os.path.exists(dest_fname)==True:
@@ -73,10 +92,7 @@ def make_thumbnail(base_data_dir, path, fname, derived_dir,print_cmd_flag=False)
         # because we wouldn't be calling this function if derived_failed == 1
 
         cmd = ['convert',src_fname, '-resize', '10%',dest_fname]
-        if print_cmd_flag==True:
-            logger.info(cmd)
-        #end
-        subprocess.call(cmd)
+        subprocess_with_logging(cmd)
 
         if os.path.exists(dest_fname)==False:
             logger.info("%s -> %s failed" % (src_fname, dest_fname))

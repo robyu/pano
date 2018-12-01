@@ -114,14 +114,95 @@ The camera will also stream the video live, via RTSP.
 
 
 
-* Dicking around with the open sources
-short history
-shinobi
-blue iris
-experiments w/ cycle load & ffmpeg
-rebuilding ffmpeg for h264 support
-core i7 
-the revelation!
+* Dicking around with the open sources and underpowered processors
+I first tried to install ZoneMinder, because it seemed to be the most mature
+system.  Starting with a fresh install of Linux Mint 17, I followed the
+"easy way" installation 
+process--which isn't all that easy, in terms of number of keystrokes. 
+There's installing Apache, there's configuring PHP and MySQL.
+This went off the rails almost immediately, though I don't 
+recall how. I recently tried it again and got it working, so perhaps
+I was just tired. I also tried installing the Docker image because
+the application immediately quit.
+
+
+
+Sticking to my list of free, open-source software,  I next tried Shinobi (link).  I quickly got two webcams running with Shinobi, and 
+it felt promising. After more fiddling, I eventually got Shinobi running on an old 
+Mac Mini server with my Amcrest wireless camera. At this point, things started to
+unravel. I encountered two problems, in particular:
+- Shinobi often hung: Shinobi is written in Javascript. Javascript
+is an abomination. Why anybody would write a server-side application
+in Javascript is simply inexplicable.
+
+- With a single camera running at 20 FPS and at full resolution, Shinobi consumed 
+most of a single core on my aging Mac Mini.
+
+The second issue is worth discussing in depth. Most cam surveillance
+software (including Shinobi, ZoneMinder, Kerberos, and BlueIris)
+accept a __video stream__ as input. The software then decodes the
+video stream, performs motion detection, and transcodes the video to
+generate images or video clips.  Processing a high-def video stream
+is a big task for a little computer. Shinobi continuously runs ffmpeg on the 
+video stream, one instance per video stream, compressing
+the video with H.264 (MPEG-4). Sadly, two cameras
+require two instances of ffmpeg.  Two instances of
+ffmpeg is a lot of cycles.
+
+I borrowed an Intel compute stick from work (with an Atom processor) to see how it
+could handle multiple cameras. Updating Linux on the compute Stick
+was immensely annoying (see
+[http://linuxiumcomau.blogspot.com/2017/06/customizing-ubuntu-isos-documentation.html]
+).  Sadly, the stick proved to be fairly anemic, and could handle only 1 cameraq
+reliably. With two cameras, ffmpeg crashed.
+
+Recall that I was hoping to install at least 5 cameras. At the time, I
+was open to running multiple servers, but I really did not want to
+provision one computer per camera! 
+A bit of investigation revealed
+that the Raspberry Pi CPU, a Broadcom BCM2837, is actually a quad-core
+ARM Cortex A53 with hardware acceleration H.264 video encoding.  I
+could see that the ffmpeg invoked by Shinobi was not making use of the
+accelerator: [ffmpeg dump indicating lack of acceleration]
+
+
+
+Using a procedure from the internets 
+(https://github.com/legotheboss/YouTube-files/wiki/(RPi)-Compile-FFmpeg-with-the-OpenMAX-H.264-GPU-acceleration)
+
+(http://www.redhenlab.org/home/the-cognitive-core-research-topics-in-red-hen/the-barnyard/hardware-encoding-with-the-raspberry-pi),
+I rebuilt mmpeg from scratch to use the accelerator:
+
+$ ffmpeg -encoders | grep omx
+V..... h264_omx             OpenMAX IL H.264 video encoder (codec h264)
+
+
+
+Brimming with anticipation, I ran Shinobi with two video streams.
+It wasn't enough--the system still ran out of cycles.
+
+My next step was to ditch the Raspberry Pi. I looked into hardware
+with an Intel processor. An old Intel Compute Stick from work was a
+non-starter; I couldn't even install a recent version of Linux on
+it. I started searching Craigslist and eBay for used Core i7 servers.
+Mr. Shinobi claimed that he could process N streams on a (xxxxx)
+server.
+
+* The Revelation!
+Late one evening, after the kids had gone to bed, I was chewing over
+the cost of Intel-powered servers (expensive), video stream bitrates, and 
+off-the-shelf video surveillance recorders (strangely cheap) when it struck me:  why send
+raw video streams over the network? The cameras themselves perform motion
+detection, and are set up to generate snapshots and video clips.
+
+It's obvious, looking at the price of Amcrest's video recorder [amazon link & price], that
+it's nothing more than a small processor and lots of storage.
+
+So why not set up the Raspberry Pi as a simple FTP server, which 
+stores video clips and images?
+
+At this point, progress was fairly linear. It was simply a matter
+of rolling up my sleeves and writing the software.
 
 * Network
 

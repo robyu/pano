@@ -648,7 +648,7 @@ class TestPano(unittest.TestCase):
         except:
             pass
         
-        derived_fname = derived.convert_dav_to_mp4(base_data_dir, path, fname, self.derived_dir, print_cmd_flag=True)
+        derived_fname = derived.convert_dav_to_mp4(base_data_dir, path, fname, self.derived_dir)
         print('derived_fname=%s' % derived_fname)
         #self.assertTrue(os.path.exists(os.path.join(self.derived_dir, derived_fname)))
         self.assertTrue(os.path.exists(derived_fname))
