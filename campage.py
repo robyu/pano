@@ -6,6 +6,8 @@ import dtutils
 import pudb
 import logging
 import tempfile
+import subprocess
+
 """
 
   
@@ -79,7 +81,7 @@ class CamPage:
                 </li>
                 <li class="nav-item border border-success rounded">
                     <!-- TODO: figure out how to do collapse('show') after loading page -->
-                    <a class="nav-link" href="index.html#button-{cam_name}">^all cams^</a>
+                   <a class="nav-link" href="index.html#button-{cam_name}">^all cams^</a>
                 </li>
                 <li class="nav-item border border-success rounded">
                     <a class="nav-link" href="{url_next_page}">earlier >></a>
@@ -260,6 +262,28 @@ class CamPage:
 
         self.logger = logging.getLogger(__name__)
 
+    def delete_existing_campages(self):
+        """
+        delete existing files of the form "camname-*.html"
+        """
+        #
+        # delete old cam pages
+        fname_wildcard = '%s-*.html' % self.camera_name
+        self.logger.info("deleting HTML pages of form (%s)" % fname_wildcard)
+
+        cmd_list = ['find',self.www_dir,'-type','f','-name',fname_wildcard,'-delete']
+        self.logger.info(cmd_list)
+
+        p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+
+        if stdout:
+            self.logger.debug(stdout)
+        #end
+        if stderr:
+            self.logger.info(stderr)
+        #end
+        
     def calc_dest_fname(self, last_flag=False):
         """
         generate filenames of media pages
@@ -595,6 +619,8 @@ class CamPage:
         'earlier_time_sec'
 
         """
+        self.delete_existing_campages()
+        
         status_page_list = []
         #
         # convert and compute datetime intervals in seconds

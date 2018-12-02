@@ -108,10 +108,10 @@ class Pano:
         """
         generate links in www directory to data directories
         """
-        assert os.path.exists(self.param_dict['www_dir'])
+        assert os.path.exists(self.param_dict['www_dir']), "%s does not exist" % self.param_dict['www_dir']
 
         data_dir_abs_path = os.path.realpath(self.param_dict['base_data_dir'])
-        assert os.path.exists(data_dir_abs_path)
+        assert os.path.exists(data_dir_abs_path), "%s does not exist" % data_dir_abs_path
 
         www_base_dir = os.path.join(self.param_dict['www_dir'], self.param_dict['www_base_dir'])
         if os.path.exists(www_base_dir)==True:
@@ -120,7 +120,7 @@ class Pano:
         os.symlink(data_dir_abs_path, www_base_dir)
 
         derived_dir_abs_path = os.path.realpath(self.param_dict['derived_dir'])
-        assert os.path.exists(derived_dir_abs_path)
+        assert os.path.exists(derived_dir_abs_path), "%s does not exist" % derive_dir_abs_path
 
         www_derived_dir = os.path.join(self.param_dict['www_dir'], self.param_dict['www_derived_dir'])
         if os.path.exists(www_derived_dir)==True:
@@ -241,9 +241,6 @@ class Pano:
 
         assert  os.path.exists(self.param_dict['www_dir'])
 
-        #
-        # delete old cam pages
-        subprocess.call(['find',self.param_dict['www_dir'],'-type','f','-name','cam*.html','-delete'])
         #pu.db
         self.logger.info("*** write webpages")
         for index in range(len(cam_list)):

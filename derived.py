@@ -22,10 +22,10 @@ def subprocess_with_logging(cmd_list):
     stdout, stderr = p.communicate()
 
     if stdout:
-        logger.info(stdout)
+        logger.debug(stdout)
     #end
     if stderr:
-        logger.error(stderr)
+        logger.info(stderr)
     #end
 
 def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir):
