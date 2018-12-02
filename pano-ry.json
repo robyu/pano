@@ -37,11 +37,10 @@
 	{
             "name": "cam-04",
             "live_url": "rtsp://admin:jiggy001@192.168.2.124:80/cam/realmonitor?channel=1&subtype=0",
-	    "admin_url": "http://192.168.2.124",
+	    "admin_url": "http://192.168.2.134",
             "description": "alley looking north"
 	}
     ],
-
 
     "watchdog_enable_reboot": 0,
     "watchdog_check_httpd": 1,
