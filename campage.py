@@ -179,18 +179,15 @@ class CamPage:
     """)
 
     
-                    # <!-- TEMPLATE START image_link
-                         
-                    #      placeholders:
-                    #      {image_index} - zero-padded 3 digit
-                    #      {max_num_images}
-                    #      {thumb_image}
-                    #      {alt_txt}
-                    #      {actual_image}
-                    # -->
-    # templ_image_link=unicode("""
-    #                 <a href="{actual_image}"><img class="thumbnail" alt="{alt_txt}" src="{thumb_image}" ></a>
-    # """)
+    # <!-- TEMPLATE START image_link
+
+    #      placeholders:
+    #      {image_index} - zero-padded 3 digit
+    #      {max_num_images}
+    #      {thumb_image}
+    #      {alt_txt}
+    #      {actual_image}
+    # -->
     templ_image_link=str("""
                     <button class="btn pano-image-button" type="button" id="btn-image-{image_index}" onclick="onImageClick('image_pop0', {image_index}, {max_num_images}, '{actual_image}');">
                         <img class="thumbnail" alt="{alt_txt}" src="{thumb_image}" >
@@ -198,14 +195,15 @@ class CamPage:
     """)
     
 
-                    # <!-- TEMPLATE START video_link
-                    #      placeholders:
-                    #      {actual_video}
-                    #      {earlier_time}
-                    # -->
+    # <!-- TEMPLATE START video_link
+    #      placeholders:
+    #      {dav_video}
+    #      {mp4_video}
+    #      {earlier_time}
+    # -->
     templ_video_link=str("""
                     <p>
-                        <button class="btn btn-outline-success" type="button" onclick="onVideoClick('{actual_video}','video_pop0');">
+                        <button class="btn btn-outline-success" type="button" onclick="onVideoClick('{mp4_video}','{dav_video}','video_pop0');">
                             {earlier_time}
                         </button>
                     </p>
@@ -452,17 +450,22 @@ class CamPage:
         """
         html = ''
         n = 0
-        
         while n < len(video_row_list):
             row = video_row_list[n]
             if len(row.d['derived_fname']) <= 0:
                 n += 1
                 continue
             #else...
-            video_fname = row.d['derived_fname']
-            video_fname = video_fname.replace(self.derived_dir, self.www_derived_dir)
+            # dav_fname = os.path.join(row.d['base_data_dir'],
+            #                          row.d['path'],
+            #                          row.d['fname'])
+            dav_fname = self.get_actual_path(row)
+            
+            mp4_fname = row.d['derived_fname']
+            mp4_fname = mp4_fname.replace(self.derived_dir, self.www_derived_dir)
             earlier_time = dtutils.sec_to_str(row.d['ctime_unix'],"%H:%M:%S")
-            html += CamPage.templ_video_link.format(actual_video=video_fname,
+            html += CamPage.templ_video_link.format(mp4_video=mp4_fname,
+                                                    dav_video=dav_fname,
                                                     earlier_time=earlier_time)
 
             n += 1
