@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import os
 import time
 import pudb
@@ -26,9 +26,9 @@ class Watchdog:
         return
 
     def get_process_list(self):
-        cmd = ['ps','-ef']
+        cmd = "ps -ef"   # NOT a list
         try:
-            out = subprocess.check_output(cmd)
+            out = subprocess.getoutput(cmd)   # dont use check_output(): returns undesirable byte string
         except subprocess.CalledProcessError:
             out = ""
         #end
@@ -36,7 +36,6 @@ class Watchdog:
         # output of check_output is a single large string,
         # so cut it up at newlines
         out = out.splitlines()
-
         return out
 
     def check_ftp_server(self,enable_flag):
@@ -50,6 +49,7 @@ class Watchdog:
         ftpuser  31662   728  0 01:30 ?        00:00:36 pure-ftpd (IDLE)
         root     31663 31662  0 01:30 ?        00:00:00 pure-ftpd (PRIV)
         """
+        self.logger.debug("check_ftp_server: enable_flag=%d" % int(enable_flag))
         if (enable_flag==0) or (enable_flag==False):
             return True
         #end
@@ -77,6 +77,7 @@ class Watchdog:
         os.path.exists()
         os.remove()
         """
+        self.logger.debug("check_breadcrumb: enable_flag=%d" % int(enable_flag))
         if (enable_flag==0) or (enable_flag==False):
             return True
 
@@ -84,6 +85,7 @@ class Watchdog:
         breadcrumb_fname = 'pano-breadcrumb.txt'
 
         if os.path.exists('pano-breadcrumb.txt'):
+            self.logger.debug("found breadcrumb %s" % breadcrumb_fname)
             retval = True
             os.remove(breadcrumb_fname)
     
@@ -94,6 +96,7 @@ class Watchdog:
         """
         /usr/sbin/lighttpd -D -f /etc/lighttpd/lighttpd.conf
         """
+        self.logger.debug("check_http_server: enable_flag=%d" % int(enable_flag))
         if (enable_flag==0) or (enable_flag==False):
             return True
 
@@ -101,11 +104,13 @@ class Watchdog:
         out = self.get_process_list()
         linecount = 0
         for line in out:
+            #self.logger.debug(line)
             if line.find('httpd') > 0:
                 self.logger.debug(line)
+                self.logger.debug("found match")
                 linecount += 1
 
-        if linecount >= 2:
+        if linecount >= 1:
             retval = True
         
         self.logger.info("check_http_server: %s" % str(retval))
@@ -165,6 +170,7 @@ class Watchdog:
         
         loop_flag = True
         while loop_flag:
+            self.logger.info("-----------------")
             self.logger.info("watchdog sleeping: %6.2f min ( %d faults)" % (sleep_interval_min, num_faults))
             self.wd_sleep(sleep_interval_min)
             
@@ -188,11 +194,11 @@ class Watchdog:
         #while
 
         self.logger.critical("# faults (=%d) >= max (=%d)" % (num_faults, max_faults))
+        self.logger.critical("exiting watchdog")
         if self.wd_dict['watchdog_enable_reboot']==1:
             self.logger.critical('rebooting')
-            os.shell('reboot')
+            os.system('reboot')
         #end
-        self.logger.critical("exiting watchdog")
         
         
 @click.command()
@@ -204,6 +210,6 @@ def wd_main(config,loglevel,logfname):
     mywd.watch()
 
 if __name__=="__main__":
-    wd_main()
+     wd_main()
     
     

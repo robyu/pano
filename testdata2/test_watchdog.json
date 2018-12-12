@@ -1,0 +1,48 @@
+{
+    "database_fname" : "/media/wd1t/panodb.sqlite",
+    "base_data_dir" : "/media/wd1t/FTP",
+    "delta_min": 10,
+    "max_age_days": 14.0,
+    "www_dir": "/var/www",
+    "derived_dir": "/media/wd1t/derived",
+    "baseline_datetime": "now",
+    "cull_old_files": 1,
+    "sleep_interval_min": 0.1,
+    "num_worker_threads": 1,
+    "camera_list" : [
+	{
+            "name": "cam-00",
+            "live_url": "rtsp://admin:jiggy001@192.168.2.120:80/cam/realmonitor?channel=1&subtype=0",
+	    "admin_url": "http://192.168.2.120",
+            "description": "front looking south"
+	},
+	{
+            "name": "cam-01",
+            "live_url": "rtsp://admin:jiggy001@192.168.2.121:80/cam/realmonitor?channel=1&subtype=0",
+	    "admin_url": "http://192.168.2.121",
+            "description": "porch"
+	},
+	{
+            "name": "cam-02",
+            "live_url": "rtsp://admin:jiggy001@192.168.2.122:80/cam/realmonitor?channel=1&subtype=0",
+	    "admin_url": "http://192.168.2.122",
+            "description": "front looking north"
+	},
+	{
+            "name": "cam-03",
+            "live_url": "rtsp://admin:jiggy001@192.168.2.123:80/cam/realmonitor?channel=1&subtype=0",
+	    "admin_url": "http://192.168.2.123",
+            "description": "alley looking south"
+	},
+	{
+            "name": "cam-04",
+            "live_url": "rtsp://admin:jiggy001@192.168.2.124:80/cam/realmonitor?channel=1&subtype=0",
+	    "admin_url": "http://192.168.2.134",
+            "description": "alley looking north"
+	}
+    ],
+
+    "watchdog_enable_reboot": 1,
+    "watchdog_check_httpd": 1,
+    "watchdog_check_ftpd" : 1
+}
