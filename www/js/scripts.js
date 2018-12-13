@@ -7,14 +7,16 @@ pop up video player with download link
 
 assign onclick handler to close the window
 */
-function onVideoClick(theLink,popname) {
+function onVideoClick(mp4_fname,dav_fname,popname) {
     pop_element = document.getElementById(popname)
 
     html =        "<div>"
-    html = html + "    <video controls autoplay loop id=\"pano_video_player\"><source src=\""+theLink+"\" type=\"video/webm\"></video>";
+    html = html + "    <video controls autoplay loop id=\"pano_video_player\"><source src=\""+mp4_fname+"\" type=\"video/webm\"></video>";
     html = html + "</div>";
     html = html + "<div>";
-    html = html + "    <a href=" + theLink + "> direct link >>" + theLink + "</a>";
+    html = html + "    <a href=" + mp4_fname + "> direct link >>" + mp4_fname + "</a>";
+    html = html + "<div>";
+    html = html + "    <a href=" + dav_fname + "> direct link >>" + dav_fname + "</a>";
     html = html + "</div>";
     pop_element.innerHTML = html;
 
