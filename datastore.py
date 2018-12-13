@@ -315,6 +315,7 @@ class Datastore:
         else:
             cmd = "update {tn} set {col}={val} where id={id}".format(tn=self.tablename, col=col,val=val,id=id)
         #end
+        self.logger.debug("execute sql: (%s)" % cmd)
         self.cursor.execute(cmd)
         self.dbconn.commit()
 

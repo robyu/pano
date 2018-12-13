@@ -279,7 +279,7 @@ class CamPage:
             self.logger.debug(stdout)
         #end
         if stderr:
-            self.logger.info(stderr)
+            self.logger.debug(stderr)
         #end
         
     def calc_dest_fname(self, last_flag=False):

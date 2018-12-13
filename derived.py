@@ -16,7 +16,7 @@ def subprocess_with_logging(cmd_list):
     invoke subprocess, send output to logger
     https://stackoverflow.com/questions/18774476/subprocess-call-logger-info-and-error-for-stdout-and-stderr-respectively
     """
-    logger.info(cmd_list)
+    logger.debug(cmd_list)
     
     p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
@@ -25,7 +25,7 @@ def subprocess_with_logging(cmd_list):
         logger.debug(stdout)
     #end
     if stderr:
-        logger.info(stderr)
+        logger.debug(stderr)
     #end
 
 def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir):
@@ -81,7 +81,7 @@ def make_thumbnail(base_data_dir, path, fname, derived_dir):
     try:
         os.makedirs(dest_path)
     except os.error:
-        logger.info("could not create dest path (%s)" % dest_path)
+        logger.debug("could not create dest path (%s) - may exist already" % dest_path)
         pass
 
     if os.path.exists(dest_fname)==True:
