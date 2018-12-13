@@ -37,10 +37,15 @@ class IndexPage:
     <body >
 
         <div class="container">  <!- container: allow margins -->
-	    <div class="row">
-		<h2>
-		    Panopticon
-		</h2>
+            <div class="col-sm">
+ 	        <div class="row">
+		    <h2>
+		        Panopticon
+		    </h2>
+                </div>
+	        <div class="row">
+		        Updated {update_date_time}
+                </div>
             </div>
 
             <!--  SUMMARY TABLE HEADER -->
@@ -294,7 +299,8 @@ class IndexPage:
 
         full_dest_fname = os.path.join(self.www_dir, self.dest_fname)
         f = open(full_dest_fname, "wt")
-        f.write(IndexPage.templ_webpage.format(camera_overview_rows = overview_html,
+        f.write(IndexPage.templ_webpage.format(update_date_time = dtutils.now_to_str(),
+                                               camera_overview_rows = overview_html,
                                                camera_status_cards = status_html))
         f.close()
 

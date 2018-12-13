@@ -17,12 +17,14 @@ it's now November 2018.
 
 * System Requirements
 
-The high-level requirements are simple: my system needs to provide continuous surveillance of the front and back of my
-house from multiple viewpoints. In the event that something happens, I also need to be able to easily review footage from 
-up to two weeks ago. The footage needs to be of sufficient quality to identify a face.
+The high-level requirements are simple: my system needs to provide
+continuous surveillance of the front and back of my house from
+multiple viewpoints. In the event that something happens, I also need
+to be able to easily review footage from up to two weeks ago. The
+footage needs to be of sufficient quality to identify a face.
 
 Here are the lessons I learned from my previous surveillance system:
-- resolution is king; 1080p is a minimum useful resolution; any lower and faces at any distance appear as mere blurs.
+-  resolution is king; 1080p is a minimum useful resolution; any lower and faces at any distance appear as mere blurs.
 - Wifi is unreliable.  The combination of spotty coverage
 (at the corners of my property) and high-bandwdith content can really bring a surveillance
 system to its knees.
@@ -32,12 +34,13 @@ a static background, but add a tree, a bit of breeze, and preso! you've got moti
 - storage and review UI
 - live video ain't important.  It's nice, but unless you've got absolutely nothing to do except stare at video feeds, it's not necessary.
 
-additional requirements:associated with the storage: the camera manufacturer is selling you
-hardware in the hopes of selling a service.  Looking at the Logitech
-Circle service, Logitech gives you 24 hours of storage for free (which
-seems largely useless); 14-day storage is $69/year for one camera.
-Storing a month of images for five cameras is $179/year.  If you are
-cheap AND paranoid, like me, then this is too much.
+additional requirements:associated with the storage: the camera
+manufacturer is selling you hardware in the hopes of selling a
+service.  Looking at the Logitech Circle service, Logitech gives you
+24 hours of storage for free (which seems largely useless); 14-day
+storage is $69/year for one camera.  Storing a month of images for
+five cameras is $179/year.  If you are cheap AND paranoid, like me,
+then this is too much.
 
 Second, there are the bandwidth issues.  My DSL connection at home
 supports a paltry 1 Mbps upstream; depending on how well your camera
@@ -72,82 +75,112 @@ routers
 cameras: amcrest ip2m-842
 
 * A word about the cameras:
-The IP2M-842 is a digital camera in an IP66 housing (for outdoor use).  It can deliver 1080p HD video over Wifi or Ethernet, which is important because you cannot
-rely on wifi coverage.  Camera configuration is via a built-in webserver and webpage, which is surprisingly complete. 
+The IP2M-842 is a digital camera in an IP66 housing (for outdoor use).
+It can deliver 1080p HD video over Wifi or Ethernet, which is
+important because you cannot rely on wifi coverage.  Camera
+configuration is via a built-in webserver and webpage, which is
+surprisingly complete.
 https://s3.amazonaws.com/amcrest-files/IP2M-842+Specifications+Sheet.pdf
 [picture of webpage]
 
-Unfortunately, the configuration also replies on a plugin to display live video, and this plugin is not available for the Chrome browser.
-There seems to be a non-browser specific client, but I never got this to work.
+Unfortunately, the configuration also replies on a plugin to display
+live video, and this plugin is not available for the Chrome browser.
+There seems to be a non-browser specific client, but I never got this
+to work.
 
-The iPhone app works fairly well; it's useful for pointing the cameras during installation. Surprisingly, the app is able to connect to my cameras
-when outside my local network; I guess that's the magic of P2P.
+The iPhone app works fairly well; it's useful for pointing the cameras
+during installation. Surprisingly, the app is able to connect to my
+cameras when outside my local network; I guess that's the magic of
+P2P.
 
-The viewing angle is 72 degrees, which is less than ideal; the solution is to be extra careful with camera placement, and to use multiple cameras.
-
-The mounting hardware consists of a mounting plate attached to the camera via a swivel joint. It turns out the swivel is frustratingly limited,
-especially when the plate is attached to a surface which is neither perfectly vertical nor horizontal (like the angled soffit under my eaves).
-sometimes it's simply not possible to point the camera in the desired direction.
+The viewing angle is 72 degrees, which is less than ideal; the
+solution is to be extra careful with camera placement, and to use
+multiple cameras.  [example picture]
 
 
-Fortunately, I found a 3D-printable mount on thingiverse, designed especially for amcrest cameras.  
+The mounting hardware consists of a mounting plate attached to the
+camera via a swivel joint. It turns out the swivel is frustratingly
+limited, especially when the plate is attached to a surface which is
+neither perfectly vertical nor horizontal (like the angled soffit
+under my eaves).  sometimes it's simply not possible to point the
+camera in the desired direction.
+
+
+Fortunately, I found a 3D-printable mount on thingiverse, designed
+especially for amcrest cameras.
 https://www.thingiverse.com/thing:2022254/#files
 
-Infrared illumination at night is provided by a ring of LEDs surrounding the lens. Though I expecting to buy a standalone infrared
-illuminator, the built-in LEDs are adequate.
+Infrared illumination at night is provided by a ring of LEDs
+surrounding the lens. Though I expecting to buy a standalone infrared
+illuminator, the built-in LEDs are adequate.  [picture at night]
 
-I would characterize Amcrest technical support as enthusiastic but generally hapless.
+With one of my cameras, there is a defect which manifests during
+infrared illumination as a halo around the image.  [halo picture at
+night]
 
-The cameras come with 4 hours of storage on Amcrest's servers, though I don't plan to use this.
 
-The built-in software will take video and snapshots when it detects motion 
-[picture of motion-detection configuration]
-The video and snapshots can be stored in the camera, on an SD card, or sent via FTP--which is how I use it.
-[picture of FTP configuration]
-Snapshots are encoded as standard JPEG; videos, on the other hand, are encoded in a proprietary format (DAV).
-This proved to be a minor pain in the ass. Fortunately, ffmpeg converts this DAV format into MP4, albeit with complaints.
-The camera will also stream the video live, via RTSP. 
+I would characterize Amcrest technical support as enthusiastic but
+generally hapless.
+
+The cameras come with 4 hours of storage on Amcrest's servers, though
+I don't plan to use this.
+
+The built-in software will take video and snapshots when it detects
+motion [picture of motion-detection configuration] The video and
+snapshots can be stored in the camera, on an SD card, or sent via
+FTP--which is how I use it.  [picture of FTP configuration] Snapshots
+are encoded as standard JPEG; videos, on the other hand, are encoded
+in a proprietary format (DAV).  This proved to be a minor pain in the
+ass. Fortunately, ffmpeg converts this DAV format into MP4, albeit
+with complaints.  The camera will also stream the video live, via
+RTSP.
 
 ** PROS
 
 ** CONS 
 
 
+YOYO linux support (you're on your own)
 
 * Dicking around with the open sources and underpowered processors
-I first tried to install ZoneMinder, because it seemed to be the most mature
-system.  Starting with a fresh install of Linux Mint 17, I followed the
-"easy way" installation 
-process--which isn't all that easy, in terms of number of keystrokes. 
-There's installing Apache, there's configuring PHP and MySQL.
-This went off the rails almost immediately, though I don't 
-recall how. I recently tried it again and got it working, so perhaps
-I was just tired. I also tried installing the Docker image because
-the application immediately quit.
+I first tried to install ZoneMinder, because it seemed to be the most
+mature system.  Starting with a fresh install of Linux Mint 17, I
+followed the "easy way" installation process--which isn't all that
+easy, in terms of number of keystrokes.  There's installing Apache,
+there's configuring PHP and MySQL.  This went off the rails almost
+immediately, though I don't recall how. I recently tried it again and
+got it working, so perhaps I was just tired. I also tried installing
+the Docker image because the application immediately quit.
 
+Sticking to my list of free, open-source software, I next tried
+Shinobi (link).  I quickly got two webcams running with Shinobi, and
+it felt promising. After more fiddling, I eventually got Shinobi
+running on an old Mac Mini server with my Amcrest wireless camera. At
+this point, things started to unravel. I encountered two problems, in
+particular:
 
+1. Shinobi often hanged or crashed. I would start an instance of
+   Shinobi in the morning, and that evening I wouldn't be able to
+   bring up the admin webpage. I suspect this is due to Shinobi's
+   dependency on ffmpeg, but it's also because
+Shinobi is written in Javascript and Node.js.  Javascript alone is an
+abomination.  Why anybody would choose to write a server in Javascript
+is beyond me.
 
-Sticking to my list of free, open-source software,  I next tried Shinobi (link).  I quickly got two webcams running with Shinobi, and 
-it felt promising. After more fiddling, I eventually got Shinobi running on an old 
-Mac Mini server with my Amcrest wireless camera. At this point, things started to
-unravel. I encountered two problems, in particular:
-- Shinobi often hung: Shinobi is written in Javascript. Javascript
-is an abomination. Why anybody would write a server-side application
-in Javascript is simply inexplicable.
-
-- With a single camera running at 20 FPS and at full resolution, Shinobi consumed 
+2. With a single camera running at 20 FPS and at full resolution,
+   Shinobi consumed
 most of a single core on my aging Mac Mini.
 
 The second issue is worth discussing in depth. Most cam surveillance
 software (including Shinobi, ZoneMinder, Kerberos, and BlueIris)
-accept a __video stream__ as input. The software then decodes the
-video stream, performs motion detection, and transcodes the video to
-generate images or video clips.  Processing a high-def video stream
-is a big task for a little computer. Shinobi continuously runs ffmpeg on the 
-video stream, one instance per video stream, compressing
-the video with H.264 (MPEG-4). Sadly, two cameras
-require two instances of ffmpeg.  Two instances of
-ffmpeg is a lot of cycles.
+accept a __video stream__ as input. The video stream is typically JPG
+or H.264 or MPEG-4. The software then decodes the video stream,
+performs motion detection, and transcodes the video to generate images
+or video clips.  Processing a high-def video stream is a big task for
+a little computer. Shinobi continuously runs ffmpeg on the video
+stream, one instance per video stream, compressing the video with
+H.264 (MPEG-4). Sadly, two cameras require two instances of ffmpeg.
+Two instances of ffmpeg is a lot of cycles.
 
 I borrowed an Intel compute stick from work (with an Atom processor) to see how it
 could handle multiple cameras. Updating Linux on the compute Stick
@@ -186,33 +219,53 @@ with an Intel processor. An old Intel Compute Stick from work was a
 non-starter; I couldn't even install a recent version of Linux on
 it. I started searching Craigslist and eBay for used Core i7 servers.
 Mr. Shinobi claimed that he could process N streams on a (xxxxx)
-server.
+1server.
 
 * The Revelation!
-Late one evening, after the kids had gone to bed, I was chewing over
+Late one evening after the kids had gone to bed, I sat at my computer,
+mulling over the problem.  I wasn't happy with Shinobi, which was 
+crash-prone and ate up cycles. I thought about
 the cost of Intel-powered servers (expensive), video stream bitrates, and 
 off-the-shelf video surveillance recorders (strangely cheap) when it struck me:  why send
-raw video streams over the network? The cameras themselves perform motion
-detection, and are set up to generate snapshots and video clips.
+continuous video streams over the network at all? The cameras themselves perform motion
+detection, and are alraedy set up to generate snapshots and video clips. The server
+merely needs to store snapshots and video clips!
 
 It's obvious, looking at the price of Amcrest's video recorder [amazon link & price], that
-it's nothing more than a small processor and lots of storage.
+it's nothing more than a small processor and lots of storage.  You really do not want
+your server perfoming encoding/decoding unless the camera itself can't do it,
+e.g. with a USB camera.
 
-So why not set up the Raspberry Pi as a simple FTP server, which 
+So why not set up the Raspberry Pi as a FTP server, which 
 stores video clips and images?
 
 At this point, progress was fairly linear. It was simply a matter
 of rolling up my sleeves and writing the software.
 
 * Network
+From previous experience, I knew that it would take work to get my home network
+in sufficient shape for a home surveillance system. For whatever reason, it's remarkably
+difficult to a good wifi at the edges of my property.
 
-TP link AC1750 archer c7: same model number, different hardware.  who does that?
-RT-AC68U
-dd-wrt on all routers
+When FTPing snapshots and video, the Amcrest cameras tend to give up easily
+when its network connection stutters. This results in corrupted images
+and video files. 
 
-wds for wireless hop to my garage
+I knew that I would need multiple wifi routers, installed in my attic and
+in the garage. For the sake of simplicity, I tried to use the same brand of
+router, but even this proved difficult to accomplish.
+I ordered three TP Link AC1750 Archer C7 routers; when the arrived, two of the C7s were 
+version 3.  The third C7 was version 4: same model name, but different processor, different
+administration software.  Who does that?!  I sent it back.
+In lieu of setting up a system of identical routers, I decided it would be easier to 
+have a bunch of routers running identical firmware.  I bought routers which
+were guaranteed to work with DD-WRT (https://dd-wrt.com/), the open source
+router firmware.  This proved to be a wonderful decision, because now I can use
+the same-looking administration software on all of my routers.
 
-garage door and anti-rat metal screen effectively blocks Wifi
+Between my house and my detached garage, I set up a wireless hop using WDS
+(https://wiki.dd-wrt.com/wiki/index.php/WDS_Linked_router_network).
+
 
 * Rolling My Own
 Panopticon
@@ -222,6 +275,41 @@ DFD
 github
 json 
 
+I wrote the software in Python3. I call it "Panopticon."  The processing is
+straightforward:
+- wake up periodically
+- check the FTP download folder for new images and videos, uploaded by the cameras
+- add new media files to a database
+- cull old files
+- process new media files to generate thumbnails, convert DAV videos to MP4, etc.
+  - DAV to MP4 conversion via ffmpeg
+  - image resizing (for thumbnails) with ImageMagick
+- generate a new set of webpages, to be served up by an independent webserver
+- go to sleep
+
+I deliberately chose to generate only static HTML--I wanted to keep Panopticon
+lightweight and secure.  The current UI is barebones, and I expect it to evolve as
+I add more cameras and increase the amount of stored media.  I used Bootstrap as a front-end component library,
+because it gives me built-in mobile support along with other gewgaws which I desired
+(collapsing lists, sane CSS).  I wrote a teeny bit of Javascript--only where necessary
+and with much revulsion.
+
+It turns out the video DAV format recorded by the Amcrest cameras is vendor-specific, and ffmpeg often
+outputs garbage when converting from DAV to MP4. This is a good reason to get a camera
+which generates standard MP4 videos.
+
+Because Shinobi often seemed to crash or hang while waiting for ffmpeg, I also
+implemented a watchdog process, which periodically checks Panopticon
+for a pulse and reboots the system if necessary. Surprisingly, I've never
+seen the watchdog to have to reboot the system.
+
+
+Started Apr 12, finished (approx) Nov 30.  Estimate 2.5 hours a week.
+
+Here's a DFD with more detail:
+(dfd)
+
+
 * final system
 [pictures]
 
@@ -230,3 +318,13 @@ json
 
 
 
+
+picture of camera with printed mount
+
+image during day
+
+image during night
+
+pano status screen
+
+pano media screen
