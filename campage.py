@@ -358,7 +358,7 @@ class CamPage:
 
         if os.path.exists(thumb_path)==False:
             self.logger.info("%s does not exist" % thumb_path)
-            thumb_path = self.default_image_name
+            thumb_path = self.default_image_fname
         #end
         thumb_path2 = thumb_path.replace(self.derived_dir, self.www_derived_dir)
         return thumb_path2
@@ -371,7 +371,7 @@ class CamPage:
 
         if os.path.exists(actual_path)==False:
             self.logger.info("%s does not exist" % actual_path)
-            actual_path = self.default_image_name
+            actual_path = self.default_image_fname
         #end
         
         # replace basedir with webpage-friendly path
