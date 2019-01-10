@@ -95,12 +95,23 @@ manufacturer.
 
 = Resolution =
 
-Here is an image of me at 1920x1080 pixels.
-This is the maximum resolution for a 1080p sensor.
-{{attachment:example-1080p.jpg|example 1080p|width=100%}}
+Having sufficient sensor resolution to identify a face is important; as better sensors
+come down in price, this becomes less of an issue. For my system, 1920x1080 pixels
+is the minimum useful resolution.
 
-Here is the same image at 1280x720 pixels.
-{{attachment:example-720p.jpg|example 720p|width=100%}}
+Here is an image taken under ideal lighting conditions.  I am approximately
+NNN meters away.  
+
+{{attachment:example-1080p.jpg|example 1080p|width=20%}}
+
+I've isolated the portion containing my face:
+
+{{attachment:example-detail-1080p.jpg|example detail 1080p|width=100%}}
+
+The same image portion, resampled to the equivalent of 1280x720 pixels,
+illustrates the image degradation:
+
+{{attachment:example-detail-720p.jpg|example detail 720p|width=100%}}
 
 = About the Cameras =
 
