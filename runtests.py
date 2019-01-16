@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sqlite3
 import dirwalk
@@ -34,7 +34,9 @@ class TestPano(unittest.TestCase):
 
     def setUp(self):
         print("setup")
-        subprocess.call(['./restore-testdata.sh'])
+        os.chdir('../pano-test-data')
+        subprocess.call(['../pano-test-data/restore-testdata.sh'])
+        os.chdir('../pano')
 
         fname_list = glob.glob("www/*.html")
         for fname in fname_list:
@@ -245,7 +247,7 @@ class TestPano(unittest.TestCase):
         #
         # use python method to get local time
         localtime = time.localtime(time.time())
-        print "Local current time :", localtime
+        print("Local current time :" + str(localtime))
 
         #
         # year, month, day, hour should match
