@@ -1,10 +1,14 @@
+#acl All:read
+
+= Panopticon: a DIY Home Video Surveillance System =
+
 <<TableOfContents(3)>>
 
 = Intro =
 
 Back in 2006, I hoped to catch the thief who was stripping my apricot
 trees. I cobbled together a video surveillance system out of an analog
-security camera, a video card, and an old PC (see see [[http://robertyu.com/wikiperdido/ObscuraLucida|Obscura Lucida]]).
+security camera, a video card, and an old PC (see [[http://robertyu.com/wikiperdido/ObscuraLucida|Obscura Lucida]]).
 It didn't work very well, but I captured amusing animal photos and 
 learned a bit about home video surveillance.
 
@@ -99,19 +103,15 @@ Having sufficient sensor resolution to identify a face is important; as better s
 come down in price, this becomes less of an issue. For my system, 1920x1080 pixels
 is the minimum useful resolution.
 
-Here is an image taken under ideal lighting conditions.  I am approximately
-NNN meters away.  
+Here is an image taken under ideal lighting conditions. I am in the upper center portion
+of the image (in the red rectangle):  
 
-{{attachment:example-1080p.jpg|example 1080p|width=20%}}
+{{attachment:resolution-0-1080p.jpg|example 1080p|width=800}}
 
-I've isolated the portion containing my face:
+I've isolated the portion containing my face; my face is recognizable at this resolution,
+but just barely.
 
-{{attachment:example-detail-1080p.jpg|example detail 1080p|width=100%}}
-
-The same image portion, resampled to the equivalent of 1280x720 pixels,
-illustrates the image degradation:
-
-{{attachment:example-detail-720p.jpg|example detail 720p|width=100%}}
+{{attachment:resolution-0-1080p-cropped.jpg|example detail 1080p|width=200}}
 
 = About the Cameras =
 
@@ -121,7 +121,7 @@ important because you cannot rely on wifi coverage.  Camera
 configuration is via a built-in webserver and webpage, which is
 nicely full-featured.
 
-{{attachment:cam-config.png|config page|width=50%}}
+{{attachment:cam-config.png|config page|width=800}}
 
 Unfortunately, the configuration webpage relies on a browser plugin to display
 live video, and this plugin is not available for the Chrome browser.
@@ -155,7 +155,8 @@ especially for
 The mount converts an angled surface into a vertical or horizontal
 surface, and makes camera-pointing somewhat easier.
 
-{{attachment:placeholder.jpg|picture of cam with printed mount|width=200}}
+|| {{attachment:cam-mount-2.jpg|picture of cam with printed mount|width=200}} ||{{attachment:cam-mount-0.jpg|picture of cam with printed mount|width=200}} || {{attachment:cam-mount-1.jpg|picture of cam with printed mount|width=200}} ||
+
 
 Infrared illumination at night is provided by a ring of LEDs
 surrounding the lens. Though I expected to buy a standalone infrared
@@ -165,7 +166,7 @@ illuminator, the built-in LEDs are adequate.
 With one of my cameras, there is a defect which manifests during
 infrared illumination as a halo around the image.
 
-{{attachment:halo.jpg|image with halo|width=200}}
+{{attachment:halo.jpg|image with halo|width=800}}
 
 I would characterize Amcrest technical support as enthusiastic but
 generally hapless. 
@@ -347,39 +348,37 @@ seen the watchdog have to reboot the system.
 
 Started Apr 12, finished (approx) Nov 30.  Estimate 2.5 hours a week: 33 weeks * 2.5 = 82.5 hours.
 
-Here's a DFD with more detail:
+{{attachment:dfd-0-top-level-resized.jpg|pano DFD 0|width=800}}
 
-{{attachment:placeholder.jpg|pano DFD|width=200}}
+{{attachment:dfd-1-resized.jpg|pano DFD 1|width=800}}
 
 
 = Images from the Panopticon =
 
 Alley during the day (ideal illumination)
 
-{{attachment:alley-day.jpg|alley day|width=200}}
+{{attachment:alley-day.jpg|alley day|width=800}}
 
 Alley at night (infrared illumination)
 
-{{attachment:alley-night|alley night|width=200||
+{{attachment:alley-night.jpg|alley night|width=800}}
 
 Video at night
 
 {{{#!raw
-video embed object
+<iframe width="560" height="315" src="https://www.youtube.com/embed/Wly8Dgyi4yw" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 }}}
-
 
 Pano "Status" page, listing all cameras
 
-{{attachment:status-all-cams.png|status all cams|width=200}}
+{{attachment:status-all-cams.png|status all cams|width=800}}
 
 Pano "Status" page with a single camera expanded
 
-{{attachment:status-expand-cam.png|status single cam|wdith=200}}
+{{attachment:status-expand-cam.png|status single cam|width=800}}
 
 
 Pano Media screen: images on the left, videos on the right, in
 chronological order
 
-{{attachment:media-page.png|camera media|width=200}}
-
+{{attachment:media-page.png|camera media|width=800}}
