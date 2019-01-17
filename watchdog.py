@@ -204,7 +204,7 @@ class Watchdog:
 @click.command()
 @click.argument('config')
 @click.option('--loglevel',default='info',help='valid values: \'debug\'|\'info\'|\'warning\'|\'error\'|\'critical\'')
-@click.option('--logfname',default='watchdog.log',help='specify \'stdout\' for sys.stdout')
+@click.option('--logfname',default='pano.log',help='specify \'stdout\' for sys.stdout')
 def wd_main(config,loglevel,logfname):
     mywd = Watchdog(config, loglevel, logfname)
     mywd.watch()
