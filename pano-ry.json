@@ -7,7 +7,7 @@
     "derived_dir": "/media/wd1t/derived",
     "baseline_datetime": "now",
     "cull_old_files": 1,
-    "sleep_interval_min": 3.0,
+    "sleep_interval_min": 15.0,
     "num_worker_threads": 1,
     "camera_list" : [
 	{
