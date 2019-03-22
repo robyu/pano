@@ -24,8 +24,8 @@
 	},
 	{
             "name": "cam-02",
-            "live_url": "rtsp://admin:jiggy001@192.168.2.122:80/cam/realmonitor?channel=1&subtype=0",
-	    "admin_url": "http://192.168.2.122",
+            "live_url": "rtsp://admin:jiggy001@192.168.2.132:80/cam/realmonitor?channel=1&subtype=0",
+	    "admin_url": "http://192.168.2.132",
             "description": "front looking north"
 	},
 	{
@@ -39,6 +39,12 @@
             "live_url": "rtsp://admin:jiggy001@192.168.2.124:80/cam/realmonitor?channel=1&subtype=0",
 	    "admin_url": "http://192.168.2.134",
             "description": "alley looking north"
+	},
+	{
+            "name": "cam-05",
+            "live_url": "rtsp://admin:jiggy001@192.168.2.125:80/cam/realmonitor?channel=1&subtype=0",
+	    "admin_url": "http://192.168.2.125",
+            "description": "side deck"
 	}
     ],
 

@@ -7,7 +7,7 @@ import pudb
 import logging
 import tempfile
 import subprocess
-
+import timeit
 """
 
   
@@ -260,6 +260,7 @@ class CamPage:
 
         self.logger = logging.getLogger(__name__)
 
+    @timeit.timeit
     def delete_existing_campages(self):
         """
         delete existing files of the form "camname-*.html"
@@ -269,7 +270,7 @@ class CamPage:
         fname_wildcard = '%s-*.html' % self.camera_name
         self.logger.info("deleting HTML pages of form (%s)" % fname_wildcard)
 
-        cmd_list = ['find',self.www_dir,'-type','f','-name',fname_wildcard,'-delete']
+        cmd_list = ['find',self.www_dir,'-maxdepth', '1','-type','f','-name',fname_wildcard,'-delete']
         self.logger.info(cmd_list)
 
         p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -307,7 +308,8 @@ class CamPage:
             
         self.fname_index += 1
         return dest_fname, prev_fname, next_fname
-        
+
+    @timeit.timeit
     def write_html(self,dest_fname, html_doc):
         """
         given destination fname and html text,
@@ -605,6 +607,7 @@ class CamPage:
 
         return row_html
     
+    @timeit.timeit
     def generate(self, later_datetime, max_age_days, interval_min):
         """
         given

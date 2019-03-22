@@ -28,6 +28,7 @@ def subprocess_with_logging(cmd_list):
         logger.debug(stderr)
     #end
 
+@timeit.timeit
 def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir):
     src_fname = os.path.join(base_data_dir, path, fname)
     dest_path = os.path.join(derived_dir, path)

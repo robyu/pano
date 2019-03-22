@@ -180,6 +180,7 @@ class Pano:
 
         return cam_list
     
+    @timeit.timeit
     def gen_index_page(self, cam_list):
         """
         IN:
@@ -216,7 +217,7 @@ class Pano:
         
         return num_deleted
     
-
+    @timeit.timeit
     def gen_camera_pages(self, make_derived_files=True):
         """
         for each camera listed in the json file, 
