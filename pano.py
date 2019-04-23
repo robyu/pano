@@ -59,6 +59,12 @@ class Pano:
         self.image_db = datastore.Datastore(self.param_dict['database_fname'],
                                             drop_table_flag=drop_table_flag)
 
+        cam_list = self.get_cam_list()
+        self.logger.info("REGISTERED CAMERAS:")
+        for cam in cam_list:
+            self.logger.info(cam['name'])
+        #end
+
     def configure_logging(self, loglevel,logfname):
         """
         see https://docs.python.org/2/howto/logging.html
@@ -84,7 +90,7 @@ class Pano:
             handler = logging.StreamHandler(sys.stdout)
         else:
             print("logging to %s" % logfname)
-            handler = logging.handlers.RotatingFileHandler(logfname, maxBytes=32000, backupCount=4)
+            handler = logging.handlers.RotatingFileHandler(logfname, maxBytes=128000, backupCount=4)
         #end
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
         handler.setFormatter(formatter)        
@@ -96,14 +102,15 @@ class Pano:
         logger.setLevel(numeric_level)
 
 
-        logger.debug("test debug")
-        logger.info("test info")
-        logger.warning("test warning")
-        logger.error("test error")
-        logger.critical("test critical")
+        logger.debug("DEBUG logging enabled")
+        logger.info("INFO logging enabled")
+        logger.warning("WARNING logging enabled")
+        logger.error("ERROR logging enabled")
+        logger.critical("CRITICAL logging enabled")
 
         return logger
         
+    @timeit.timeit
     def generate_sym_links(self):
         """
         generate links in www directory to data directories
@@ -129,7 +136,7 @@ class Pano:
         os.symlink(derived_dir_abs_path, www_derived_dir)
 
     @timeit.timeit
-    def slurp_images(self):
+    def slurp_images(self, skip_flag=False):
         """
         given base_data_dir,
         - delete empty dirs
@@ -142,16 +149,19 @@ class Pano:
         total_files_added = 0
         total_files_deleted = 0
         self.logger.info("** slurp images")
+
+        if skip_flag:
+            self.logger.debug("skipping slurp")
+            return (total_files_added, total_files_deleted)
+        #endif
+        
         base_data_dir = self.param_dict['base_data_dir']
         cam_list = self.get_cam_list()
         for cam in cam_list:
             cam_dir = os.path.join(base_data_dir, cam['name']) # "testdata/FTP-culled/b0"
             self.logger.info("*** processing camera dir %s" % cam_dir)
-            self.logger.info("**** cull empty dirs")
             dirwalk.cull_empty_dirs(cam_dir)
-            self.logger.info("**** cull files by ext")
             num_deleted = dirwalk.cull_files_by_ext(base_data_dir=cam_dir)
-            self.logger.info("**** walk dir and load db")
             num_added = dirwalk.walk_dir_and_load_db(self.image_db, base_data_dir,
                                                            cam_name = cam['name'])
             total_files_added += num_added
@@ -206,11 +216,14 @@ class Pano:
         num entries deleted
         """
         self.logger.info("** cull files by age")
+
         if self.param_dict['cull_old_files']==1:
             num_deleted = dirwalk.cull_files_by_age(self.image_db,
                                                     derived_dir = self.param_dict['derived_dir'],
                                                     baseline_time = self.param_dict['baseline_datetime'],
                                                     max_age_days = self.param_dict['max_age_days'])
+            # delete empty dirs
+            dirwalk.cull_empty_dirs(self.param_dict['derived_dir'])
         else:
             num_deleted = 0
         #END
@@ -232,12 +245,6 @@ class Pano:
         """
         self.logger.info("** generate camera webpages")
         self.logger.info("*** make derived files")
-        if (make_derived_files==True):
-            derived.make_derived_files(self.image_db,
-                                       num_workers = self.param_dict['num_worker_threads'],
-                                       derived_dir = self.param_dict['derived_dir'])
-        #endif
-        
         cam_list = self.get_cam_list()
 
         assert  os.path.exists(self.param_dict['www_dir'])
@@ -245,15 +252,24 @@ class Pano:
         #pu.db
         self.logger.info("*** write webpages")
         for index in range(len(cam_list)):
+        
             cam_page_base_fname =  'cam_%02d' % index  # webpage generator will add suffix + .html
+
+            cam_name = cam_list[index]['name']
+
+            if (make_derived_files==True):
+                derived.make_derived_files(self.image_db,
+                                           cam_name,
+                                           num_workers = self.param_dict['num_worker_threads'],
+                                           derived_dir = self.param_dict['derived_dir'])
+            #endif
 
             #
             # get camera name
             # we dont normalize camera name until now because we assume the media
             # file paths use the unnormalized camera names
-            cam_name = cam_list[index]['name']
-            cam_name = self.normalize_cam_name(cam_name)
-            page_generator = campage.CamPage(cam_name,
+            norm_cam_name = self.normalize_cam_name(cam_name)
+            page_generator = campage.CamPage(norm_cam_name,
                                              self.image_db,
                                              self.param_dict['derived_dir'],
                                              self.param_dict['base_data_dir'],
@@ -269,7 +285,6 @@ class Pano:
             #
             # augment the existing dictionary list to add the filenames
             cam_list[index]['status_page_list'] = status_page_list    # formerly page_fnames_list
-            #end
         #end
         return cam_list
 
@@ -316,7 +331,8 @@ class Pano:
 @click.option('--droptable/--no-droptable', default=False,help='delete existing image database')
 @click.option('--logfname', default='pano.log',help='specify \'stdout\' for sys.stdout')
 @click.option('--loglevel',default='warning',help='valid values: \'debug\'|\'info\'|\'warning\'|\'error\'|\'critical\'')
-def pano_main(config, loopcnt,droptable,loglevel,logfname):
+@click.option('--skip_slurp_flag', default=False,help='skip media-slurp operation')
+def pano_main(config, loopcnt,droptable,loglevel,logfname, skip_slurp_flag):
     print("config file=%s" % config)
     print("loopcnt=%d" % loopcnt)
     mypano = Pano(config,droptable,loglevel,logfname)
@@ -325,14 +341,14 @@ def pano_main(config, loopcnt,droptable,loglevel,logfname):
     while loop_flag:
         mypano.write_breadcrumb()
         num_entries_start = len(mypano.image_db.select_all())
-        (num_files_added, num_deleted_ext) = mypano.slurp_images()
+        (num_files_added, num_deleted_ext) = mypano.slurp_images(skip_slurp_flag)
         num_deleted_age = mypano.cull_old_files()
         #pu.db
         cam_list = mypano.gen_camera_pages()
         mypano.logger.info("generated camera pages")
 
         index_fname = mypano.gen_index_page(cam_list)
-        mypano.logger.info("generated index page")
+        mypano.logger.info("updated index page (%s)" % index_fname)
 
         mypano.print_summary(num_files_added, num_deleted_ext, num_deleted_age, num_entries_start)
         mypano.logger.info("sleeping...%6.2f min" % mypano.param_dict['sleep_interval_min'])

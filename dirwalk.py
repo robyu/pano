@@ -82,6 +82,7 @@ def parse_info_amcrest(base_data_dir, dir_path, fname):
     
 @timeit.timeit
 def cull_files_by_ext(base_data_dir='.', ext_list=['.avi','.idx']):
+    logger.info("culling files by extension in %s" % base_data_dir)
     num_deleted = 0
     for dir_path, subdir_list, file_list in os.walk(base_data_dir):
         for fname in file_list:
@@ -140,7 +141,7 @@ def cull_empty_dirs(base_data_dir):
     returns:
     none
     """
-    logger.info("culling %s" % base_data_dir)
+    logger.info("culling empty dirs in %s" % base_data_dir)
     # print empty dirs
     # print(['find',base_data_dir,'-type','d','-empty','-print'])
     # subprocess.call(['find',base_data_dir,'-type','d','-empty','-print'])
@@ -160,7 +161,7 @@ def walk_dir_and_load_db(db, base_data_dir, cam_name=''):
 
     returns: number of files added
     """
-
+    logger.info("walking directory and registering media: (%s)" % os.path.join(base_data_dir, cam_name))
     # how many entries in db?
     all_rows = db.select_all()
     num_start = len(all_rows)

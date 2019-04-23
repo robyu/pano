@@ -1,6 +1,7 @@
 import sqlite3
 import logging
 import datetime
+import timeit
 
 """
 """    
@@ -153,8 +154,9 @@ class Datastore:
         col_vector += ")"
         val_vector += ")"
         cmd = "%s %s VALUES %s" % (cmd, col_vector, val_vector)
-        
+        self.logger.debug("adding row (%s)" % cmd)
         c.execute(cmd)
+        self.logger.debug("success!")
 
     def entries_to_rows(self, entry_list):
         """
@@ -254,12 +256,13 @@ class Datastore:
 
     def select_latest_image_per_camera(self,cam_name):
         """
-        get latest entry, 1 per camera
+        get latest entry, 1 per camera, with a derived image
         
         returns list of row entries
         """
         cmd = "select *, max(ctime_unix) from {tn} where cam_name='{cam_name}'" \
         " AND mediatype={mediatype}" \
+        " AND length(derived_fname) > 0" \
         " AND derive_failed==0".format(tn=self.tablename,
                                        cam_name=cam_name,
                                        mediatype=MEDIA_IMAGE)
@@ -269,6 +272,7 @@ class Datastore:
         assert len(row_list)==1
         return row_list
     
+    @timeit.timeit
     def select_by_age_range(self, baseline_time=None, max_age_days=14):
         """
         given baseline_time
@@ -370,6 +374,21 @@ class Datastore:
                       upper_time = upper_time_sec,
                       lower_time = lower_time_sec,
                       mediatype=mediatype)
+        self.cursor.execute(cmd)
+        entry_list = self.cursor.fetchall()
+        row_list = self.entries_to_rows(entry_list)
+        return row_list
+
+    def select_by_cam(self, cam_name):
+        """
+        select db entries based on criteria
+        
+        return:
+        list of selected rows
+        """
+        cmd = "select * from {tn} where (cam_name='{cam_name}')"\
+              .format(tn=self.tablename,
+                      cam_name=cam_name)
         self.cursor.execute(cmd)
         entry_list = self.cursor.fetchall()
         row_list = self.entries_to_rows(entry_list)

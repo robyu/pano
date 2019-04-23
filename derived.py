@@ -38,6 +38,7 @@ def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir):
     #
     # dont assert src existence--file may have been deleted?!
     #assert os.path.exists(src_fname)
+    logger.info("MP4 %s -> %s" % (src_fname, dest_fname))
     
     try:
         os.makedirs(dest_path)
@@ -45,7 +46,7 @@ def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir):
         pass
 
     if os.path.exists(dest_fname)==True:
-        logger.info("%s -> %s already exists" % (src_fname, dest_fname))
+        logger.debug("%s already exists" % dest_fname)
     else:        
         # ffmpeg -i 21.18.33-21.26.00\[M\]\[0\@0\]\[0\].dav -vcodec copy -preset veryfast out2.avi
         cmd = ['ffmpeg', '-y','-i',src_fname, '-vcodec', 'copy', '-preset', 'veryfast', dest_fname]
@@ -57,7 +58,7 @@ def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir):
             dest_fname=''  # if failed, then return empty string
             assert len(dest_fname)==0
         else:
-            logger.info("%s -> %s success" % (src_fname, dest_fname))
+            logger.debug("mp4 conversion success")
         #end 
     #end
     return dest_fname
@@ -73,9 +74,11 @@ def make_thumbnail(base_data_dir, path, fname, derived_dir):
     dest_path = os.path.join(derived_dir, path)
     dest_fname = os.path.join(dest_path, fname)
 
+    logger.info("thumbnail %s -> %s" % (src_fname, dest_fname))
+
     # sometimes the database is out of date and the source file doesn't actually exist
     if os.path.exists(src_fname)==False:
-        logger.info("src file %s does not exist" % src_fname)
+        logger.debug("src file %s does not exist" % src_fname)
         dest_fname = ''
         return dest_fname
     #end
@@ -86,7 +89,7 @@ def make_thumbnail(base_data_dir, path, fname, derived_dir):
         pass
 
     if os.path.exists(dest_fname)==True:
-        logger.info("%s -> %s already exists" % (src_fname, dest_fname))
+        logger.debug("%s already exists" % dest_fname)
     else:        
         #
         # dont need to check beforehand if the dest_fname already exists,
@@ -100,7 +103,7 @@ def make_thumbnail(base_data_dir, path, fname, derived_dir):
             dest_fname=''  # if failed, then return empty string
             assert len(dest_fname)==0
         else:
-            logger.info("%s -> %s success" % (src_fname, dest_fname))
+            logger.debug("success")
         #end
     #end    
     return dest_fname
@@ -158,6 +161,7 @@ def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag
     return (# success, # failed)
 
     """
+    assert False, "update to match code in derive_with_signal_thread"
     MAX_WAIT_SEC = 60 *2 
     assert num_workers >= 1
     pool = mp.Pool(num_workers)
@@ -194,6 +198,8 @@ def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag
                     #end  
                     mpr_list.append(mpr)
                     worker_index += 1
+                else:
+                    logger.debug("did not attempt derivation: derive_failed=%d derived_fname=%s" % (row.d['derive_failed'], row.d['derived_fname']))
                 #end
             #end
         #end
@@ -232,7 +238,7 @@ def derive_with_single_thread(db, derived_dir, row_list, test_thread_flag):
     count_success = 0
     count_failed = 0
     for row in row_list:
-        if row.d['derive_failed']==0 and len(row.d['derived_fname'])==0:
+        if row.d['derive_failed']==0 and len(row.d['derived_fname'])==0: # previous attempt has not failed 
             if test_thread_flag==True:
                 result_dict = sleep_fcn(row, derived_dir)
             else:
@@ -240,18 +246,34 @@ def derive_with_single_thread(db, derived_dir, row_list, test_thread_flag):
             #end
 
             if len(result_dict['derived_fname']) > 0:
+                logger.debug("derivation success")
                 db.update_row(result_dict['id'], 'derived_fname', result_dict['derived_fname'])
+
+                if row.d['derive_failed'] != 0:
+                    # this shouldnt ever happen
+                    logger.warning("strangely, derivation was success but derive_failed==1; fixing")
+                    db.update_row(result_dict['id'], 'derive_failed', 1)
+                #end
                 count_success += 1
             else:
                 count_failed += 1
+                logger.debug("derivation failed")
                 db.update_row(result_dict['id'], 'derive_failed', 1)
-            #end 
+
+                if len(row.d['derived_fname']) > 0:
+                    # this shouldnt ever happen
+                    logger.warning("strangely, derivation failed but derived_fname != null; fixing")
+                    db.update_row(result_dict['derived_fname'], '')
+                #end
+            #end
+        else:
+            logger.debug("did not attempt derivation: derive_failed=%d derived_fname=%s" % (row.d['derive_failed'], row.d['derived_fname']))
         #end
     #end
     return (count_success, count_failed)
 
 @timeit.timeit
-def make_derived_files(db, derived_dir=DEFAULT_DERIVED_DIR, num_workers = -1, test_thread_flag=False):
+def make_derived_files(db, cam_name, derived_dir=DEFAULT_DERIVED_DIR, num_workers = -1, test_thread_flag=False):
     """
     create directory for derived files.
     for each entry in database, create derived files (thumbnails, converted video)
@@ -269,7 +291,8 @@ def make_derived_files(db, derived_dir=DEFAULT_DERIVED_DIR, num_workers = -1, te
     # actually exists
     assert os.path.exists(derived_dir)
         
-    row_list = db.select_all()
+    row_list = db.select_by_cam(cam_name)
+    logger.info("selected %d media files by name (%s)" % (len(row_list), cam_name))
 
     if num_workers <= 0:
         num_workers = mp.cpu_count()

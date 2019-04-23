@@ -216,7 +216,9 @@ class IndexPage:
 
         self.dest_fname = dest_fname
         self.logger = logging.getLogger(__name__)
-        self.db = db 
+        self.db = db
+
+        self.default_image_name = 'www/mryuck.png'
 
     def generate_overview_rows(self, cam_list):
         """
@@ -253,7 +255,12 @@ class IndexPage:
         later_fmt = "%a %b %d %H:%M:%S"   
         cards_html = ''
         for cam_info in cam_list:
-            num_status_pages = len(cam_info['status_page_list'])
+            if 'status_page_list' in cam_info:
+                num_status_pages = len(cam_info['status_page_list'])
+            else:
+                num_status_pages = 0
+                self.logger.debug("'status_page_list' not defined for this camera; CamPage not yet run for (%s)" % cam_info['name'])
+            #end
             self.logger.debug("cam (%s) has %d status pages" % (cam_info['name'], num_status_pages))
             if num_status_pages > 0:  # at least one status page
                 # note earliest/latest times from first and last entries

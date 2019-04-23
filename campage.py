@@ -360,6 +360,7 @@ class CamPage:
 
         if os.path.exists(thumb_path)==False:
             self.logger.info("%s does not exist" % thumb_path)
+
             thumb_path = self.default_image_fname
         #end
         thumb_path2 = thumb_path.replace(self.derived_dir, self.www_derived_dir)
@@ -540,7 +541,7 @@ class CamPage:
         navbar_html = self.make_html_navbar(prev_fname, next_fname)
         html_doc = self.make_html_doc(carousel_html, media_html, navbar_html)
         self.write_html(dest_fname, html_doc)
-
+        self.logger.info("wrote %s" % dest_fname)
         return dest_fname
 
     def make_html_carousel(self, image_list, row_index):
@@ -650,6 +651,7 @@ class CamPage:
         curr_file_later_time_sec = -1
         while(later_time_sec > final_earlier_time_sec):
             earlier_time_sec = later_time_sec - interval_sec
+            self.logger.debug("find (%s) media between [%d..%d]" % (self.camera_name, earlier_time_sec, later_time_sec))
             row_image_list = self.db.select_by_time_cam_media(self.camera_name,
                                                          later_time_sec,
                                                          earlier_time_sec,
