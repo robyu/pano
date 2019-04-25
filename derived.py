@@ -38,7 +38,7 @@ def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir):
     #
     # dont assert src existence--file may have been deleted?!
     #assert os.path.exists(src_fname)
-    logger.info("MP4 %s -> %s" % (src_fname, dest_fname))
+    logger.debug("MP4 %s -> %s" % (src_fname, dest_fname))
     
     try:
         os.makedirs(dest_path)
@@ -54,7 +54,7 @@ def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir):
 
         # check again: conversion may have failed
         if os.path.exists(dest_fname)==False:
-            logger.info("%s -> %s failed" % (src_fname, dest_fname))
+            logger.debug("%s -> %s failed" % (src_fname, dest_fname))
             dest_fname=''  # if failed, then return empty string
             assert len(dest_fname)==0
         else:
@@ -74,7 +74,7 @@ def make_thumbnail(base_data_dir, path, fname, derived_dir):
     dest_path = os.path.join(derived_dir, path)
     dest_fname = os.path.join(dest_path, fname)
 
-    logger.info("thumbnail %s -> %s" % (src_fname, dest_fname))
+    logger.debug("thumbnail %s -> %s" % (src_fname, dest_fname))
 
     # sometimes the database is out of date and the source file doesn't actually exist
     if os.path.exists(src_fname)==False:
@@ -99,7 +99,7 @@ def make_thumbnail(base_data_dir, path, fname, derived_dir):
         subprocess_with_logging(cmd)
 
         if os.path.exists(dest_fname)==False:
-            logger.info("%s -> %s failed" % (src_fname, dest_fname))
+            logger.debug("%s -> %s failed" % (src_fname, dest_fname))
             dest_fname=''  # if failed, then return empty string
             assert len(dest_fname)==0
         else:
@@ -237,7 +237,12 @@ def derive_with_single_thread(db, derived_dir, row_list, test_thread_flag):
     """
     count_success = 0
     count_failed = 0
-    for row in row_list:
+    for index in range(len(row_list)):
+        row = row_list[index]
+
+        if (index % 100)==0:
+            logger.info("derive %s %d of %d" % (row.d['cam_name'], index, len(row_list)))
+        #end
         if row.d['derive_failed']==0 and len(row.d['derived_fname'])==0: # previous attempt has not failed 
             if test_thread_flag==True:
                 result_dict = sleep_fcn(row, derived_dir)

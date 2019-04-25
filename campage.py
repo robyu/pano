@@ -309,7 +309,6 @@ class CamPage:
         self.fname_index += 1
         return dest_fname, prev_fname, next_fname
 
-    @timeit.timeit
     def write_html(self,dest_fname, html_doc):
         """
         given destination fname and html text,
@@ -497,6 +496,11 @@ class CamPage:
         make dictionary entry with generated HTML files and associated times
         """
         d={}
+        if later_time_sec < earlier_time_sec:
+            #
+            # sometimes this function gets called before later_time_sec has been assigned, so it's -1
+            later_time_sec = earlier_time_sec
+        #end
         assert later_time_sec >= earlier_time_sec, "assert later %d > earlier %d failed" % (later_time_sec,earlier_time_sec)
         d['page_fname'] = dest_fname
         d['later_time_sec'] = later_time_sec
@@ -680,6 +684,7 @@ class CamPage:
             else:
                 #
                 # insert a blank row to indicate passage of time
+                self.logger.debug("no media files found")
                 media_html += self.make_html_media_row_blank()
             #end
             later_time_sec = earlier_time_sec
@@ -703,12 +708,10 @@ class CamPage:
             #end 
         #end
         
-        # close last webpage (only if it has >= 1 image)
-        if num_images_on_page > 0:
-            media_html = media_html.format(max_index=num_images_on_page) # replace last template token
-            dest_fname = self.write_webpage(carousel_html, media_html, True)
-            status_page_list.append(self.make_status_dict(dest_fname, curr_file_later_time_sec, earlier_time_sec))
-        #end
+        # close last webpage
+        media_html = media_html.format(max_index=num_images_on_page) # replace last template token
+        dest_fname = self.write_webpage(carousel_html, media_html, True)
+        status_page_list.append(self.make_status_dict(dest_fname, curr_file_later_time_sec, earlier_time_sec))
 
         #
         # for next time around, restart the suffix index
