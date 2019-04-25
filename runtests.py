@@ -46,7 +46,7 @@ class TestPano(unittest.TestCase):
         #pu.db
         num_deleted = dirwalk.cull_files_by_ext(base_data_dir=self.test_data_dir)
         print("num_deleted = %d" % num_deleted)
-        self.assertTrue(num_deleted==87)
+        self.assertTrue(num_deleted==174)
         
     def test_cull_empty_dirs(self):
         dirwalk.cull_empty_dirs(self.test_data_dir)
@@ -240,6 +240,7 @@ class TestPano(unittest.TestCase):
         print("%s -> %s" % (time_string0, time_string))
         # ['2018', '11', '12 21:54:32']
         time_string_split = time_string.split('-')
+        #time_string_split = str.split(time_string,'-')
         time_string_split[2:3] = time_string_split[2].split(' ')
         time_string_split[3:6] = time_string_split[3].split(':')
 
@@ -332,7 +333,8 @@ class TestPano(unittest.TestCase):
         count_success, count_failed = derived.make_derived_files(db,
                                                                  derived_dir=self.derived_dir,
                                                                  num_workers = 4)
-        self.assertTrue (count_success==211)
+        print("count_success=%d, count_failed=%d" % (count_success, count_failed))
+        self.assertTrue (count_success==195)
         self.assertTrue(count_failed==3)
         db.close()
 
@@ -350,7 +352,8 @@ class TestPano(unittest.TestCase):
         count_success, count_failed = derived.make_derived_files(db,
                                                                  derived_dir=self.derived_dir,
                                                                  num_workers = 3)
-        self.assertTrue (count_success==211)
+        print("count_success=%d, count_failed=%d" % (count_success, count_failed))
+        self.assertTrue (count_success==195)
         self.assertTrue(count_failed==3)
         db.close()
         
@@ -607,7 +610,7 @@ class TestPano(unittest.TestCase):
         print("0: success=%d, fail=%d, time=%f" % (count_success0, count_failed0, time_trial0))
         print("1: success=%d, fail=%d, time=%f" % (count_success1, count_failed1, time_trial1))
 
-        self.assertTrue(count_success0==211)
+        self.assertTrue(count_success0==195)
         self.assertTrue(count_failed0==3)
         
         self.assertTrue(count_success1==0)  # no files processed 2nd trial
@@ -631,8 +634,8 @@ class TestPano(unittest.TestCase):
 
         self.assertTrue(len(cam_list)==2)
         for cam_info in cam_list:
-            for fname in cam_info['page_fnames_list']:
-                full_fname = os.path.join("www", fname)
+            for status_page in cam_info['status_page_list']:
+                full_fname = os.path.join("www", status_page['page_fname'])
                 self.assertTrue(os.path.exists(full_fname))
             #end
         #end
