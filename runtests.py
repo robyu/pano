@@ -208,7 +208,7 @@ class TestPano(unittest.TestCase):
         
         print("%s %s" % (time_string0, time_string))
         #time_string = time_string.replace('T',' ')
-        time_string = time_string.encode('utf8')    # convert from decode to plain
+        #time_string = time_string.encode('utf8')    # convert from decode to plain
         self.assertTrue(time_string==time_string0)
 
     def test_time_roundtrip2(self):
@@ -227,7 +227,7 @@ class TestPano(unittest.TestCase):
         """
         iso8601 -> seconds -> iso8601
         """
-        pu.db
+        #pu.db
 
         #
         # use mysql to determine local time
@@ -236,7 +236,7 @@ class TestPano(unittest.TestCase):
         time_sec = db.iso8601_to_sec(time_string0)
         
         time_string = db.sec_to_iso8601(time_sec)
-        time_string = time_string.encode('utf8')    # convert from decode to plain
+        #time_string = time_string.encode('utf8')    # convert from decode to plain
         print("%s -> %s" % (time_string0, time_string))
         # ['2018', '11', '12 21:54:32']
         time_string_split = time_string.split('-')
@@ -280,7 +280,7 @@ class TestPano(unittest.TestCase):
 
         row_list = db.select_by_age_range(baseline_time='2018-02-26', max_age_days=0.33)
         print(len(row_list))
-        self.assertTrue(len(row_list)==214)
+        self.assertTrue(len(row_list)==198)
 
         db.close()
 
@@ -446,7 +446,7 @@ class TestPano(unittest.TestCase):
         print(d)
         self.assertTrue(d['camera_list'][0]['name']==u'b0')
         self.assertTrue(len(d['camera_list'])==2)
-        self.assertTrue(d['max_age_days']==0.25)
+        self.assertTrue(d['max_age_days']==2.0)
 
     def test_pano_init(self):
         #pu.db
@@ -458,7 +458,7 @@ class TestPano(unittest.TestCase):
         mypano = pano.Pano("testdata2/test_pano_init.json")
         num_files_added,num_deleted = mypano.slurp_images()
         print("num_files_added=%d" % num_files_added)
-        self.assertTrue(num_files_added==621)
+        self.assertTrue(num_files_added==605)
 
     def test_pano_slurp_b1_only(self):
         #pu.db
@@ -469,7 +469,7 @@ class TestPano(unittest.TestCase):
         
         num_files_added,num_deleted = mypano.slurp_images()
         print("num_files_added=%d" % num_files_added)
-        self.assertTrue(num_files_added==318)
+        self.assertTrue(num_files_added==302)
         
     def test_pano_make_pages(self):
         #pu.db
