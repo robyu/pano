@@ -160,7 +160,6 @@ class Pano:
         for cam in cam_list:
             cam_dir = os.path.join(base_data_dir, cam['name']) # "testdata/FTP-culled/b0"
             self.logger.debug("*** processing camera dir %s" % cam_dir)
-            dirwalk.cull_empty_dirs(cam_dir)
             num_deleted = dirwalk.cull_files_by_ext(base_data_dir=cam_dir)
             num_added = dirwalk.walk_dir_and_load_db(self.image_db, base_data_dir,
                                                            cam_name = cam['name'])
@@ -168,6 +167,45 @@ class Pano:
             total_files_deleted += num_deleted
         #end
         return (total_files_added, total_files_deleted)
+
+    @timeit.timeit
+    def cull_empty_dirs(self, skip_flag=False):
+        """
+        """
+        self.logger.info("delete empty dirs")
+
+        if skip_flag:
+            return
+        #endif
+
+        # delete empty dirs in the data directory, e.g. FTP/cam00
+        base_data_dir = self.param_dict['base_data_dir']
+        derived_dir = self.param_dict['derived_dir']
+        cam_list = self.get_cam_list()
+        for cam in cam_list:
+            cam_dir = os.path.join(base_data_dir, cam['name']) # "testdata/FTP-culled/b0"
+            self.logger.debug("cull empty dirs %s" % cam_dir)
+            dirwalk.cull_empty_dirs(cam_dir)
+
+            cam_dir = os.path.join(derived_dir, cam['name'])
+            self.logger.debug("cull empty dirs %s" % cam_dir)
+            dirwalk.cull_empty_dirs(cam_dir)
+        #end
+
+        return
+
+    def cull_and_sleep(self, skip_cull_flag=False):
+        sleep_sec = self.param_dict['sleep_interval_min'] * 60.0
+
+        cull_start = time.time()
+        self.cull_empty_dirs(skip_cull_flag)
+        cull_stop = time.time()
+
+        remaining_sec = max(sleep_sec - (cull_stop - cull_start), 0.0)
+        assert remaining_sec >= 0.0
+        self.logger.debug("sleep for remaining %f sec" % remaining_sec)
+        time.sleep(remaining_sec)
+        return
 
     def normalize_cam_name(self, name):
         """
@@ -223,10 +261,7 @@ class Pano:
                                                     derived_dir = self.param_dict['derived_dir'],
                                                     baseline_time = self.param_dict['baseline_datetime'],
                                                     max_age_days = self.param_dict['max_age_days'])
-            # delete empty dirs
-            dirwalk.cull_empty_dirs(self.param_dict['derived_dir'])
         #END
-        
         return num_deleted
     
     @timeit.timeit
@@ -308,13 +343,6 @@ class Pano:
         #end
         return cam_list
 
-    def sleep(self):
-        assert self.param_dict['sleep_interval_min'] > 0.0
-        sleep_interval_sec = 60.0 * self.param_dict['sleep_interval_min']
-        time.sleep(sleep_interval_sec)
-        return
-
-
     def print_summary(self, num_added, num_deleted_ext, num_deleted_age):
         self.logger.info("== SUMMARY ==")
         self.logger.info("CAMERAS:")
@@ -370,8 +398,9 @@ def pano_main(config, loopcnt,droptable,loglevel,logfname):
         mypano.logger.info("updated index page (%s)" % index_fname)
 
         mypano.print_summary(num_files_added, num_deleted_ext, num_deleted_age)
-        mypano.logger.info("sleeping...%6.2f min" % mypano.param_dict['sleep_interval_min'])
-        mypano.sleep()
+
+        mypano.logger.info("cull & sleeping...%6.2f min" % mypano.param_dict['sleep_interval_min'])
+        mypano.cull_and_sleep(mypano.param_dict['skip_cull_empty_dirs'])
 
         loop_index += 1
         if (loopcnt >= 0):
