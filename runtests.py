@@ -21,10 +21,10 @@ import dtutils
 
 """
 run all unit tests
-python -m unittest runtests.py
+python3 -m unittest runtests.py
 
 run an individual test
-python -m unittest runtests.TestPano.test_create_table   # works with #pu.db in code
+python3 -m unittest runtests.TestPano.test_create_table   # works with #pu.db in code
 """
 
 class TestPano(unittest.TestCase):
@@ -427,11 +427,11 @@ class TestPano(unittest.TestCase):
                                     'www',
                                     'www/derived',
                                     'www/FTP')
-        fname_webpage_list = cam_pages.generate(start_datetime, 1, delta_min)
+        webpage_list = cam_pages.generate(start_datetime, 1, delta_min)
 
-        for fname in fname_webpage_list:
+        for webpage in webpage_list:
             #fname = os.path.join(self.www_dir, fname)
-            fname = os.path.join("www", fname)
+            fname = os.path.join("www", webpage['page_fname'])
             print("check for existence: %s" % fname)
             self.assertTrue(os.path.exists(fname))
 
@@ -477,8 +477,9 @@ class TestPano(unittest.TestCase):
 
         self.assertTrue(len(cam_list)==2)
         for cam_info in cam_list:
-            for fname in cam_info['page_fnames_list']:
-                full_fname = os.path.join("www", fname)
+            print(cam_info)
+            for status_page in cam_info['status_page_list']:
+                full_fname = os.path.join("www", status_page['page_fname'])
                 self.assertTrue(os.path.exists(full_fname))
             #end
         #end
@@ -666,7 +667,7 @@ class TestPano(unittest.TestCase):
         except:
             pass
 
-        derived_fname = derived.make_thumbnail(base_data_dir, path, fname, self.derived_dir, print_cmd_flag=True)
+        derived_fname = derived.make_thumbnail(base_data_dir, path, fname, self.derived_dir)
         print('derived_fname=%s' % derived_fname)
         #self.assertTrue(os.path.exists(os.path.join(self.derived_dir, derived_fname)))
         self.assertTrue(os.path.exists(derived_fname))

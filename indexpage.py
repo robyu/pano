@@ -217,8 +217,7 @@ class IndexPage:
         self.dest_fname = dest_fname
         self.logger = logging.getLogger(__name__)
         self.db = db
-
-        self.default_image_name = 'www/mryuck.png'
+        self.default_image_fname = os.path.join(self.www_dir, 'mryuck.png')
 
     def generate_overview_rows(self, cam_list):
         """
@@ -242,7 +241,7 @@ class IndexPage:
         thumb_path=latest_image_entry[0].d['derived_fname']
         if os.path.exists(thumb_path)==False:
             self.logger.info("%s does not exist" % thumb_path)
-            thumb_path = self.default_image_name
+            thumb_path = self.default_image_fname
         #end
         thumb_path2 = thumb_path.replace(self.derived_dir, self.www_derived_dir)
         return thumb_path2
