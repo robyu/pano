@@ -201,10 +201,10 @@ class Datastore:
         self.cursor.execute(cmd)
         ret = self.cursor.fetchall()
         sec = int(ret[0][0])
-        if strtime=="now":
-            self.logger.info("strtime=='now'")
-            self.logger.info("system time currently: %s" % datetime.datetime.now())
-            self.logger.info("epoch time (%d) -> iso8601 (%s)" % (sec, self.sec_to_iso8601(sec)))
+        # if strtime=="now":
+        #     self.logger.info("strtime=='now'")
+        #     self.logger.info("system time currently: %s" % datetime.datetime.now())
+        #     self.logger.info("epoch time (%d) -> iso8601 (%s)" % (sec, self.sec_to_iso8601(sec)))
         return sec
 
     def sec_to_iso8601(self, sec):

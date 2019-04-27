@@ -358,9 +358,12 @@ class CamPage:
         #end
 
         if os.path.exists(thumb_path)==False:
-            self.logger.info("%s does not exist" % thumb_path)
+            self.logger.info("THUMB %s does not exist" % thumb_path)
 
-            thumb_path = self.default_image_fname
+            # update the database entry so it doesn't occur next time
+            self.logger.info("updating database entry %d", row.d['id'])
+            self.db.update_row(row.d['id'], 'derived_fname', '')
+
         #end
         thumb_path2 = thumb_path.replace(self.derived_dir, self.www_derived_dir)
         return thumb_path2
@@ -372,7 +375,13 @@ class CamPage:
         actual_path = os.path.join(self.base_dir, row.d['path'], row.d['fname'])
 
         if os.path.exists(actual_path)==False:
-            self.logger.info("%s does not exist" % actual_path)
+            self.logger.info("ORIGINAL %s does not exist" % actual_path)
+
+            #
+            # update database so this doesn't happen next time
+            self.logger.info("deleting database entry %d", row.d['id'])
+            self.db.delete_row(row)
+            
             actual_path = self.default_image_fname
         #end
         
