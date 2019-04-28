@@ -161,7 +161,6 @@ def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag
     return (# success, # failed)
 
     """
-    assert False, "update to match code in derive_with_signal_thread"
     MAX_WAIT_SEC = 60 *2 
     assert num_workers >= 1
     pool = mp.Pool(num_workers)
@@ -174,8 +173,8 @@ def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag
     # waiting for the results (mpr.get) because
     # we want to regularly update the database with the pass/fail results
     while index < len(row_list):
+
         mpr_list = []
-        
         # assign media file to each worker
         worker_index=0
         while worker_index < num_workers:
@@ -187,19 +186,23 @@ def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag
                 assert index < len(row_list)
                 row = row_list[index]
                 index += 1
+                if (index % 100)==0:
+                    logger.info("derive %s %d of %d" % (row.d['cam_name'], index, len(row_list)))
+                #end
                 if row.d['derive_failed']==0 and len(row.d['derived_fname'])==0:
                     if test_thread_flag==True:
-                            #
-                            # run a fake test fcn, just to test thread pool
+                        #
+                        # run a fake test fcn, just to test thread pool
                         mpr = pool.apply_async(sleep_fcn, args=(row, derived_dir))
                     else:
                         mpr = pool.apply_async(process_media_file, args=(row, derived_dir))
-                        #print("assigned row %d to worker %d" % (index, n))
+                        logger.debug("assigned row %d to worker %d" % (index, worker_index))
                     #end  
                     mpr_list.append(mpr)
                     worker_index += 1
                 else:
-                    logger.debug("did not attempt derivation: derive_failed=%d derived_fname=%s" % (row.d['derive_failed'], row.d['derived_fname']))
+                    pass
+                    #logger.debug("did not attempt derivation: derive_failed=%d derived_fname=%s" % (row.d['derive_failed'], row.d['derived_fname']))
                 #end
             #end
         #end
@@ -210,15 +213,21 @@ def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag
                 result_dict = mpr.get(MAX_WAIT_SEC)
                 # update datastore with derived fname
                 if len(result_dict['derived_fname']) > 0:
+                    logger.debug("derivation success")
                     db.update_row(result_dict['id'], 'derived_fname', result_dict['derived_fname'])
+                    db.update_row(result_dict['id'], 'derive_failed', 0)
                     count_success += 1
                 else:
+                    logger.debug("derivation failed")
                     count_failed += 1
-                    db.update_row(result_dict['id'], 'derive_failed', 1)
+                    db.update_row(result_dict['id'], 'derived_fname', '')
+                    db.update_row(result_dict['id'], 'derive_failed', 0)
                 #end
             except mp.TimeoutError:
+                logger.debug("derivation failed (TIMEOUT)")
                 count_failed += 1
-                db.update_row(result_dict['id'], 'derive_failed', 1)
+                db.update_row(result_dict['id'], 'derived_fname', '')
+                db.update_row(result_dict['id'], 'derive_failed', 0)
             #end
         
         #end
@@ -253,26 +262,17 @@ def derive_with_single_thread(db, derived_dir, row_list, test_thread_flag):
             if len(result_dict['derived_fname']) > 0:
                 logger.debug("derivation success")
                 db.update_row(result_dict['id'], 'derived_fname', result_dict['derived_fname'])
-
-                if row.d['derive_failed'] != 0:
-                    # this shouldnt ever happen
-                    logger.warning("strangely, derivation was success but derive_failed==1; fixing")
-                    db.update_row(result_dict['id'], 'derive_failed', 1)
-                #end
+                db.update_row(result_dict['id'], 'derive_failed', 0)
                 count_success += 1
             else:
-                count_failed += 1
                 logger.debug("derivation failed")
+                count_failed += 1
+                db.update_row(result_dict['id'], 'derived_fname', '')
                 db.update_row(result_dict['id'], 'derive_failed', 1)
-
-                if len(row.d['derived_fname']) > 0:
-                    # this shouldnt ever happen
-                    logger.warning("strangely, derivation failed but derived_fname != null; fixing")
-                    db.update_row(result_dict['derived_fname'], '')
-                #end
             #end
         else:
-            logger.debug("did not attempt derivation: derive_failed=%d derived_fname=%s" % (row.d['derive_failed'], row.d['derived_fname']))
+            pass
+            #logger.debug("did not attempt derivation: derive_failed=%d derived_fname=%s" % (row.d['derive_failed'], row.d['derived_fname']))
         #end
     #end
     return (count_success, count_failed)
