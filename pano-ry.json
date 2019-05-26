@@ -1,10 +1,10 @@
 {
     "database_fname" : "/home/pi/pano/panodb.sqlite",
-    "base_data_dir" : "/media/wd1t/FTP",
+    "base_data_dir" : "/media/wd2tb/FTP",
     "delta_min": 30,
     "max_age_days": 14.0,
     "www_dir": "/var/www",
-    "derived_dir": "/media/wd1t/derived",
+    "derived_dir": "/media/wd2tb/derived",
     "baseline_datetime": "now",
 
     "skip_cull_old_files": 0,

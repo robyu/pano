@@ -127,7 +127,7 @@ class Pano:
         os.symlink(data_dir_abs_path, www_base_dir)
 
         derived_dir_abs_path = os.path.realpath(self.param_dict['derived_dir'])
-        assert os.path.exists(derived_dir_abs_path), "%s does not exist" % derive_dir_abs_path
+        assert os.path.exists(derived_dir_abs_path), "%s does not exist" % derived_dir_abs_path
 
         www_derived_dir = os.path.join(self.param_dict['www_dir'], self.param_dict['www_derived_dir'])
         if os.path.exists(www_derived_dir)==True:
