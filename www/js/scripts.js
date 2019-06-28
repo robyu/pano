@@ -14,9 +14,9 @@ function onVideoClick(mp4_fname,dav_fname,popname) {
     html = html + "    <video controls autoplay loop id=\"pano_video_player\"><source src=\""+mp4_fname+"\" type=\"video/webm\"></video>";
     html = html + "</div>";
     html = html + "<div>";
-    html = html + "    <a href=" + mp4_fname + "> direct link >>" + mp4_fname + "</a>";
+    html = html + "    <a href=" + mp4_fname + " target=\"_blank\"> direct link >>" + mp4_fname + "</a>";
     html = html + "<div>";
-    html = html + "    <a href=" + dav_fname + "> direct link >>" + dav_fname + "</a>";
+    html = html + "    <a href=" + dav_fname + " target=\"_blank\"> direct link >>" + dav_fname + "</a>";
     html = html + "</div>";
     pop_element.innerHTML = html;
 
@@ -97,7 +97,7 @@ function onImageClick(popname, image_index, num_images, image_url) {
     html = html + "          <button class=\"btn btn-outline-success pop-nav-btn\" onclick=\"" + next_onclick + "\"> earlier >> </button>"
     html = html + "        </p>"
     html = html + "        <div class=\"container border border-success\">"
-    html = html + "            <a href=\"" +image_url+ "\">"
+    html = html + "            <a href=\"" +image_url+ "\" target=\"_blank\">" // target="_blank" opens a new tab
     html = html + "                <img src=\" "+image_url+ "\" class=\"img-fluid d-block mx-auto\">"
     html = html + "            </a>"
     html = html + "        </div>"  // container
