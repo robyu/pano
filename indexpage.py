@@ -239,7 +239,12 @@ class IndexPage:
         """
         latest_image_entry = self.db.select_latest_image_per_camera(cam_name)
         thumb_path=latest_image_entry[0].d['derived_fname']
-        if os.path.exists(thumb_path)==False:
+
+        # sometimes, latest_image_entry[0] is a bogus database entry.
+        # this occurs when there are no derived thumbnails.
+        # so we must check if thumb_path is None.
+
+        if thumb_path==None or  os.path.exists(thumb_path)==False:
             self.logger.info("%s does not exist" % thumb_path)
             thumb_path = self.default_image_fname
         #end

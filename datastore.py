@@ -268,7 +268,12 @@ class Datastore:
                                        mediatype=MEDIA_IMAGE)
         self.cursor.execute(cmd)
         entry_list = self.cursor.fetchall()
+        # NOTE: if no entry is found which meets the query,
+        # entry_list will contain a single tuple which is all "None"
+        # this condition is awkward to detect, so handle it downstream.
+
         row_list = self.entries_to_rows(entry_list)
+
         assert len(row_list)==1
         return row_list
     
