@@ -217,7 +217,7 @@ class IndexPage:
         self.dest_fname = dest_fname
         self.logger = logging.getLogger(__name__)
         self.db = db
-        self.default_image_fname = os.path.join(self.www_dir, 'mryuck.png')
+        self.default_image_fname = 'mryuck.png'
 
     def generate_overview_rows(self, cam_list):
         """
