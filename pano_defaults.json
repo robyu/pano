@@ -5,6 +5,8 @@
     "delta_min": 10,
     "derived_dir": "derived",
     "drop_table_flag": 0,
+    "ffmpeg": "/usr/bin/ffmpeg",
+    "magick_convert": "/usr/bin/convert",
     "max_age_days": 14,
     "num_worker_threads": 1,
     "sleep_interval_min": 5,

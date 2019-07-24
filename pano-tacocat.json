@@ -1,11 +1,14 @@
 {
     "database_fname" : "/Users/ryu/pano/panodb.sqlite",
-    "base_data_dir" : "/Volumes/HD500GB-2/FTP",
+    "base_data_dir" : "/Volumes/HD2/FTP",
     "delta_min": 30,
-    "max_age_days": 1.0,
-    "www_dir": "/Users/ryu/pano/www",
-    "derived_dir": "/Volumes/HD500GB-2/derived",
-    "baseline_datetime": "2019-06-29",
+    "max_age_days": 14.0,
+    "www_dir": "/usr/local/var/www",
+    "derived_dir": "/Volumes/HD2/derived",
+    "baseline_datetime": "now",
+
+    "ffmpeg": "/usr/local/bin/ffmpeg",
+    "magick_convert": "/usr/local/bin/convert",
 
     "skip_cull_old_files": 1,
     "skip_slurp": 0,
@@ -13,14 +16,50 @@
     "skip_gen_cam_pages": 0,
     "skip_cull_empty_dirs": 1,
 
-    "sleep_interval_min": 15.0,
-    "num_worker_threads": 2,
+    "sleep_interval_min": 10.0,
+    "num_worker_threads": 1,
     "camera_list" : [
 	{
             "name": "cam-00",
             "live_url": "rtsp://admin:jiggy001@192.168.2.120:80/cam/realmonitor?channel=1&subtype=0",
 	    "admin_url": "http://192.168.2.120",
             "description": "front looking south"
+	},
+	{
+            "name": "cam-01",
+            "live_url": "rtsp://admin:jiggy001@192.168.2.121:80/cam/realmonitor?channel=1&subtype=0",
+	    "admin_url": "http://192.168.2.121",
+            "description": "porch"
+	},
+	{
+            "name": "cam-02",
+            "live_url": "rtsp://admin:jiggy001@192.168.2.132:80/cam/realmonitor?channel=1&subtype=0",
+	    "admin_url": "http://192.168.2.132",
+            "description": "front looking north"
+	},
+	{
+            "name": "cam-03",
+            "live_url": "rtsp://admin:jiggy001@192.168.2.123:80/cam/realmonitor?channel=1&subtype=0",
+	    "admin_url": "http://192.168.2.123",
+            "description": "alley looking south"
+	},
+	{
+            "name": "cam-04",
+            "live_url": "rtsp://admin:jiggy001@192.168.2.124:80/cam/realmonitor?channel=1&subtype=0",
+	    "admin_url": "http://192.168.2.134",
+            "description": "alley looking north"
+	},
+	{
+            "name": "cam-05",
+            "live_url": "rtsp://admin:jiggy001@192.168.2.125:80/cam/realmonitor?channel=1&subtype=0",
+	    "admin_url": "http://192.168.2.125",
+            "description": "side deck"
+	},
+	{
+            "name": "cam-06",
+            "live_url": "rtsp://admin:jiggy001@192.168.2.126:80/cam/realmonitor?channel=1&subtype=0",
+	    "admin_url": "http://192.168.2.126",
+            "description": "new cam"
 	}
     ],
 

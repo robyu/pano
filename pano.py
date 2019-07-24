@@ -286,7 +286,9 @@ class Pano:
             derived.make_derived_files(self.image_db,
                                        cam_name,
                                        num_workers = self.param_dict['num_worker_threads'],
-                                       derived_dir = self.param_dict['derived_dir'])
+                                       derived_dir = self.param_dict['derived_dir'],
+                                       cmd_ffmpeg = self.param_dict['ffmpeg'],
+                                       cmd_magick_convert = self.param_dict['magick_convert'])
 
         #end
         return
