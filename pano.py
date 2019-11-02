@@ -175,6 +175,7 @@ class Pano:
         self.logger.info("delete empty dirs")
 
         if skip_flag:
+            self.logger.info("skipping cull_empty_dirs")
             return
         #endif
 
@@ -255,8 +256,10 @@ class Pano:
         """
         self.logger.info("** cull files by age")
         if skip_flag:
+            self.logger.info(f"skip_flag={skip_flag}, skipping cull_old_files")
             num_deleted = 0
         else:
+            self.logger.info("cull_old_files")
             num_deleted = dirwalk.cull_files_by_age(self.image_db,
                                                     derived_dir = self.param_dict['derived_dir'],
                                                     baseline_time = self.param_dict['baseline_datetime'],

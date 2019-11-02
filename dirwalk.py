@@ -81,15 +81,15 @@ def parse_info_amcrest(base_data_dir, dir_path, fname):
     return row
     
 @timeit.timeit
-def cull_files_by_ext(base_data_dir='.', ext_list=['.avi','.idx']):
+def cull_files_by_ext(base_data_dir='.', keep_list=['.dav','.jpg']):
     logger.info("culling files by extension in %s" % base_data_dir)
     num_deleted = 0
     for dir_path, subdir_list, file_list in os.walk(base_data_dir):
         for fname in file_list:
             full_fname = os.path.join(dir_path, fname)
             (root, ext) = os.path.splitext(fname)  # split foo.bar into 'foo', '.bar'
-            if ext in ext_list:
-                #print("found %s in delete list" % fname)
+            if ext not in keep_list:
+                logger.info("deleting %s" % fname)
                 try:
                     os.remove(full_fname)
                     num_deleted += 1
@@ -118,9 +118,10 @@ def cull_files_by_age(db, baseline_time='Now', derived_dir='derived',max_age_day
     for row in row_list:
         full_fname = os.path.join(row.d['base_data_dir'], row.d['path'], row.d['fname'])
         try:
+            logger.info("deleting %s" % full_fname)
             os.remove(full_fname)
         except OSError:
-            pass
+            logger.warning("failed to remove %s, maxage=(%d) days" % (full_fname, max_age_days))
         if row.d['derived_fname'] != 0:
             try:
                 os.remove(row.d['derived_fname'])
