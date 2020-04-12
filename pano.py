@@ -45,8 +45,8 @@ class Pano:
     
     def __init__(self, config_fname,droptable=False, loglevel='warning', logfname='stdout'):
         print("Pano: reading config file (%s)" % config_fname)
-        self.logger = self.configure_logging(loglevel, logfname)
         self.param_dict = panoconfig.get_param_dict(config_fname)
+        self.logger = self.configure_logging(loglevel, logfname)
 
         self.generate_sym_links()
         
@@ -90,7 +90,7 @@ class Pano:
             handler = logging.StreamHandler(sys.stdout)
         else:
             print("logging to %s" % logfname)
-            handler = logging.handlers.RotatingFileHandler(logfname, maxBytes=128000, backupCount=4)
+            handler = logging.handlers.RotatingFileHandler(logfname, maxBytes=512000, backupCount=4)
         #end
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
         handler.setFormatter(formatter)        
@@ -381,7 +381,7 @@ class Pano:
 @click.argument('config')
 @click.option('--loopcnt',default=-1,help='number of times to loop; -1 == forever')
 @click.option('--droptable/--no-droptable', default=False,help='delete existing image database')
-@click.option('--logfname', default='pano.log',help='specify \'stdout\' for sys.stdout')
+@click.option('--logfname', default='logs/pano.log',help='specify \'stdout\' for sys.stdout')
 @click.option('--loglevel',default='warning',help='valid values: \'debug\'|\'info\'|\'warning\'|\'error\'|\'critical\'')
 def pano_main(config, loopcnt,droptable,loglevel,logfname):
     print("config file=%s" % config)

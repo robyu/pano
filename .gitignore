@@ -2,7 +2,7 @@
 __pycache__/
 *.py[cod]
 *.sqlite
-*.log*
+pano.log*
 derived/
 www/*.html
 *~
