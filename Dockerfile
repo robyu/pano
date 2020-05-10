@@ -1,9 +1,10 @@
 # ubuntu:latest maps to latest LTS
 FROM phusion/baseimage:latest
 
-ENV www_dir /www
-ENV ftp_dir /FTP
-ENV log_dir /var/log
+ENV www_dir /var/www
+ENV ftp_dir /var/FTP
+ENV log_dir /home/pano/logs
+ENV derived_dir /var/derived
 
 RUN add-apt-repository -y ppa:deadsnakes/ppa
 
@@ -28,15 +29,27 @@ COPY *.py   /home/pano/
 COPY *.json /home/pano/
      
 RUN mkdir ${ftp_dir}
-RUN chmod ugo+rw ${ftp_dir}
+RUN chmod -R ugo+rw ${ftp_dir}
 VOLUME ${ftp_dir}
 
 RUN mkdir ${www_dir}
-RUN chmod ugo+rw ${www_dir}
+RUN mkdir ${www_dir}/css
+RUN mkdir ${www_dir}/fonts
+RUN mkdir ${www_dir}/js
+RUN chmod -R ugo+rw ${www_dir}
+COPY www        ${www_dir}/
+COPY www/css    ${www_dir}/css/
+COPY www/fonts  ${www_dir}/fonts/
+COPY www/js     ${www_dir}/js/
 VOLUME ${www_dir}
 
-RUN chmod ugo+rw ${log_dir}
+RUN mkdir ${log_dir} 
+RUN chmod ugo+rw -R ${log_dir}
 VOLUME ${log_dir}
+
+RUN mkdir ${derived_dir}
+RUN chmod ugo+rw -R ${derived_dir}
+VOLUME ${derived_dir}
 
 WORKDIR /home/pano
 USER pano

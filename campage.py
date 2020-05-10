@@ -243,7 +243,7 @@ class CamPage:
         self.www_dir = www_dir
 
         self.default_image_fname = os.path.join(self.www_dir, 'mryuck.png')
-        assert os.path.exists(self.default_image_fname)
+        assert os.path.exists(self.default_image_fname), f"cannot find {self.default_image_name}"
 
         self.camera_name = camera_name
 
