@@ -8,6 +8,7 @@ import logging
 import tempfile
 import subprocess
 import timeit
+import shutil
 """
 
   
@@ -329,7 +330,12 @@ class CamPage:
             os.remove(full_dest_fname)
         #end
 
-        os.rename(temp_fname, full_dest_fname)
+        # turns out os.rename doesn't work across filesystems,
+        # so we gotta copy and remove
+        #os.rename(temp_fname, full_dest_fname)
+        shutil.copy(temp_fname, full_dest_fname)
+        os.remove(full_dest_fname)
+        
         
     
     def add_html_header_footer(self, html_doc, url_prev_page, url_next_page):

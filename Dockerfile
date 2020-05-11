@@ -1,4 +1,9 @@
 # ubuntu:latest maps to latest LTS
+#
+# docker build -t imagename:00 .
+# docker run -t -d  -v /Users/chuyu/Documents/2020/docker-pano/pano:/home/pano  mypano:13
+# docker exec -it -u root agitated_joliot /bin/bash
+#
 FROM phusion/baseimage:latest
 
 ENV www_dir /var/www
@@ -25,8 +30,6 @@ RUN python3.7 -m pip install dtutils click pudb
 RUN groupadd -r pano && useradd --no-log-init -r -m -g pano pano
 
 
-COPY *.py   /home/pano/
-COPY *.json /home/pano/
      
 RUN mkdir ${ftp_dir}
 RUN chmod -R ugo+rw ${ftp_dir}
@@ -43,16 +46,22 @@ COPY www/fonts  ${www_dir}/fonts/
 COPY www/js     ${www_dir}/js/
 VOLUME ${www_dir}
 
-RUN mkdir ${log_dir} 
-RUN chmod ugo+rw -R ${log_dir}
-VOLUME ${log_dir}
-
 RUN mkdir ${derived_dir}
 RUN chmod ugo+rw -R ${derived_dir}
 VOLUME ${derived_dir}
 
-WORKDIR /home/pano
+COPY *.py   /home/pano/
+COPY *.json /home/pano/
+RUN chown -R pano:pano /home/pano
+VOLUME /home/pano
+
+RUN mkdir ${log_dir} 
+#RUN chmod ugo+rw -R ${log_dir}
+VOLUME ${log_dir}
+
 USER pano
+WORKDIR /home/pano
+
 
 CMD ["/bin/bash"]
 
