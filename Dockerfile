@@ -28,8 +28,6 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.7 1
 RUN python3.7 -m pip install --upgrade pip
 RUN python3.7 -m pip install dtutils click pudb
 RUN groupadd -r pano && useradd --no-log-init -r -m -g pano pano
-
-
      
 RUN mkdir ${ftp_dir}
 RUN chmod -R ugo+rw ${ftp_dir}
