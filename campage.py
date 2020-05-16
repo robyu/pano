@@ -671,7 +671,8 @@ class CamPage:
         curr_file_later_time_sec = -1
         while(later_time_sec > final_earlier_time_sec):
             earlier_time_sec = later_time_sec - interval_sec
-            self.logger.debug("find (%s) media between [%d..%d]" % (self.camera_name, earlier_time_sec, later_time_sec))
+            self.logger.debug("find (%s) media between [%s..%s]" % (self.camera_name, dtutils.sec_to_str(earlier_time_sec),
+                                                                    dtutils.sec_to_str(later_time_sec)))
             row_image_list = self.db.select_by_time_cam_media(self.camera_name,
                                                          later_time_sec,
                                                          earlier_time_sec,

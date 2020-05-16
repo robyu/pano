@@ -16,7 +16,7 @@ import datetime
 import logging
 import logging.handlers
 import sys
-
+import dtutils
 """
 data dict
 =========
@@ -59,12 +59,34 @@ class Pano:
         self.image_db = datastore.Datastore(self.param_dict['database_fname'],
                                             drop_table_flag=drop_table_flag)
 
+        self.print_baseline_time_info()
+            
         cam_list = self.get_cam_list()
         self.logger.info("REGISTERED CAMERAS:")
         for cam in cam_list:
             self.logger.info(cam['name'])
         #end
 
+    def print_baseline_time_info(self):
+        """
+        write some stuff about the configured baseline time and duration
+        """
+        self.logger.info("print_baseline_time_info() ********************************")
+        baseline_datetime = self.param_dict['baseline_datetime']
+        max_age_days = self.param_dict['max_age_days']
+        self.logger.info(f"baseline_datetime = {baseline_datetime}")
+        self.logger.info(f"max_age_days = {max_age_days}")
+        baseline_sec = self.image_db.iso8601_to_sec(baseline_datetime)
+        self.logger.info(f"baseline_datetime = {baseline_sec} sec")
+        self.logger.info(f"baseline_datetime = {dtutils.sec_to_str(baseline_sec)} (roundtrip conversion)")
+        max_age_sec = self.param_dict['max_age_days'] * 24.0 * 60.0 * 60.0
+        oldest_sec = baseline_sec - max_age_sec
+        oldest_datetime = dtutils.sec_to_str(oldest_sec)
+        self.logger.info(f"scanning media from {oldest_datetime} .. {baseline_datetime}")
+        self.logger.info("print_baseline_time_info() ********************************")
+        #end
+        return
+        
     def configure_logging(self, loglevel,logfname):
         """
         see https://docs.python.org/2/howto/logging.html
@@ -72,8 +94,8 @@ class Pano:
         but see also
         https://stackoverflow.com/questions/20240464/python-logging-file-is-not-working-when-using-logging-basicconfig
         """
-        #logger = logging.getLogger("app")
-        logger = logging.getLogger()
+        logger = logging.getLogger("app")
+        #logger = logging.getLogger()
 
         #
         # normalize loglevel arg
@@ -100,7 +122,6 @@ class Pano:
         # can't set level of root logger using basicConfig
         # see stackoverflow question above
         logger.setLevel(numeric_level)
-
 
         logger.debug("DEBUG logging enabled")
         logger.info("INFO logging enabled")
@@ -195,18 +216,21 @@ class Pano:
 
         return
 
-    def cull_and_sleep(self, skip_cull_flag=False):
-        sleep_sec = self.param_dict['sleep_interval_min'] * 60.0
-
+    def cull(self, skip_cull_flag=False):
         cull_start = time.time()
         self.cull_empty_dirs(skip_cull_flag)
         cull_stop = time.time()
 
-        remaining_sec = max(sleep_sec - (cull_stop - cull_start), 0.0)
-        assert remaining_sec >= 0.0
-        self.logger.debug("sleep for remaining %f sec" % remaining_sec)
-        time.sleep(remaining_sec)
         return
+
+    def sleep(self):
+        sleep_sec = self.param_dict['sleep_interval_min'] * 60.0
+        assert sleep_sec >= 0.0
+
+        self.logger.debug("sleep for %f sec" % sleep_sec)
+        time.sleep(sleep_sec)
+        return
+
 
     def normalize_cam_name(self, name):
         """
@@ -389,7 +413,7 @@ def pano_main(config, loopcnt,droptable,loglevel,logfname):
     mypano = Pano(config,droptable,loglevel,logfname)
     loop_flag = True
     loop_index=0
-    while loop_flag:
+    while True:
         mypano.write_breadcrumb()
         (num_files_added, num_deleted_ext) = mypano.slurp_images(mypano.param_dict['skip_slurp'])
         num_deleted_age = mypano.cull_old_files(mypano.param_dict['skip_cull_old_files'])
@@ -404,15 +428,15 @@ def pano_main(config, loopcnt,droptable,loglevel,logfname):
 
         mypano.print_summary(num_files_added, num_deleted_ext, num_deleted_age)
 
-        mypano.logger.info("cull & sleeping...%6.2f min" % mypano.param_dict['sleep_interval_min'])
-        mypano.cull_and_sleep(mypano.param_dict['skip_cull_empty_dirs'])
-
+        mypano.logger.info("cull")
+        mypano.cull(mypano.param_dict['skip_cull_empty_dirs'])
         loop_index += 1
-        if (loopcnt >= 0):
-            loop_flag = loop_index < loopcnt
-        else:
-            loop_flag = True
+
+        if loop_index >= loopcnt:
+            break
         #end
+        mypano.sleep()
+        
     #end
 
 if __name__=="__main__":
