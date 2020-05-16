@@ -25,7 +25,7 @@ class TestLogger:
     The root logger is configured in the calling code
     
     """    
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger("pano")
 
         self.logger.debug("init debug")
         self.logger.warning("init warning")
@@ -41,7 +41,7 @@ class TestLogger:
 if __name__=="__main__":
     #
     # configure root logger
-    logger = logging.getLogger()  # ROOT logger
+    logger = logging.getLogger("pano")  # ROOT logger
     handler = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
     handler.setFormatter(formatter)        

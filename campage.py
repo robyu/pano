@@ -260,20 +260,22 @@ class CamPage:
         # generate carousel html?
         self.make_carousel=False
 
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger("pano")
+
+        self.TMP_HTML_EXTENSION = 'html_in_progress'
 
     @timeit.timeit
     def delete_existing_campages(self):
         """
-        delete existing files of the form "camname-*.html"
+        delete existing camera-specific html and temp files
         """
         #
-        # delete old cam pages
+        # delete old .html pages
         fname_wildcard = '%s-*.html' % self.camera_name
         self.logger.info("deleting HTML pages of form (%s)" % fname_wildcard)
 
         cmd_list = ['find',self.www_dir,'-maxdepth', '1','-type','f','-name',fname_wildcard,'-delete']
-        self.logger.info(cmd_list)
+        self.logger.debug(cmd_list)
 
         p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
@@ -284,6 +286,26 @@ class CamPage:
         if stderr:
             self.logger.debug(stderr)
         #end
+
+        #
+        # delete old temporary files
+        fname_wildcard = f"*.{self.TMP_HTML_EXTENSION}"
+        self.logger.info("deleting temporary files of form (%s)" % fname_wildcard)
+
+        cmd_list = ['find',self.www_dir,'-maxdepth', '1','-type','f','-name',fname_wildcard,'-delete']
+        self.logger.debug(cmd_list)
+
+        p = subprocess.Popen(cmd_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+
+        if stdout:
+            self.logger.debug(stdout)
+        #end
+        if stderr:
+            self.logger.debug(stderr)
+        #end
+        return
+
         
     def calc_dest_fname(self, last_flag=False):
         """
@@ -319,10 +341,11 @@ class CamPage:
         returns:
         none
         """ 
-        temp_fname = os.path.join(self.www_dir, tempfile.mktemp('.html'))
-        f = open(temp_fname, "wt")
-        f.write(html_doc)
-        f.close()
+        tmp_file = tempfile.NamedTemporaryFile(mode="wt", suffix=".html_in_progress", dir=self.www_dir,delete=False)
+        
+        self.logger.debug(f"HTML filename = {tmp_file.name}")
+        tmp_file.write(html_doc)
+        tmp_file.close()
         
         #
         # remove existing dest_fname, rename temp to dest_fname
@@ -331,12 +354,11 @@ class CamPage:
             os.remove(full_dest_fname)
         #end
 
-        # turns out os.rename doesn't work across filesystems,
-        # so we gotta copy and remove
-        #os.rename(temp_fname, full_dest_fname)
-        shutil.copy(temp_fname, full_dest_fname)
-        os.remove(full_dest_fname)
-        
+        os.rename(tmp_file.name, full_dest_fname)
+        # shutil.copy(temp_fname, full_dest_fname)
+        # os.remove(full_dest_fname)
+
+        return
         
     
     def add_html_header_footer(self, html_doc, url_prev_page, url_next_page):
@@ -562,6 +584,7 @@ class CamPage:
         html_doc = self.make_html_doc(carousel_html, media_html, navbar_html)
         self.write_html(dest_fname, html_doc)
         self.logger.info("wrote %s" % dest_fname)
+
         return dest_fname
 
     def make_html_carousel(self, image_list, row_index):
@@ -627,6 +650,28 @@ class CamPage:
         row_html = " <p>  &or; </p>"
 
         return row_html
+
+    def get_total_number_media_files(self, earliest_time_sec, latest_time_sec):
+        """
+        search the entire time period for media files, report on result
+        """
+        assert earliest_time_sec < latest_time_sec
+        row_image_list = self.db.select_by_time_cam_media(self.camera_name,
+                                                          latest_time_sec,
+                                                          earliest_time_sec,
+                                                          mediatype=datastore.MEDIA_IMAGE)
+        row_video_list = self.db.select_by_time_cam_media(self.camera_name,
+                                                          latest_time_sec,
+                                                          earliest_time_sec,
+                                                          mediatype=datastore.MEDIA_VIDEO)
+        self.logger.debug("==================")
+        self.logger.debug("search db for  camera (%s) media between [%s..%s]" % (self.camera_name, dtutils.sec_to_str(earliest_time_sec),
+                                                                    dtutils.sec_to_str(latest_time_sec)))
+        self.logger.debug(f"db yielded {len(row_image_list)} images and {len(row_video_list)} videos")
+        self.logger.debug("\n")
+
+        return
+        
     
     @timeit.timeit
     def generate(self, later_datetime, max_age_days, interval_min):
@@ -656,14 +701,16 @@ class CamPage:
 
         final_earlier_time_sec = later_time_sec - int(max_age_days * 24.0 * 60.0 * 60.0) # days * (hrs/day)(min/hrs)(sec/min)
         assert (final_earlier_time_sec > 0)
-
         assert interval_min > 0
         interval_sec = int(interval_min * 60.0)
+        self.logger.debug(f"generating cam pages for times {dtutils.sec_to_str(final_earlier_time_sec)}..{dtutils.sec_to_str(later_time_sec)}")
 
         # start a new web page
         media_row_index = 0
         carousel_html = ''
         media_html = ''
+
+        self.get_total_number_media_files(final_earlier_time_sec, later_time_sec)
 
         # iterate through all rows which fall into the time interval
         # iterate backwards through time, from latest (later time) to oldest (earlier time)
@@ -673,6 +720,8 @@ class CamPage:
             earlier_time_sec = later_time_sec - interval_sec
             self.logger.debug("find (%s) media between [%s..%s]" % (self.camera_name, dtutils.sec_to_str(earlier_time_sec),
                                                                     dtutils.sec_to_str(later_time_sec)))
+
+
             row_image_list = self.db.select_by_time_cam_media(self.camera_name,
                                                          later_time_sec,
                                                          earlier_time_sec,
@@ -681,6 +730,8 @@ class CamPage:
                                                          later_time_sec,
                                                          earlier_time_sec,
                                                          mediatype=datastore.MEDIA_VIDEO)
+            self.logger.debug(f"db yielded {len(row_image_list)} images and {len(row_video_list)} videos")
+
             #
             # if later_time0 not yet recorded, then do so
             if curr_file_later_time_sec <= 0:

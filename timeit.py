@@ -6,7 +6,7 @@ a decorator for timing code execution
 
 see https://medium.com/pythonhive/python-decorator-to-measure-the-execution-time-of-methods-fa04cb6bb36d
 """
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("pano")
 def timeit(method):
     def timed(*args, **kw):
         ts = time.time()

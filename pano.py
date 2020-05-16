@@ -94,7 +94,7 @@ class Pano:
         but see also
         https://stackoverflow.com/questions/20240464/python-logging-file-is-not-working-when-using-logging-basicconfig
         """
-        logger = logging.getLogger("app")
+        logger = logging.getLogger("pano")
         #logger = logging.getLogger()
 
         #
@@ -114,9 +114,10 @@ class Pano:
             print("logging to %s" % logfname)
             handler = logging.handlers.RotatingFileHandler(logfname, maxBytes=512000, backupCount=4)
         #end
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
-        handler.setFormatter(formatter)        
-        logger.addHandler(handler)
+        #formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
+        #formatter = logging.Formatter('%(levelname)s  %(message)s')
+        #handler.setFormatter(formatter)        
+        #logger.addHandler(handler)
 
         # because of how logging is imported,    
         # can't set level of root logger using basicConfig

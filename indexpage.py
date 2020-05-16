@@ -215,7 +215,7 @@ class IndexPage:
         self.www_derived_dir = www_derived_dir
 
         self.dest_fname = dest_fname
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger("pano")
         self.db = db
         self.default_image_fname = 'mryuck.png'
 

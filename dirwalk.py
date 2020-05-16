@@ -7,7 +7,7 @@ import derived
 import timeit
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("pano")
 
 def parse_info_amcrest_jpg(row, dir_element_list, fname):
     # ['b0', 'AMC0028V_795UUB', '2018-02-24', '001', 'jpg', '10', '35']

@@ -123,7 +123,7 @@ class Watchdog:
         but see also
         https://stackoverflow.com/questions/20240464/python-logging-file-is-not-working-when-using-logging-basicconfig
         """
-        logger = logging.getLogger()
+        logger = logging.getLogger("pano-watchdog")
 
         #
         # normalize loglevel arg

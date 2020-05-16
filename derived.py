@@ -7,7 +7,7 @@ import sys
 import timeit
 import logging
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("pano")
 
 DEFAULT_DERIVED_DIR = './derived'
 
@@ -28,7 +28,7 @@ def subprocess_with_logging(cmd_list):
         logger.debug(stderr)
     #end
 
-@timeit.timeit
+
 def convert_dav_to_mp4(cmd_ffmpeg, base_data_dir, path, fname, derived_dir):
     src_fname = os.path.join(base_data_dir, path, fname)
     dest_path = os.path.join(derived_dir, path)

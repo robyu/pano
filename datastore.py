@@ -56,7 +56,7 @@ class Datastore:
         self.dbconn = None
         self.tablename = "pano"
         self.cursor = None
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger("pano")
         
         self.create_table(drop_table_flag)
 
