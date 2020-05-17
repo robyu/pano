@@ -420,7 +420,7 @@ def pano_main(config, loopcnt,droptable,loglevel,logfname):
         mypano.cull(mypano.param_dict['skip_cull_empty_dirs'])
         loop_index += 1
 
-        if loop_index >= loopcnt:
+        if (loop_index >= loopcnt) and (loopcnt > 0):
             break
         #end
         mypano.sleep()
