@@ -111,8 +111,9 @@ class Pano:
             print("logging to stdout")
             handler = logging.StreamHandler(sys.stdout)
         else:
-            print("logging to %s" % logfname)
-            handler = logging.handlers.RotatingFileHandler(logfname, maxBytes=512000, backupCount=4)
+            full_fname = os.path.join(self.param_dict['log_dir'], logfname)
+            print("logging to %s" % full_fname)
+            handler = logging.handlers.RotatingFileHandler(full_fname, maxBytes=512000, backupCount=4)
         #end
         #formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
         #formatter = logging.Formatter('%(levelname)s  %(message)s')
@@ -142,20 +143,28 @@ class Pano:
         data_dir_abs_path = os.path.realpath(self.param_dict['base_data_dir'])
         assert os.path.exists(data_dir_abs_path), "%s does not exist" % data_dir_abs_path
 
-        www_base_dir = os.path.join(self.param_dict['www_dir'], self.param_dict['www_base_dir'])
-        if os.path.exists(www_base_dir)==True:
-            os.unlink(www_base_dir)
-            
-        os.symlink(data_dir_abs_path, www_base_dir)
+        www_data_dir = os.path.join(self.param_dict['www_dir'], self.param_dict['www_data_dir'])
+        # assert os.path.exists(www_data_dir), f"www_data_dir {www_data_dir} does not exist"
 
+        # if os.path.exists(www_data_dir)==True:
+        #     os.unlink(www_data_dir)
+        # assert False
+        try:
+            os.symlink(data_dir_abs_path, www_data_dir)
+        except FileExistsError:
+            self.logger.debug(f"www/FTP symlink {www_data_dir} already exists")
+        #end
+        
         derived_dir_abs_path = os.path.realpath(self.param_dict['derived_dir'])
         assert os.path.exists(derived_dir_abs_path), "%s does not exist" % derived_dir_abs_path
 
         www_derived_dir = os.path.join(self.param_dict['www_dir'], self.param_dict['www_derived_dir'])
-        if os.path.exists(www_derived_dir)==True:
-            os.unlink(www_derived_dir)
             
-        os.symlink(derived_dir_abs_path, www_derived_dir)
+        try:
+            os.symlink(derived_dir_abs_path, www_derived_dir)
+        except FileExistsError:
+            self.logger.debug(f"www/derived symlink {www_derived_dir} already exists")
+        #end
 
     @timeit.timeit
     def slurp_images(self, skip_flag=False):
@@ -356,7 +365,7 @@ class Pano:
                                              self.param_dict['base_data_dir'],
                                              self.param_dict['www_dir'],
                                              self.param_dict['www_derived_dir'],
-                                             self.param_dict['www_base_dir'])
+                                             self.param_dict['www_data_dir'])
                                              
             # generate 1 or more HTML webpages
             if skip_flag:

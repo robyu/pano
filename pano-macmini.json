@@ -2,6 +2,7 @@
     "baseline_datetime": "2020-04-11",
     "database_fname" : "/Users/chuyu/Documents/2020/pano-test/db.sqlite",
     "base_data_dir" :  "/Users/chuyu/Documents/2020/pano-test/FTP",
+    "log_dir": "/Users/chuyu/Documents/2020/pano-test/logs",
     "delta_min": 30,
     "max_age_days": 14.0,
     "www_dir":         "/Users/chuyu/Documents/2020/pano-test/www",
@@ -26,40 +27,10 @@
             "description": "front looking south"
 	},
 	{
-            "name": "cam-01",
-            "live_url": "rtsp://admin:jiggy001@192.168.2.121:80/cam/realmonitor?channel=1&subtype=0",
-	    "admin_url": "http://192.168.2.121",
-            "description": "porch"
-	},
-	{
             "name": "cam-02",
             "live_url": "rtsp://admin:jiggy001@192.168.2.132:80/cam/realmonitor?channel=1&subtype=0",
 	    "admin_url": "http://192.168.2.132",
             "description": "front looking north"
-	},
-	{
-            "name": "cam-03",
-            "live_url": "rtsp://admin:jiggy001@192.168.2.123:80/cam/realmonitor?channel=1&subtype=0",
-	    "admin_url": "http://192.168.2.123",
-            "description": "alley looking south"
-	},
-	{
-            "name": "cam-04",
-            "live_url": "rtsp://admin:jiggy001@192.168.2.124:80/cam/realmonitor?channel=1&subtype=0",
-	    "admin_url": "http://192.168.2.134",
-            "description": "alley looking north"
-	},
-	{
-            "name": "cam-05",
-            "live_url": "rtsp://admin:jiggy001@192.168.2.125:80/cam/realmonitor?channel=1&subtype=0",
-	    "admin_url": "http://192.168.2.125",
-            "description": "side deck"
-	},
-	{
-            "name": "cam-06",
-            "live_url": "rtsp://admin:jiggy001@192.168.2.126:80/cam/realmonitor?channel=1&subtype=0",
-	    "admin_url": "http://192.168.2.126",
-            "description": "new cam"
 	}
     ],
 

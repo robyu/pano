@@ -218,7 +218,7 @@ class CamPage:
                  base_dir,
                  www_dir,
                  www_derived_dir,
-                 www_base_dir):
+                 www_data_dir):
         """
         camera_name = "whatever"
         db = the image datastore
@@ -226,7 +226,7 @@ class CamPage:
         base_dir = the actual path to the actual media, e.g. "/media/FTP"
         www_dir = actual path to webserver directory, e.g. "www"
         www_derived_dir = path to webserver directory for derived media, e.g. "www/derived"
-        www_base_dir = path to webserver directory for actual media, e.g. "www/FTP"
+        www_data_dir = path to webserver directory for actual media, e.g. "www/FTP"
         """
         
         self.db = db  # pointer to datastore
@@ -238,7 +238,7 @@ class CamPage:
         
         self.www_derived_dir = www_derived_dir
         
-        self.www_base_dir = www_base_dir
+        self.www_data_dir = www_data_dir
         
         self.num_images_per_row = 4
 
@@ -416,7 +416,7 @@ class CamPage:
         
         # replace basedir with webpage-friendly path
         # ./FTP/120/AMC0028V_795UUB/2018-08-24/001/jpg/22/27/22[M][0@0][0].jpg
-        actual_path2 = actual_path.replace(self.base_dir, self.www_base_dir)
+        actual_path2 = actual_path.replace(self.base_dir, self.www_data_dir)
         
         return actual_path2
     
