@@ -8,8 +8,8 @@ FROM phusion/baseimage:latest
 
 ENV www_dir /var/www
 ENV ftp_dir /var/FTP
-ENV log_dir /home/pano/logs
 ENV derived_dir /var/derived
+ENV log_dir /home/pano/logs
 
 RUN add-apt-repository -y ppa:deadsnakes/ppa
 
@@ -48,8 +48,9 @@ RUN mkdir ${derived_dir}
 RUN chmod ugo+rw -R ${derived_dir}
 VOLUME ${derived_dir}
 
-COPY *.py   /home/pano/
-COPY *.json /home/pano/
+COPY *.py          /home/pano/
+COPY *.json        /home/pano/
+COPY start-pano.sh /home/pano
 RUN chown -R pano:pano /home/pano
 VOLUME /home/pano
 
@@ -61,6 +62,7 @@ USER pano
 WORKDIR /home/pano
 
 
-CMD ["/bin/bash"]
+CMD ["./start-pano.sh"]
+
 
 
