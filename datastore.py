@@ -56,7 +56,6 @@ class Datastore:
         self.dbconn = None
         self.tablename = "pano"
         self.cursor = None
-        self.logger = logging.getLogger("pano")
         
         self.create_table(drop_table_flag)
 
@@ -154,9 +153,9 @@ class Datastore:
         col_vector += ")"
         val_vector += ")"
         cmd = "%s %s VALUES %s" % (cmd, col_vector, val_vector)
-        self.logger.debug("adding row (%s)" % cmd)
+        logging.debug("adding row (%s)" % cmd)
         c.execute(cmd)
-        self.logger.debug("success!")
+        logging.debug("success!")
 
     def entries_to_rows(self, entry_list):
         """
@@ -202,9 +201,9 @@ class Datastore:
         ret = self.cursor.fetchall()
         sec = int(ret[0][0])
         # if strtime=="now":
-        #     self.logger.info("strtime=='now'")
-        #     self.logger.info("system time currently: %s" % datetime.datetime.now())
-        #     self.logger.info("epoch time (%d) -> iso8601 (%s)" % (sec, self.sec_to_iso8601(sec)))
+        #     logging.info("strtime=='now'")
+        #     logging.info("system time currently: %s" % datetime.datetime.now())
+        #     logging.info("epoch time (%d) -> iso8601 (%s)" % (sec, self.sec_to_iso8601(sec)))
         return sec
 
     def sec_to_iso8601(self, sec):
@@ -324,7 +323,7 @@ class Datastore:
         else:
             cmd = "update {tn} set {col}={val} where id={id}".format(tn=self.tablename, col=col,val=val,id=id)
         #end
-        self.logger.debug("execute sql: (%s)" % cmd)
+        logging.debug("execute sql: (%s)" % cmd)
         self.cursor.execute(cmd)
         self.dbconn.commit()
 

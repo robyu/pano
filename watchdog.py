@@ -6,13 +6,11 @@ import panoconfig
 import click
 import subprocess
 import logging
-import logging.handlers
 import sys
 """
 ./watchdog.py --logfname=stdout  --loglevel=debug testdata2/test_pano_b1_only.json
 """
 class Watchdog:
-    logger = None
     wd_dict = {}
     
     def __init__(self, config, loglevel, logfname):
@@ -49,7 +47,7 @@ class Watchdog:
         ftpuser  31662   728  0 01:30 ?        00:00:36 pure-ftpd (IDLE)
         root     31663 31662  0 01:30 ?        00:00:00 pure-ftpd (PRIV)
         """
-        self.logger.debug("check_ftp_server: enable_flag=%d" % int(enable_flag))
+        logging.debug("check_ftp_server: enable_flag=%d" % int(enable_flag))
         if (enable_flag==0) or (enable_flag==False):
             return True
         #end
@@ -59,7 +57,7 @@ class Watchdog:
         linecount = 0
         for line in out:
             if line.find('ftpd') > 0:
-                self.logger.debug(line)
+                logging.debug(line)
                 linecount += 1
             #end
         #end
@@ -68,7 +66,7 @@ class Watchdog:
             retval = True
         #end
 
-        self.logger.info("check_ftp_server: %s" % str(retval))
+        logging.info("check_ftp_server: %s" % str(retval))
         return retval
 
     def check_breadcrumb(self,enable_flag):
@@ -77,7 +75,7 @@ class Watchdog:
         os.path.exists()
         os.remove()
         """
-        self.logger.debug("check_breadcrumb: enable_flag=%d" % int(enable_flag))
+        logging.debug("check_breadcrumb: enable_flag=%d" % int(enable_flag))
         if (enable_flag==0) or (enable_flag==False):
             return True
 
@@ -85,18 +83,18 @@ class Watchdog:
         breadcrumb_fname = 'pano-breadcrumb.txt'
 
         if os.path.exists('pano-breadcrumb.txt'):
-            self.logger.debug("found breadcrumb %s" % breadcrumb_fname)
+            logging.debug("found breadcrumb %s" % breadcrumb_fname)
             retval = True
             os.remove(breadcrumb_fname)
     
-        self.logger.info("check_breadcrumb: %s" % str(retval))
+        logging.info("check_breadcrumb: %s" % str(retval))
         return retval
 
     def check_http_server(self, enable_flag):
         """
         /usr/sbin/lighttpd -D -f /etc/lighttpd/lighttpd.conf
         """
-        self.logger.debug("check_http_server: enable_flag=%d" % int(enable_flag))
+        logging.debug("check_http_server: enable_flag=%d" % int(enable_flag))
         if (enable_flag==0) or (enable_flag==False):
             return True
 
@@ -104,16 +102,16 @@ class Watchdog:
         out = self.get_process_list()
         linecount = 0
         for line in out:
-            #self.logger.debug(line)
+            #logging.debug(line)
             if line.find('httpd') > 0:
-                self.logger.debug(line)
-                self.logger.debug("found match")
+                logging.debug(line)
+                logging.debug("found match")
                 linecount += 1
 
         if linecount >= 1:
             retval = True
         
-        self.logger.info("check_http_server: %s" % str(retval))
+        logging.info("check_http_server: %s" % str(retval))
         return retval
 
     def configure_logging(self, loglevel,logfname):
@@ -166,12 +164,12 @@ class Watchdog:
         max_faults = self.wd_dict['watchdog_max_faults']
         
         sleep_interval_min = self.wd_dict['sleep_interval_min']
-        self.logger.info("sleep_interval_min=%d" % sleep_interval_min)
+        logging.info("sleep_interval_min=%d" % sleep_interval_min)
         
         loop_flag = True
         while loop_flag:
-            self.logger.info("-----------------")
-            self.logger.info("watchdog sleeping: %6.2f min ( %d faults)" % (sleep_interval_min, num_faults))
+            logging.info("-----------------")
+            logging.info("watchdog sleeping: %6.2f min ( %d faults)" % (sleep_interval_min, num_faults))
             self.wd_sleep(sleep_interval_min)
             
             # I originally implemented this with bool logic, but
@@ -193,10 +191,10 @@ class Watchdog:
         
         #while
 
-        self.logger.critical("# faults (=%d) >= max (=%d)" % (num_faults, max_faults))
-        self.logger.critical("exiting watchdog")
+        logging.critical("# faults (=%d) >= max (=%d)" % (num_faults, max_faults))
+        logging.critical("exiting watchdog")
         if self.wd_dict['watchdog_enable_reboot']==1:
-            self.logger.critical('rebooting')
+            logging.critical('rebooting')
             os.system('reboot')
         #end
         

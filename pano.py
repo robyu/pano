@@ -14,7 +14,7 @@ import pudb
 import panoconfig
 import datetime
 import logging
-import logging.handlers
+#import logging.handlers
 import sys
 import dtutils
 """
@@ -41,7 +41,6 @@ class Pano:
     default_json_fname = "pano_defaults.json"
     param_dict = {}
     image_db = None
-    logger = None
     
     def __init__(self, config_fname,droptable=False, loglevel='warning', logfname='stdout'):
         print("Pano: reading config file (%s)" % config_fname)
@@ -53,7 +52,7 @@ class Pano:
         if self.param_dict['drop_table_flag']==0 and droptable==False:
             drop_table_flag=False
         else:
-            self.logger.info("drop existing table")
+            logging.info("drop existing table")
             drop_table_flag=True
         #end 
         self.image_db = datastore.Datastore(self.param_dict['database_fname'],
@@ -62,76 +61,55 @@ class Pano:
         self.print_baseline_time_info()
             
         cam_list = self.get_cam_list()
-        self.logger.info("REGISTERED CAMERAS:")
+        logging.info("REGISTERED CAMERAS:")
         for cam in cam_list:
-            self.logger.info(cam['name'])
+            logging.info(cam['name'])
         #end
 
     def print_baseline_time_info(self):
         """
         write some stuff about the configured baseline time and duration
         """
-        self.logger.info("print_baseline_time_info() ********************************")
+        logging.info("print_baseline_time_info() ********************************")
         baseline_datetime = self.param_dict['baseline_datetime']
         max_age_days = self.param_dict['max_age_days']
-        self.logger.info(f"baseline_datetime = {baseline_datetime}")
-        self.logger.info(f"max_age_days = {max_age_days}")
+        logging.info(f"baseline_datetime = {baseline_datetime}")
+        logging.info(f"max_age_days = {max_age_days}")
         baseline_sec = self.image_db.iso8601_to_sec(baseline_datetime)
-        self.logger.info(f"baseline_datetime = {baseline_sec} sec")
-        self.logger.info(f"baseline_datetime = {dtutils.sec_to_str(baseline_sec)} (roundtrip conversion)")
+        logging.info(f"baseline_datetime = {baseline_sec} sec")
+        logging.info(f"baseline_datetime = {dtutils.sec_to_str(baseline_sec)} (roundtrip conversion)")
         max_age_sec = self.param_dict['max_age_days'] * 24.0 * 60.0 * 60.0
         oldest_sec = baseline_sec - max_age_sec
         oldest_datetime = dtutils.sec_to_str(oldest_sec)
-        self.logger.info(f"scanning media from {oldest_datetime} .. {baseline_datetime}")
-        self.logger.info("print_baseline_time_info() ********************************")
+        logging.info(f"scanning media from {oldest_datetime} .. {baseline_datetime}")
+        logging.info("print_baseline_time_info() ********************************")
         #end
         return
         
     def configure_logging(self, loglevel,logfname):
         """
-        see https://docs.python.org/2/howto/logging.html
-        
-        but see also
-        https://stackoverflow.com/questions/20240464/python-logging-file-is-not-working-when-using-logging-basicconfig
+        agh, python logging is awful
         """
-        logger = logging.getLogger("pano")
-        #logger = logging.getLogger()
-
-        #
-        # normalize loglevel arg
-        #
-        # assuming loglevel is bound to the string value obtained from the
-        # command line argument. Convert to upper case to allow the user to
-        # specify --log=DEBUG or --log=debug
         numeric_level = getattr(logging, loglevel.upper(), None)
         if not isinstance(numeric_level, int):
             raise ValueError('Invalid log level: %s' % loglevel)
 
+        print(f"logging to {logfname}")
         if logfname=='stdout':
-            print("logging to stdout")
-            handler = logging.StreamHandler(sys.stdout)
+            log_dest = None
         else:
-            full_fname = os.path.join(self.param_dict['log_dir'], logfname)
-            print("logging to %s" % full_fname)
-            handler = logging.handlers.RotatingFileHandler(full_fname, maxBytes=512000, backupCount=4)
+            log_dest = logfname
         #end
-        #formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
-        #formatter = logging.Formatter('%(levelname)s  %(message)s')
-        #handler.setFormatter(formatter)        
-        #logger.addHandler(handler)
-
-        # because of how logging is imported,    
-        # can't set level of root logger using basicConfig
-        # see stackoverflow question above
-        logger.setLevel(numeric_level)
-
-        logger.debug("DEBUG logging enabled")
-        logger.info("INFO logging enabled")
-        logger.warning("WARNING logging enabled")
-        logger.error("ERROR logging enabled")
-        logger.critical("CRITICAL logging enabled")
-
-        return logger
+        logging.basicConfig(filename=log_dest,
+                            level=numeric_level,
+                            format='%(asctime)s %(levelname)-8s %(message)s',
+                            filemode='w')   # overwrite existing logfile
+        
+        logging.debug(   "DEBUG     logging enabled")
+        logging.info(    "INFO      logging enabled")
+        logging.warning( "WARNING   logging enabled")
+        logging.error(   "ERROR     logging enabled")
+        logging.critical("CRITICAL logging enabled")
         
     @timeit.timeit
     def generate_sym_links(self):
@@ -152,7 +130,7 @@ class Pano:
         try:
             os.symlink(data_dir_abs_path, www_data_dir)
         except FileExistsError:
-            self.logger.debug(f"www/FTP symlink {www_data_dir} already exists")
+            logging.debug(f"www/FTP symlink {www_data_dir} already exists")
         #end
         
         derived_dir_abs_path = os.path.realpath(self.param_dict['derived_dir'])
@@ -163,7 +141,7 @@ class Pano:
         try:
             os.symlink(derived_dir_abs_path, www_derived_dir)
         except FileExistsError:
-            self.logger.debug(f"www/derived symlink {www_derived_dir} already exists")
+            logging.debug(f"www/derived symlink {www_derived_dir} already exists")
         #end
 
     @timeit.timeit
@@ -179,10 +157,10 @@ class Pano:
         """
         total_files_added = 0
         total_files_deleted = 0
-        self.logger.info("** slurp images")
+        logging.info("** slurp images")
 
         if skip_flag:
-            self.logger.debug("skipping slurp")
+            logging.debug("skipping slurp")
             return (total_files_added, total_files_deleted)
         #endif
         
@@ -190,7 +168,7 @@ class Pano:
         cam_list = self.get_cam_list()
         for cam in cam_list:
             cam_dir = os.path.join(base_data_dir, cam['name']) # "testdata/FTP-culled/b0"
-            self.logger.debug("*** processing camera dir %s" % cam_dir)
+            logging.debug("*** processing camera dir %s" % cam_dir)
             num_deleted = dirwalk.cull_files_by_ext(base_data_dir=cam_dir)
             num_added = dirwalk.walk_dir_and_load_db(self.image_db, base_data_dir,
                                                            cam_name = cam['name'])
@@ -203,10 +181,10 @@ class Pano:
     def cull_empty_dirs(self, skip_flag=False):
         """
         """
-        self.logger.info("delete empty dirs")
+        logging.info("delete empty dirs")
 
         if skip_flag:
-            self.logger.info("skipping cull_empty_dirs")
+            logging.info("skipping cull_empty_dirs")
             return
         #endif
 
@@ -216,11 +194,11 @@ class Pano:
         cam_list = self.get_cam_list()
         for cam in cam_list:
             cam_dir = os.path.join(base_data_dir, cam['name']) # "testdata/FTP-culled/b0"
-            self.logger.debug("cull empty dirs %s" % cam_dir)
+            logging.debug("cull empty dirs %s" % cam_dir)
             dirwalk.cull_empty_dirs(cam_dir)
 
             cam_dir = os.path.join(derived_dir, cam['name'])
-            self.logger.debug("cull empty dirs %s" % cam_dir)
+            logging.debug("cull empty dirs %s" % cam_dir)
             dirwalk.cull_empty_dirs(cam_dir)
         #end
 
@@ -237,7 +215,7 @@ class Pano:
         sleep_sec = self.param_dict['sleep_interval_min'] * 60.0
         assert sleep_sec >= 0.0
 
-        self.logger.debug("sleep for %f sec" % sleep_sec)
+        logging.debug("sleep for %f sec" % sleep_sec)
         time.sleep(sleep_sec)
         return
 
@@ -269,7 +247,7 @@ class Pano:
         IN:
         cam_list: list of per-camera dict objects
         """
-        self.logger.info("** generate index page")
+        logging.info("** generate index page")
         assert len(cam_list) > 0, "you gotta run gen_camera_pages first"
         
         index_page = indexpage.IndexPage(self.image_db,
@@ -288,12 +266,12 @@ class Pano:
         returns:
         num entries deleted
         """
-        self.logger.info("** cull files by age")
+        logging.info("** cull files by age")
         if skip_flag:
-            self.logger.info(f"skip_flag={skip_flag}, skipping cull_old_files")
+            logging.info(f"skip_flag={skip_flag}, skipping cull_old_files")
             num_deleted = 0
         else:
-            self.logger.info("cull_old_files")
+            logging.info("cull_old_files")
             num_deleted = dirwalk.cull_files_by_age(self.image_db,
                                                     derived_dir = self.param_dict['derived_dir'],
                                                     baseline_time = self.param_dict['baseline_datetime'],
@@ -310,7 +288,7 @@ class Pano:
         returns:
         none
         """
-        self.logger.info("** make derived media")
+        logging.info("** make derived media")
         if skip_flag:
             return
         #end
@@ -341,7 +319,7 @@ class Pano:
         the camera-info list (see get_cam_list) plus an extra entry, "status_page_list"
         listing the web pages
         """
-        self.logger.info("** generate camera webpages")
+        logging.info("** generate camera webpages")
 
         cam_list = self.get_cam_list()
 
@@ -383,21 +361,21 @@ class Pano:
         return cam_list
 
     def print_summary(self, num_added, num_deleted_ext, num_deleted_age):
-        self.logger.info("== SUMMARY ==")
-        self.logger.info("CAMERAS:")
+        logging.info("== SUMMARY ==")
+        logging.info("CAMERAS:")
         cam_list = self.get_cam_list()
         for cam in cam_list:
-            self.logger.info("%s" % cam['name'])
+            logging.info("%s" % cam['name'])
         #end
-        self.logger.info("")
-        self.logger.info("FILE PROCESSING:")
-        self.logger.info("Files Deleted (wrong extension): %d" % num_deleted_ext)
-        self.logger.info("Files Added: %d" % num_added)
-        self.logger.info("")
-        self.logger.info("DATASTORE:")
-        self.logger.info("Num Entries deleted (age): %d" % num_deleted_age)
+        logging.info("")
+        logging.info("FILE PROCESSING:")
+        logging.info("Files Deleted (wrong extension): %d" % num_deleted_ext)
+        logging.info("Files Added: %d" % num_added)
+        logging.info("")
+        logging.info("DATASTORE:")
+        logging.info("Num Entries deleted (age): %d" % num_deleted_age)
         all_rows = self.image_db.select_all()
-        self.logger.info("Num Entries after processing: %d" % len(all_rows))
+        logging.info("Num Entries after processing: %d" % len(all_rows))
         
         return
 
@@ -431,14 +409,14 @@ def pano_main(config, loopcnt,droptable,loglevel,logfname):
         mypano.derive_media(mypano.param_dict['skip_derive_media'])
         
         cam_list = mypano.gen_camera_pages(mypano.param_dict['skip_gen_cam_pages'])
-        mypano.logger.info("generated camera pages")
+        logging.info("generated camera pages")
 
         index_fname = mypano.gen_index_page(cam_list)
-        mypano.logger.info("updated index page (%s)" % index_fname)
+        logging.info("updated index page (%s)" % index_fname)
 
         mypano.print_summary(num_files_added, num_deleted_ext, num_deleted_age)
 
-        mypano.logger.info("cull")
+        logging.info("cull")
         mypano.cull(mypano.param_dict['skip_cull_empty_dirs'])
         loop_index += 1
 

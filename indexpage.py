@@ -215,7 +215,7 @@ class IndexPage:
         self.www_derived_dir = www_derived_dir
 
         self.dest_fname = dest_fname
-        self.logger = logging.getLogger("pano")
+
         self.db = db
         self.default_image_fname = 'mryuck.png'
 
@@ -245,7 +245,7 @@ class IndexPage:
         # so we must check if thumb_path is None.
 
         if thumb_path==None or  os.path.exists(thumb_path)==False:
-            self.logger.info("%s does not exist" % thumb_path)
+            logging.info("%s does not exist" % thumb_path)
             thumb_path = self.default_image_fname
         #end
         thumb_path2 = thumb_path.replace(self.derived_dir, self.www_derived_dir)
@@ -263,9 +263,9 @@ class IndexPage:
                 num_status_pages = len(cam_info['status_page_list'])
             else:
                 num_status_pages = 0
-                self.logger.debug("'status_page_list' not defined for this camera; CamPage not yet run for (%s)" % cam_info['name'])
+                logging.debug("'status_page_list' not defined for this camera; CamPage not yet run for (%s)" % cam_info['name'])
             #end
-            self.logger.debug("cam (%s) has %d status pages" % (cam_info['name'], num_status_pages))
+            logging.debug("cam (%s) has %d status pages" % (cam_info['name'], num_status_pages))
             if num_status_pages > 0:  # at least one status page
                 # note earliest/latest times from first and last entries
                 latest_time_sec = cam_info['status_page_list'][0]['later_time_sec']

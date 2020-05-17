@@ -1,5 +1,5 @@
 import json
-import logging
+
 
 """
 
@@ -60,11 +60,13 @@ def merge_dicts(defaults_dict, user_dict):
         merged_dict[k] = final_val
     #end
 
-    # any keys left in user_dict?
-    logging.info("Remainder user_dict entries:")
-    logging.info(user_dict)
-    
-    assert len(user_dict)==0, "Entries in user-specified JSON did not match entries in default JSON file"
+    if len(user_dict) > 0:
+        #
+        # can't use logging because its not yet configured!
+        print( "Entries in user-specified JSON did not match entries in default JSON file")
+        print(f"{user_dict}")
+        assert False
+    #endif
 
     # sanity checks
     assert len(merged_dict['camera_list']) > 0, "no cameras listed"
