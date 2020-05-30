@@ -21,10 +21,19 @@ RUN apt install -y sqlite3
 RUN apt install -y python3-pip
 RUN apt install -y imagemagick
 
+###################
 # set timezone
 # see https://serverfault.com/questions/683605/docker-container-time-timezone-will-not-reflect-changes
+# and https://stackoverflow.com/questions/44331836/apt-get-install-tzdata-noninteractive
+#
+
+# need to set the symbolic link BEFORE installing tzdata!!!
+# otherwise tzdata sets the timezone to Etc/UTC
 ENV TZ=America/Los_Angeles
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+# make tzdata installation non-interactive
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt install -y tzdata
 
 #
 # make python3.7 the default
@@ -32,7 +41,6 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.7 1
 
 RUN python3.7 -m pip install --upgrade pip
 RUN python3.7 -m pip install dtutils click pudb
-
 
 #
 # match user id and group id with host
@@ -44,17 +52,20 @@ ARG GROUP_ID
 RUN groupadd -r --gid $GROUP_ID pano
 RUN useradd --uid $USER_ID --gid $GROUP_ID -ms /bin/bash pano
 #RUN groupadd -r pano && useradd --no-log-init -r -m -g pano pano
-     
+
 RUN mkdir ${ftp_dir}
 #RUN chmod -R ugo+rw ${ftp_dir}
 VOLUME ${ftp_dir}
 
-RUN mkdir ${www_dir}
-VOLUME ${www_dir}
-
 RUN mkdir ${derived_dir}
 #RUN chmod ugo+rw -R ${derived_dir}
 VOLUME ${derived_dir}
+
+RUN mkdir ${www_dir}
+VOLUME ${www_dir}
+###############
+# remaining operations are done as user 'pano'
+USER pano
 
 COPY *.py          /home/pano/
 COPY *.json        /home/pano/
@@ -81,7 +92,6 @@ RUN mkdir ${log_dir}
 #RUN chmod ugo+rw -R ${log_dir}
 VOLUME ${log_dir}
 
-USER pano
 WORKDIR /home/pano
 
 
