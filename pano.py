@@ -98,7 +98,8 @@ class Pano:
         if logfname=='stdout':
             log_dest = None
         else:
-            log_dest = logfname
+            log_dest = os.path.join(self.param_dict['log_dir'], logfname)
+            print(f"prepending log directory: {log_dest}")
         #end
         logging.basicConfig(filename=log_dest,
                             level=numeric_level,
