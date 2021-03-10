@@ -80,7 +80,7 @@ def parse_info_amcrest(base_data_dir, dir_path, fname):
 
     return row
     
-@timeit.timeit
+#@timeit.timeit
 def cull_files_by_ext(base_data_dir='.', keep_list=['.dav','.jpg']):
     logger.info("culling files by extension in %s" % base_data_dir)
     num_deleted = 0
@@ -97,8 +97,8 @@ def cull_files_by_ext(base_data_dir='.', keep_list=['.dav','.jpg']):
                     pass
     return num_deleted
     
-@timeit.timeit
-def cull_files_by_age(db, baseline_time='Now', derived_dir='derived',max_age_days=14):
+#@timeit.timeit
+def cull_files_by_age(db, baseline_time='Now', derived_dir='derived',keep_days=14):
     """
     given file entries in db,
     delete files based on age:
@@ -114,14 +114,14 @@ def cull_files_by_age(db, baseline_time='Now', derived_dir='derived',max_age_day
 
     RETURNS: number of files deleted
     """
-    row_list = db.select_older_than(baseline_time=baseline_time, max_age_days=max_age_days)
+    row_list = db.select_older_than(baseline_time=baseline_time, max_age_days=keep_days)
     for row in row_list:
         full_fname = os.path.join(row.d['base_data_dir'], row.d['path'], row.d['fname'])
         try:
             logger.info("deleting %s" % full_fname)
             os.remove(full_fname)
         except OSError:
-            logger.warning("failed to remove %s, maxage=(%d) days" % (full_fname, max_age_days))
+            logger.warning("failed to remove %s, maxage=(%d) days" % (full_fname, keep_days))
         if row.d['derived_fname'] != 0:
             try:
                 os.remove(row.d['derived_fname'])
@@ -133,7 +133,7 @@ def cull_files_by_age(db, baseline_time='Now', derived_dir='derived',max_age_day
     logger.info("cull_files_by_age: deleted (%d) files" % len(row_list))
     return len(row_list)
 
-@timeit.timeit
+#@timeit.timeit
 def cull_empty_dirs(base_data_dir):
     """
     execute: 
@@ -150,8 +150,9 @@ def cull_empty_dirs(base_data_dir):
     # delete empty dirs
     # for some reason, rm -rf {} doesn't work under linux
     #subprocess.call(['find',base_data_dir,'-type','d','-empty','-exec','rm','-rf','{}',';'])
-    subprocess.call(['find',base_data_dir,'-type','d','-empty','-delete'])
-
+    cmd_list = ['find',base_data_dir,'-type','d','-empty','-delete']
+    cp=subprocess.run(cmd_list)
+    assert cp.returncode==0
 
 @timeit.timeit        
 def walk_dir_and_load_db(db, base_data_dir, cam_name=''):
@@ -163,6 +164,7 @@ def walk_dir_and_load_db(db, base_data_dir, cam_name=''):
     returns: number of files added
     """
     logger.info("walking directory and registering media: (%s)" % os.path.join(base_data_dir, cam_name))
+    assert os.path.exists(base_data_dir)
     # how many entries in db?
     all_rows = db.select_all()
     num_start = len(all_rows)

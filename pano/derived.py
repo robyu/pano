@@ -28,8 +28,8 @@ def subprocess_with_logging(cmd_list):
         logger.debug(stderr)
     #end
 
+def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir,cmd_ffmpeg = 'ffmpeg'):
 
-def convert_dav_to_mp4(cmd_ffmpeg, base_data_dir, path, fname, derived_dir):
     src_fname = os.path.join(base_data_dir, path, fname)
     dest_path = os.path.join(derived_dir, path)
     dest_fname = os.path.join(dest_path, fname)
@@ -63,7 +63,7 @@ def convert_dav_to_mp4(cmd_ffmpeg, base_data_dir, path, fname, derived_dir):
     #end
     return dest_fname
 
-def make_thumbnail(cmd_magick_convert, base_data_dir, path, fname, derived_dir):
+def make_thumbnail(base_data_dir, path, fname, derived_dir,cmd_magick='convert'):
     """
     given the base_data_dir+path+fname of an image,
     generate a thumbnail image in derived_dir,
@@ -71,6 +71,7 @@ def make_thumbnail(cmd_magick_convert, base_data_dir, path, fname, derived_dir):
     returns the absolute filename of the thumbnail
     """
     src_fname = os.path.join(base_data_dir, path, fname)
+
     dest_path = os.path.join(derived_dir, path)
     dest_fname = os.path.join(dest_path, fname)
 
@@ -95,7 +96,7 @@ def make_thumbnail(cmd_magick_convert, base_data_dir, path, fname, derived_dir):
         # dont need to check beforehand if the dest_fname already exists,
         # because we wouldn't be calling this function if derived_failed == 1
 
-        cmd = [cmd_magick_convert,src_fname, '-resize', '10%',dest_fname]
+        cmd = [cmd_magick,src_fname, '-resize', '10%',dest_fname]
         subprocess_with_logging(cmd)
 
         if os.path.exists(dest_fname)==False:
@@ -123,7 +124,7 @@ def sleep_fcn(row, derived_dir):
     return return_dict
 
 
-def process_media_file(row, derived_dir,cmd_ffmpeg, cmd_magick_convert):
+def process_media_file(row, derived_dir,cmd_ffmpeg, cmd_magick):
     """
     given datastore row and output directory name (derived_dir),
     
@@ -136,9 +137,9 @@ def process_media_file(row, derived_dir,cmd_ffmpeg, cmd_magick_convert):
     #                                                                    row.d['derived_fname'],
     #                                                                    row.d['fname']))
     if row.d['mediatype']==datastore.MEDIA_VIDEO:
-        derived_fname=convert_dav_to_mp4(cmd_ffmpeg, row.d['base_data_dir'], row.d['path'], row.d['fname'], derived_dir)
+        derived_fname=convert_dav_to_mp4(row.d['base_data_dir'], row.d['path'], row.d['fname'], derived_dir,cmd_ffmpeg=cmd_ffmpeg)
     elif row.d['mediatype']==datastore.MEDIA_IMAGE:
-        derived_fname=make_thumbnail(cmd_magick_convert, row.d['base_data_dir'], row.d['path'], row.d['fname'], derived_dir)
+        derived_fname=make_thumbnail(row.d['base_data_dir'], row.d['path'], row.d['fname'], derived_dir,cmd_magick=cmd_magick)
     else:
         logger.info("(%s) has unrecognized mediatype (%d)" % (media_fname, media_type))
         derived_fname = None
@@ -150,7 +151,7 @@ def process_media_file(row, derived_dir,cmd_ffmpeg, cmd_magick_convert):
     
 
 @timeit.timeit
-def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag):
+def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag,cmd_ffmpeg = 'ffmpeg',cmd_magick_convert='convert'):
     """
     run media processing functions 
     in worker pool threads
@@ -196,7 +197,7 @@ def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag
                         # run a fake test fcn, just to test thread pool
                         mpr = pool.apply_async(sleep_fcn, args=(row, derived_dir))
                     else:
-                        mpr = pool.apply_async(process_media_file, args=(row, derived_dir))
+                        mpr = pool.apply_async(process_media_file, args=(row, derived_dir, cmd_ffmpeg, cmd_magick_convert))
                         logger.debug("assigned row %d to worker %d" % (index, worker_index))
                     #end  
                     mpr_list.append(mpr)
@@ -278,14 +279,13 @@ def derive_with_single_thread(db, derived_dir, row_list, test_thread_flag, cmd_f
     #end
     return (count_success, count_failed)
 
-@timeit.timeit
 def make_derived_files(db, 
                        cam_name, 
                        derived_dir=DEFAULT_DERIVED_DIR, 
                        num_workers = -1, 
                        test_thread_flag=False,
-                       cmd_ffmpeg="not specified",
-                       cmd_magick_convert="not specified"):
+                       cmd_ffmpeg="ffmpeg",
+                       cmd_magick_convert="convert"):
     """
     create directory for derived files.
     for each entry in database, create derived files (thumbnails, converted video)
@@ -313,7 +313,6 @@ def make_derived_files(db,
     assert num_workers >= 1
     
     if num_workers >= 2:
-        assert False, "num_workers >2 does not work with logging!!"
         count_success, count_failed = derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag)
     else:
         count_success, count_failed = derive_with_single_thread(db, derived_dir, row_list, test_thread_flag, cmd_ffmpeg, cmd_magick_convert)

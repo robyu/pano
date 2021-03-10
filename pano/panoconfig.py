@@ -1,11 +1,53 @@
 import json
 
 
-"""
+DEFAULTS_JSON = """
+{
+    "base_data_dir" : "FTP",
+    "baseline_datetime": "now",
+    "database_fname" : "panodb.sqlite",
+    "delta_min": 10,
+    "derived_dir": "derived",
+    "drop_table_flag": 0,
+    "ffmpeg": "/usr/bin/ffmpeg",
+    "log_dir": "./logs",
+    "magick_convert": "/usr/bin/convert",
+    "max_age_days": 14,
+    "num_worker_threads": 1,
+    "sleep_interval_min": 5,
+    "www_dir": "www",
+    "www_data_dir": "./FTP",
+    "www_derived_dir": "./derived",
 
-"""
-default_json_fname = "pano_defaults.json"
+    "skip_derive_media": 0,
+    "skip_slurp": 0,
+    "skip_cull_old_files": 0,
+    "skip_gen_cam_pages": 0,
+    "skip_cull_empty_dirs": 0,
+    
+    "@camera_list (example)" : [
+	{
+            "name": "b0",
+            "live_url": "rtsp://192.168.0.1",
+	    "admin_url": "http://192.168.0.1",
+            "description": "porch"
+	},
+	{
+            "name": "b0",
+            "live_url": "rtsp://192.168.0.1",
+	    "admin_url": "http://192.168.0.1",
+            "description": "porch"
+	}
+    ],
+    "camera_list" : [],
 
+    "watchdog_max_faults": 5,
+    "watchdog_enable_reboot": 1,
+    "watchdog_check_httpd": 1,
+    "watchdog_check_ftpd" : 1,
+    "watchdog_check_breadcrumb": 1
+}
+"""
 def get_param_dict(config_fname):
     """
         read user-specified config file, default config file,
@@ -16,9 +58,7 @@ def get_param_dict(config_fname):
     """
     #
     # read config json, store in dict
-    f = open(default_json_fname)
-    defaults_dict = json.load(f)
-    f.close()
+    defaults_dict = json.loads(DEFAULTS_JSON)
     
     f = open(config_fname)
     user_param_dict = json.load(f)

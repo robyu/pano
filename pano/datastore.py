@@ -362,21 +362,22 @@ class Datastore:
         self.cursor.execute(cmd)
         return
     
-    def select_by_time_cam_media(self, cam_name, upper_time_sec, lower_time_sec, mediatype):
+    def select_by_time_cam_media(self, cam_name, stop_time_sec, start_time_sec, mediatype):
         """
         select db entries based on criteria
         
         return:
         list of selected rows
         """
+        assert start_time_sec < stop_time_sec
         cmd = "select * from {tn} where (cam_name='{cam_name}')"\
-              " AND (ctime_unix > {lower_time})"\
-              " AND (ctime_unix <= {upper_time})"\
+              " AND (ctime_unix > {start_time_sec})"\
+              " AND (ctime_unix <= {stop_time_sec})"\
               " AND (mediatype={mediatype})"\
               .format(tn=self.tablename,
                       cam_name=cam_name,
-                      upper_time = upper_time_sec,
-                      lower_time = lower_time_sec,
+                      start_time_sec= start_time_sec,
+                      stop_time_sec = stop_time_sec,
                       mediatype=mediatype)
         self.cursor.execute(cmd)
         entry_list = self.cursor.fetchall()
