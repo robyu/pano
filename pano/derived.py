@@ -136,9 +136,9 @@ def process_media_file(row, derived_dir,cmd_ffmpeg, cmd_magick):
     #                                                                    row.d['derive_failed'],
     #                                                                    row.d['derived_fname'],
     #                                                                    row.d['fname']))
-    if row.d['mediatype']==datastore.MEDIA_VIDEO:
+    if row.d['mediatype']==datastore.MEDIA_DAV:
         derived_fname=convert_dav_to_mp4(row.d['base_data_dir'], row.d['path'], row.d['fname'], derived_dir,cmd_ffmpeg=cmd_ffmpeg)
-    elif row.d['mediatype']==datastore.MEDIA_IMAGE:
+    elif row.d['mediatype']==datastore.MEDIA_JPG:
         derived_fname=make_thumbnail(row.d['base_data_dir'], row.d['path'], row.d['fname'], derived_dir,cmd_magick=cmd_magick)
     else:
         logger.info("(%s) has unrecognized mediatype (%d)" % (media_fname, media_type))

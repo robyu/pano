@@ -7,8 +7,9 @@ import timeit
 """    
 
 MEDIA_UNKNOWN = 0
-MEDIA_IMAGE = 1
-MEDIA_VIDEO = 2
+MEDIA_JPG = 10
+MEDIA_DAV = 20
+MEDIA_MP4 = 21
 
 class Row:
     d = {}
@@ -264,7 +265,7 @@ class Datastore:
         " AND length(derived_fname) > 0" \
         " AND derive_failed==0".format(tn=self.tablename,
                                        cam_name=cam_name,
-                                       mediatype=MEDIA_IMAGE)
+                                       mediatype=MEDIA_JPG)
         self.cursor.execute(cmd)
         entry_list = self.cursor.fetchall()
         # NOTE: if no entry is found which meets the query,
@@ -329,6 +330,9 @@ class Datastore:
 
         #print("updated row %d" % id)
         return
+
+    def commit(self):
+        self.dbconn.commit()
 
     def select_by_id(self, id):
         """

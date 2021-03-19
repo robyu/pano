@@ -658,11 +658,11 @@ class CamPage:
         row_image_list = self.db.select_by_time_cam_media(self.camera_name,
                                                           latest_time_sec,
                                                           earliest_time_sec,
-                                                          mediatype=datastore.MEDIA_IMAGE)
+                                                          mediatype=datastore.MEDIA_JPG)
         row_video_list = self.db.select_by_time_cam_media(self.camera_name,
                                                           latest_time_sec,
                                                           earliest_time_sec,
-                                                          mediatype=datastore.MEDIA_VIDEO)
+                                                          mediatype=datastore.MEDIA_DAV)
         logging.debug("==================")
         logging.debug("search db for  camera (%s) media between [%s..%s]" % (self.camera_name, dtutils.sec_to_str(earliest_time_sec),
                                                                     dtutils.sec_to_str(latest_time_sec)))
@@ -722,13 +722,13 @@ class CamPage:
 
 
             row_image_list = self.db.select_by_time_cam_media(self.camera_name,
-                                                         later_time_sec,
-                                                         earlier_time_sec,
-                                                         mediatype=datastore.MEDIA_IMAGE)
+                                                              later_time_sec,
+                                                              earlier_time_sec,
+                                                              mediatype=datastore.MEDIA_JPG)
             row_video_list = self.db.select_by_time_cam_media(self.camera_name,
-                                                         later_time_sec,
-                                                         earlier_time_sec,
-                                                         mediatype=datastore.MEDIA_VIDEO)
+                                                              later_time_sec,
+                                                              earlier_time_sec,
+                                                              mediatype=datastore.MEDIA_DAV)
             logging.debug(f"db yielded {len(row_image_list)} images and {len(row_video_list)} videos")
 
             #

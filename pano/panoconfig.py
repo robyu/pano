@@ -27,13 +27,15 @@ DEFAULTS_JSON = """
     
     "@camera_list (example)" : [
 	{
-            "name": "b0",
+            "name": "cam-00",
+            "model": "amcrest-ip2m-842",
             "live_url": "rtsp://192.168.0.1",
 	    "admin_url": "http://192.168.0.1",
             "description": "porch"
 	},
 	{
-            "name": "b0",
+            "name": "cam-01",
+            "model": "amcrest-ip3m-843",
             "live_url": "rtsp://192.168.0.1",
 	    "admin_url": "http://192.168.0.1",
             "description": "porch"
