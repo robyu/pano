@@ -366,7 +366,7 @@ class Datastore:
         self.cursor.execute(cmd)
         return
     
-    def select_by_time_cam_media(self, cam_name, stop_time_sec, start_time_sec, mediatype):
+    def select_by_time_cam_media(self, cam_name, stop_time_sec, start_time_sec, mediatype_list):
         """
         select db entries based on criteria
         
@@ -374,15 +374,27 @@ class Datastore:
         list of selected rows
         """
         assert start_time_sec < stop_time_sec
+
+        # if mediatype_list aint a list, make it one
+        if isinstance(mediatype_list,list)==False:
+            mediatype_list = [mediatype_list]
+        #end
+
+        media_selector = f"mediatype={mediatype_list[0]}"
+        for mediatype in mediatype_list[1:]:
+            media_selector += f" OR mediatype={mediatype}"
+        #end
+        
+        
         cmd = "select * from {tn} where (cam_name='{cam_name}')"\
               " AND (ctime_unix > {start_time_sec})"\
               " AND (ctime_unix <= {stop_time_sec})"\
-              " AND (mediatype={mediatype})"\
+              " AND ({media_selector})"\
               .format(tn=self.tablename,
                       cam_name=cam_name,
                       start_time_sec= start_time_sec,
                       stop_time_sec = stop_time_sec,
-                      mediatype=mediatype)
+                      media_selector=media_selector)
         self.cursor.execute(cmd)
         entry_list = self.cursor.fetchall()
         row_list = self.entries_to_rows(entry_list)
