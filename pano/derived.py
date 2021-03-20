@@ -6,6 +6,7 @@ import multiprocessing as mp
 import sys
 import timeit
 import logging
+import shutil
 
 logger = logging.getLogger("pano")
 
@@ -51,15 +52,6 @@ def convert_dav_to_mp4(base_data_dir, path, fname, derived_dir,cmd_ffmpeg = 'ffm
         # ffmpeg -i 21.18.33-21.26.00\[M\]\[0\@0\]\[0\].dav -vcodec copy -preset veryfast out2.avi
         cmd = [cmd_ffmpeg, '-y','-i',src_fname, '-vcodec', 'copy', '-preset', 'veryfast', dest_fname]
         subprocess_with_logging(cmd)
-
-        # check again: conversion may have failed
-        if os.path.exists(dest_fname)==False:
-            logger.debug("%s -> %s failed" % (src_fname, dest_fname))
-            dest_fname=''  # if failed, then return empty string
-            assert len(dest_fname)==0
-        else:
-            logger.debug("mp4 conversion success")
-        #end 
     #end
     return dest_fname
 
@@ -88,25 +80,11 @@ def make_thumbnail(base_data_dir, path, fname, derived_dir,cmd_magick='convert')
     except os.error:
         logger.debug("could not create dest path (%s) - may exist already" % dest_path)
         pass
+    #end
 
-    if os.path.exists(dest_fname)==True:
-        logger.debug("%s already exists" % dest_fname)
-    else:        
-        #
-        # dont need to check beforehand if the dest_fname already exists,
-        # because we wouldn't be calling this function if derived_failed == 1
+    cmd = [cmd_magick,src_fname, '-resize', '10%',dest_fname]
+    subprocess_with_logging(cmd)
 
-        cmd = [cmd_magick,src_fname, '-resize', '10%',dest_fname]
-        subprocess_with_logging(cmd)
-
-        if os.path.exists(dest_fname)==False:
-            logger.debug("%s -> %s failed" % (src_fname, dest_fname))
-            dest_fname=''  # if failed, then return empty string
-            assert len(dest_fname)==0
-        else:
-            logger.debug("success")
-        #end
-    #end    
     return dest_fname
 
 def sleep_fcn(row, derived_dir):
@@ -136,14 +114,38 @@ def process_media_file(row, derived_dir,cmd_ffmpeg, cmd_magick):
     #                                                                    row.d['derive_failed'],
     #                                                                    row.d['derived_fname'],
     #                                                                    row.d['fname']))
-    if row.d['mediatype']==datastore.MEDIA_DAV:
-        derived_fname=convert_dav_to_mp4(row.d['base_data_dir'], row.d['path'], row.d['fname'], derived_dir,cmd_ffmpeg=cmd_ffmpeg)
-    elif row.d['mediatype']==datastore.MEDIA_JPG:
-        derived_fname=make_thumbnail(row.d['base_data_dir'], row.d['path'], row.d['fname'], derived_dir,cmd_magick=cmd_magick)
-    else:
-        logger.info("(%s) has unrecognized mediatype (%d)" % (media_fname, media_type))
-        derived_fname = None
-    #endif
+    try:
+        if row.d['mediatype']==datastore.MEDIA_DAV:
+            derived_fname=convert_dav_to_mp4(row.d['base_data_dir'], row.d['path'], row.d['fname'], derived_dir,cmd_ffmpeg=cmd_ffmpeg)
+        elif row.d['mediatype']==datastore.MEDIA_JPG:
+            derived_fname=make_thumbnail(row.d['base_data_dir'], row.d['path'], row.d['fname'], derived_dir,cmd_magick=cmd_magick)
+        elif row.d['mediatype']==datastore.MEDIA_MP4:
+            #
+            # no processing; just copy the file straight to derived
+            src_fname = os.path.join(row.d['base_data_dir'], row.d['path'],row.d['fname'])
+            derived_path = os.path.join(derived_dir, row.d['path'])
+            derived_path = os.path.normpath(derived_path)
+            derived_fname = os.path.join(derived_path,row.d['fname'])
+            try:
+                os.makedirs(derived_path)
+            except:
+                pass
+            shutil.copyfile(src_fname, derived_fname)
+        else:
+            logger.info("(%s) has unrecognized mediatype (%d)" % (media_fname, media_type))
+            derived_fname = None
+        #endif
+    except:
+        logger.error(f"error deriving {media_fname} of type {media_type}")
+    #end
+
+    #
+    # final check to see if derivation worked
+    if os.path.exists(derived_fname)==False:
+        logger.debug(f"{row.d['path']}/{row.d['fname']} -> {derived_fname} failed")
+        derived_fname = ''
+    #end
+    
     return_dict={}
     return_dict['id'] = row.d['id']
     return_dict['derived_fname'] = derived_fname

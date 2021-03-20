@@ -6,10 +6,10 @@ import timeit
 """
 """    
 
-MEDIA_UNKNOWN = 0
-MEDIA_JPG = 10
-MEDIA_DAV = 20
-MEDIA_MP4 = 21
+MEDIA_UNKNOWN = 'UNKNOWN'
+MEDIA_JPG = 'JPG'
+MEDIA_DAV = 'DAV'
+MEDIA_MP4 = 'MP4'
 
 class Row:
     d = {}
@@ -23,7 +23,7 @@ class Row:
                  ['fname',         'STRING',   ''],
                  ['derive_failed', 'INTEGER',   0],
                  ['derived_fname', 'STRING',   ''],
-                 ['mediatype',     'INTEGER',   0],
+                 ['mediatype',     'STRING',   MEDIA_UNKNOWN],
                  ['path',          'STRING',   '']
     )
     
@@ -380,9 +380,9 @@ class Datastore:
             mediatype_list = [mediatype_list]
         #end
 
-        media_selector = f"mediatype={mediatype_list[0]}"
+        media_selector = f"""mediatype=\"{mediatype_list[0]}\""""
         for mediatype in mediatype_list[1:]:
-            media_selector += f" OR mediatype={mediatype}"
+            media_selector += f""" OR mediatype=\"{mediatype}\""""
         #end
         
         
