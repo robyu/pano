@@ -29,7 +29,7 @@ def walk_cam_dir(db, base_data_dir, cam_name, cam_model):
                 row.d['ctime'] = ctime
                 row.d['fname'] = fname
                 row.d['mediatype'] = media_type
-                row.d['path'] = dir_path[len(base_data_dir)+1:]
+                row.d['path'] = dir_path[len(base_data_dir):]
                 db.add_row(row)
             #end
         #end
@@ -38,7 +38,7 @@ def walk_cam_dir(db, base_data_dir, cam_name, cam_model):
 
 
 #@timeit.timeit
-def cull_files_by_ext(base_data_dir='.', keep_list=['.dav','.jpg']):
+def cull_files_by_ext(base_data_dir='.', keep_list=['.dav','.jpg','.mp4']):
     logger.info("culling files by extension in %s" % base_data_dir)
     num_deleted = 0
     for dir_path, subdir_list, file_list in os.walk(base_data_dir):
@@ -128,6 +128,9 @@ def walk_dir_and_load_db(db, base_data_dir, cam_name_model_list):
     # how many entries in db?
     all_rows = db.select_all()
     num_start = len(all_rows)
+
+    assert isinstance(cam_name_model_list, list)
+    assert len(cam_name_model_list[0])==2
 
     for cam_name, cam_model in cam_name_model_list:
         walk_cam_dir(db, base_data_dir, cam_name, cam_model)

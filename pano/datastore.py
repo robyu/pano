@@ -261,7 +261,7 @@ class Datastore:
         returns list of row entries
         """
         cmd = "select *, max(ctime_unix) from {tn} where cam_name='{cam_name}'" \
-        " AND mediatype={mediatype}" \
+        " AND mediatype=\"{mediatype}\"" \
         " AND length(derived_fname) > 0" \
         " AND derive_failed==0".format(tn=self.tablename,
                                        cam_name=cam_name,

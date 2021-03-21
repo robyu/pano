@@ -263,7 +263,7 @@ class CamPage:
 
         self.TMP_HTML_EXTENSION = 'html_in_progress'
 
-    @timeit.timeit
+    #@timeit.timeit
     def delete_existing_campages(self):
         """
         delete existing camera-specific html and temp files
@@ -413,11 +413,14 @@ class CamPage:
             actual_path = self.default_image_fname
         #end
         
+        #
+        # EH? is this necessary?
+        
         # replace basedir with webpage-friendly path
         # ./FTP/120/AMC0028V_795UUB/2018-08-24/001/jpg/22/27/22[M][0@0][0].jpg
-        actual_path2 = actual_path.replace(self.base_dir, self.www_data_dir)
+        # actual_path2 = actual_path.replace(self.base_dir, self.www_data_dir)
         
-        return actual_path2
+        return actual_path
     
         
     # <a href="https://www.w3schools.com">
@@ -658,11 +661,11 @@ class CamPage:
         row_image_list = self.db.select_by_time_cam_media(self.camera_name,
                                                           latest_time_sec,
                                                           earliest_time_sec,
-                                                          mediatype=datastore.MEDIA_JPG)
+                                                          [datastore.MEDIA_JPG])
         row_video_list = self.db.select_by_time_cam_media(self.camera_name,
                                                           latest_time_sec,
                                                           earliest_time_sec,
-                                                          mediatype=datastore.MEDIA_DAV)
+                                                          [datastore.MEDIA_DAV,datastore.MEDIA_MP4])
         logging.debug("==================")
         logging.debug("search db for  camera (%s) media between [%s..%s]" % (self.camera_name, dtutils.sec_to_str(earliest_time_sec),
                                                                     dtutils.sec_to_str(latest_time_sec)))
@@ -672,7 +675,7 @@ class CamPage:
         return
         
     
-    @timeit.timeit
+    #@timeit.timeit
     def generate(self, later_datetime, max_age_days, interval_min):
         """
         given
@@ -724,11 +727,11 @@ class CamPage:
             row_image_list = self.db.select_by_time_cam_media(self.camera_name,
                                                               later_time_sec,
                                                               earlier_time_sec,
-                                                              mediatype=datastore.MEDIA_JPG)
+                                                              [datastore.MEDIA_JPG])
             row_video_list = self.db.select_by_time_cam_media(self.camera_name,
                                                               later_time_sec,
                                                               earlier_time_sec,
-                                                              mediatype=datastore.MEDIA_DAV)
+                                                              [datastore.MEDIA_DAV, datastore.MEDIA_MP4])
             logging.debug(f"db yielded {len(row_image_list)} images and {len(row_video_list)} videos")
 
             #
