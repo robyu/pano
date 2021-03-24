@@ -653,7 +653,7 @@ class CamPage:
 
         return row_html
 
-    def get_total_number_media_files(self, earliest_time_sec, latest_time_sec):
+    def print_total_number_media_files(self, earliest_time_sec, latest_time_sec):
         """
         search the entire time period for media files, report on result
         """
@@ -672,7 +672,7 @@ class CamPage:
         logging.debug(f"db yielded {len(row_image_list)} images and {len(row_video_list)} videos")
         logging.debug("\n")
 
-        return
+        return 
         
     
     #@timeit.timeit
@@ -712,7 +712,7 @@ class CamPage:
         carousel_html = ''
         media_html = ''
 
-        self.get_total_number_media_files(final_earlier_time_sec, later_time_sec)
+        self.report_total_number_media_files(final_earlier_time_sec, later_time_sec)
 
         # iterate through all rows which fall into the time interval
         # iterate backwards through time, from latest (later time) to oldest (earlier time)

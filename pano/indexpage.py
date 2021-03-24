@@ -217,6 +217,8 @@ class IndexPage:
         self.dest_fname = dest_fname
 
         self.db = db
+
+        # TODO: get rid of all references to mryuck.png outside of derive
         self.default_image_fname = 'mryuck.png'
 
     def generate_overview_rows(self, cam_list):

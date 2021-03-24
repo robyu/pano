@@ -29,7 +29,8 @@ def walk_cam_dir(db, base_data_dir, cam_name, cam_model):
                 row.d['ctime'] = ctime
                 row.d['fname'] = fname
                 row.d['mediatype'] = media_type
-                row.d['path'] = dir_path[len(base_data_dir):]
+                row.d['path'] = dir_path[len(base_data_dir)+1:]
+                assert row.d['path'][0] != '/'
                 db.add_row(row)
             #end
         #end

@@ -141,18 +141,25 @@ def process_media_file(row, derived_dir,cmd_ffmpeg, cmd_magick):
 
     #
     # final check to see if derivation worked
+    derive_failed =0
     if os.path.exists(derived_fname)==False:
+        derive_failed = 1
         logger.debug(f"{row.d['path']}/{row.d['fname']} -> {derived_fname} failed")
-        derived_fname = ''
+        if row.d['mediatype']==datastore.MEDIA_JPG:
+            derived_fname = "mryuck.png"
+        else:
+            derived_fname = ''
+        #end
     #end
     
     return_dict={}
     return_dict['id'] = row.d['id']
     return_dict['derived_fname'] = derived_fname
+    return_dict['derive_failed'] = derive_failed
     return return_dict
     
 
-@timeit.timeit
+#@timeit.timeit
 def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag,cmd_ffmpeg = 'ffmpeg',cmd_magick_convert='convert'):
     """
     run media processing functions 
@@ -216,22 +223,20 @@ def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag
             try:
                 result_dict = mpr.get(MAX_WAIT_SEC)
                 # update datastore with derived fname
+                db.update_row(result_dict['id'], 'derived_fname', result_dict['derived_fname'])
+                db.update_row(result_dict['id'], 'derive_failed', result_dict['derive_failed'])
                 if len(result_dict['derived_fname']) > 0:
                     logger.debug("derivation success")
-                    db.update_row(result_dict['id'], 'derived_fname', result_dict['derived_fname'])
-                    db.update_row(result_dict['id'], 'derive_failed', 0)
                     count_success += 1
                 else:
                     logger.debug("derivation failed")
                     count_failed += 1
-                    db.update_row(result_dict['id'], 'derived_fname', '')
-                    db.update_row(result_dict['id'], 'derive_failed', 0)
                 #end
             except mp.TimeoutError:
                 logger.debug("derivation failed (TIMEOUT)")
                 count_failed += 1
                 db.update_row(result_dict['id'], 'derived_fname', '')
-                db.update_row(result_dict['id'], 'derive_failed', 0)
+                db.update_row(result_dict['id'], 'derive_failed', 1)
             #end
         
         #end
@@ -263,20 +268,18 @@ def derive_with_single_thread(db, derived_dir, row_list, test_thread_flag, cmd_f
                 result_dict = process_media_file(row, derived_dir,cmd_ffmpeg, cmd_magick_convert)
             #end
 
+            db.update_row(result_dict['id'], 'derived_fname', result_dict['derived_fname'])
+            db.update_row(result_dict['id'], 'derive_failed', result_dict['derive_failed'])
             if len(result_dict['derived_fname']) > 0:
                 logger.debug("derivation success")
-                db.update_row(result_dict['id'], 'derived_fname', result_dict['derived_fname'])
-                db.update_row(result_dict['id'], 'derive_failed', 0)
                 count_success += 1
             else:
                 logger.debug("derivation failed")
                 count_failed += 1
-                db.update_row(result_dict['id'], 'derived_fname', '')
-                db.update_row(result_dict['id'], 'derive_failed', 1)
             #end
         else:
-            pass
-            #logger.debug("did not attempt derivation: derive_failed=%d derived_fname=%s" % (row.d['derive_failed'], row.d['derived_fname']))
+            logger.debug("did not attempt derivation: derive_failed=%d derived_fname=%s" % (row.d['derive_failed'], row.d['derived_fname']))
+            assert False
         #end
     #end
     return (count_success, count_failed)
