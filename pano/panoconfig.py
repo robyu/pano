@@ -1,5 +1,5 @@
 import json
-
+import os
 
 DEFAULTS_JSON = """
 {
@@ -70,10 +70,10 @@ def get_param_dict(config_fname):
     
     #
     # normalize directory paths by making them absolute
-    # merged_dict['base_data_dir']  = os.path.realpath(merged_dict['base_data_dir'])
-    # merged_dict['database_fname'] = os.path.realpath(merged_dict['database_fname'])
-    # merged_dict['derived_dir']    = os.path.realpath(merged_dict['derived_dir'])
-    # merged_dict['www_dir']        = os.path.realpath(merged_dict['www_dir'])
+    merged_dict['base_data_dir']  = os.path.normpath(merged_dict['base_data_dir'])
+    merged_dict['database_fname'] = os.path.normpath(merged_dict['database_fname'])
+    merged_dict['derived_dir']    = os.path.normpath(merged_dict['derived_dir'])
+    merged_dict['www_dir']        = os.path.normpath(merged_dict['www_dir'])
     
     return merged_dict
     

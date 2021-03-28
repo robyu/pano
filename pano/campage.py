@@ -244,9 +244,6 @@ class CamPage:
 
         self.www_dir = www_dir
 
-        self.default_image_fname = os.path.join(self.www_dir, 'mryuck.png')
-        assert os.path.exists(self.default_image_fname), f"cannot find {self.default_image_fname}"
-
         self.camera_name = camera_name
 
         #
@@ -377,21 +374,11 @@ class CamPage:
     def get_thumb_path(self, row):
         """
         return the path to the derived image/video file
-        OR a default image (if the derived file does not exist)
         """
-        if len(row.d['derived_fname']) == 0:   # no thumbnail
-            thumb_path = self.default_image_fname
-        else:
-            thumb_path = row.d['derived_fname']
-        #end
+        thumb_path = row.d['derived_fname']
 
         if os.path.exists(thumb_path)==False:
             logging.info("THUMB %s does not exist" % thumb_path)
-
-            # update the database entry so it doesn't occur next time
-            logging.info("updating database entry %d", row.d['id'])
-            self.db.update_row(row.d['id'], 'derived_fname', '')
-
         #end
         thumb_path2 = thumb_path.replace(self.derived_dir, self.www_derived_dir)
         return thumb_path2
@@ -404,13 +391,6 @@ class CamPage:
 
         if os.path.exists(actual_path)==False:
             logging.info("ORIGINAL %s does not exist" % actual_path)
-
-            #
-            # update database so this doesn't happen next time
-            logging.info("deleting database entry %d", row.d['id'])
-            self.db.delete_row(row)
-            
-            actual_path = self.default_image_fname
         #end
         
         #
@@ -712,7 +692,7 @@ class CamPage:
         carousel_html = ''
         media_html = ''
 
-        self.report_total_number_media_files(final_earlier_time_sec, later_time_sec)
+        self.print_total_number_media_files(final_earlier_time_sec, later_time_sec)
 
         # iterate through all rows which fall into the time interval
         # iterate backwards through time, from latest (later time) to oldest (earlier time)

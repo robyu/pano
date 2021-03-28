@@ -42,9 +42,26 @@ class Pano:
     param_dict = {}
     image_db = None
     
-    def __init__(self, config_fname,droptable=False, loglevel='warning', logfname='stdout'):
+    def __init__(self, config_fname, loglevel='warning', logfname='stdout', **kwargs):
+        """
+        kwargs lets you override values in the config file.
+        e.g.
+        you can specify 
+            Pano.init("config.json", num_worker_threads=1)
+        to override the num_worker_threads parameter in config.json
+
+        see panoconfig.py for the canonical config JSON
+        """
         print("Pano: reading config file (%s)" % config_fname)
         self.param_dict = panoconfig.get_param_dict(config_fname)
+
+        for key, value in kwargs.items():
+            if key in self.param_dict.keys():
+                self.param_dict[key] = value
+            #end
+        #end
+
+        
         self.logger = self.configure_logging(loglevel, logfname)
 
         self.generate_sym_links()
@@ -89,22 +106,33 @@ class Pano:
     def configure_logging(self, loglevel,logfname):
         """
         agh, python logging is awful
+
+        loglevels are defined by the logging module: DEBUG, INFO, WARNING, ERROR
+        
+        logfname: specify a filename 
+                  specifying 'stdout' or None logs to sys.stdout
         """
         numeric_level = getattr(logging, loglevel.upper(), None)
         if not isinstance(numeric_level, int):
             raise ValueError('Invalid log level: %s' % loglevel)
 
         print(f"logging to {logfname}")
-        if logfname=='stdout':
-            log_dest = None
-        else:
+        if logfname=='stdout' or logfname==None:
+            logging.basicConfig(stream=sys.stdout,
+                                level=numeric_level,
+                                format='%(asctime)s %(levelname)-8s %(message)s',
+                                filemode='w')   # overwrite existing logfile
+        elif len(logfname) > 0:
             log_dest = os.path.join(self.param_dict['log_dir'], logfname)
             print(f"prepending log directory: {log_dest}")
+            logging.basicConfig(filename=log_dest,
+                                level=numeric_level,
+                                format='%(asctime)s %(levelname)-8s %(message)s',
+                                filemode='w')   # overwrite existing logfile
+        else:
+            assert False, "invalid logfname"
         #end
-        logging.basicConfig(filename=log_dest,
-                            level=numeric_level,
-                            format='%(asctime)s %(levelname)-8s %(message)s',
-                            filemode='w')   # overwrite existing logfile
+        
         
         logging.debug(   "DEBUG     logging enabled")
         logging.info(    "INFO      logging enabled")

@@ -172,6 +172,11 @@ class Datastore:
             row.db_entry_to_row(entry_list[n])
             row_list.append(row)
         #end
+
+        if len(entry_list)==1 and row_list[0].d['id']==None:
+            row_list = []
+        #end
+        
         return row_list
         
     def select_all(self):
@@ -268,13 +273,9 @@ class Datastore:
                                        mediatype=MEDIA_JPG)
         self.cursor.execute(cmd)
         entry_list = self.cursor.fetchall()
-        # NOTE: if no entry is found which meets the query,
-        # entry_list will contain a single tuple which is all "None"
-        # this condition is awkward to detect, so handle it downstream.
 
         row_list = self.entries_to_rows(entry_list)
 
-        assert len(row_list)==1
         return row_list
     
     @timeit.timeit

@@ -218,8 +218,6 @@ class IndexPage:
 
         self.db = db
 
-        # TODO: get rid of all references to mryuck.png outside of derive
-        self.default_image_fname = 'mryuck.png'
 
     def generate_overview_rows(self, cam_list):
         """
@@ -240,16 +238,16 @@ class IndexPage:
         get the URL (the www path) of the latest thumbnail
         """
         latest_image_entry = self.db.select_latest_image_per_camera(cam_name)
-        thumb_path=latest_image_entry[0].d['derived_fname']
+        if len(latest_image_entry) > 0:
+            thumb_path=latest_image_entry[0].d['derived_fname']
+            assert os.path.exists(thumb_path)
+        else:
+            thumb_path = "mryuck.png"
+        #end
 
         # sometimes, latest_image_entry[0] is a bogus database entry.
         # this occurs when there are no derived thumbnails.
         # so we must check if thumb_path is None.
-
-        if thumb_path==None or  os.path.exists(thumb_path)==False:
-            logging.info("%s does not exist" % thumb_path)
-            thumb_path = self.default_image_fname
-        #end
         thumb_path2 = thumb_path.replace(self.derived_dir, self.www_derived_dir)
         return thumb_path2
     

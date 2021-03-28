@@ -10,7 +10,8 @@ import path_parser
 logger = logging.getLogger("pano")
 
 def walk_cam_dir(db, base_data_dir, cam_name, cam_model):
-    cam_dir = os.path.join(base_data_dir, cam_name)
+    base_data_dir = os.path.normpath(base_data_dir)
+    cam_dir = os.path.normpath(os.path.join(base_data_dir, cam_name))
     assert os.path.exists(cam_dir)
     parser = path_parser.create(cam_model)
     assert parser, f"unrecognized camera model {cam_model}"

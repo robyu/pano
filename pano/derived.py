@@ -3,7 +3,6 @@ import time
 import subprocess
 import datastore
 import multiprocessing as mp
-import sys
 import timeit
 import logging
 import shutil
@@ -244,7 +243,7 @@ def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag
     return (count_success, count_failed)
     
     
-@timeit.timeit
+#@timeit.timeit
 def derive_with_single_thread(db, derived_dir, row_list, test_thread_flag, cmd_ffmpeg, cmd_magick_convert):
     """
     process each file in row_list to generate derived file (thumbnail, etc)
