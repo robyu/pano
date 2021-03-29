@@ -1,6 +1,4 @@
 
-import datastore
-import time
 import os
 import dtutils
 import logging

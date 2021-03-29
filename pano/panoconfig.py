@@ -10,7 +10,7 @@ DEFAULTS_JSON = """
     "derived_dir": "derived",
     "drop_table_flag": 0,
     "ffmpeg": "/usr/bin/ffmpeg",
-    "log_dir": "./logs",
+    "log_dir": "./",
     "magick_convert": "/usr/bin/convert",
     "max_age_days": 14,
     "num_worker_threads": 1,
@@ -50,7 +50,31 @@ DEFAULTS_JSON = """
     "watchdog_check_breadcrumb": 1
 }
 """
-def get_param_dict(config_fname):
+def get_param_dict(config_fname, **config_override_args):
+    config = load_base_config(config_fname)
+
+    for key, value in config_override_args.items():
+        if key in config.keys():
+            config[key] = value
+        #end
+    #end
+
+    #
+    # convert file paths to absolute
+    config['base_data_dir']     = os.path.abspath(config['base_data_dir'])
+    config['database_fname']    = os.path.abspath(config['database_fname'])
+    config['derived_dir']       = os.path.abspath(config['derived_dir'])
+    config['log_dir']           = os.path.abspath(config['log_dir'])
+    config['www_dir']           = os.path.abspath(config['www_dir'])
+
+    #
+    # the "www_" paths are meant to be relative to www_dir
+    # config['www_data_dir']      = os.path.abspath(config['www_data_dir'])
+    # config['www_derived_dir']   = os.path.abspath(config['www_derived_dir'])
+    
+    return config
+
+def load_base_config(config_fname):
     """
         read user-specified config file, default config file,
         merge the two parameters

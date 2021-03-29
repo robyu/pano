@@ -1,22 +1,16 @@
-#!/usr/bin/env python3
-import json
 import datastore
 import dirwalk
 import os
 import campage
 import derived
 import indexpage
-import click
 import time
-import timeit
-import subprocess
-import pudb
 import panoconfig
 import datetime
 import logging
-#import logging.handlers
 import sys
 import dtutils
+import uuid
 """
 data dict
 =========
@@ -42,7 +36,7 @@ class Pano:
     param_dict = {}
     image_db = None
     
-    def __init__(self, config_fname, loglevel='warning', logfname='stdout', **kwargs):
+    def __init__(self, config_fname, loglevel='warning', logfname='stdout', **config_override_args):
         """
         kwargs lets you override values in the config file.
         e.g.
@@ -53,20 +47,15 @@ class Pano:
         see panoconfig.py for the canonical config JSON
         """
         print("Pano: reading config file (%s)" % config_fname)
-        self.param_dict = panoconfig.get_param_dict(config_fname)
 
-        for key, value in kwargs.items():
-            if key in self.param_dict.keys():
-                self.param_dict[key] = value
-            #end
-        #end
+        self.param_dict = panoconfig.get_param_dict(config_fname, **config_override_args)
 
         
         self.logger = self.configure_logging(loglevel, logfname)
-
-        self.generate_sym_links()
+        self.verify_paths()
+        self.generate_www_sym_links()
         
-        if self.param_dict['drop_table_flag']==0 and droptable==False:
+        if self.param_dict['drop_table_flag']==0:
             drop_table_flag=False
         else:
             logging.info("drop existing table")
@@ -82,6 +71,17 @@ class Pano:
         for cam in cam_list:
             logging.info(cam['name'])
         #end
+
+    def verify_paths(self):
+        assert os.path.exists(self.param_dict['base_data_dir'])
+        assert os.path.exists(self.param_dict['derived_dir'])
+
+        assert os.path.exists(self.param_dict['www_dir'])
+        assert os.path.exists(os.path.join(self.param_dict['www_dir'], 'css'))
+        assert os.path.exists(os.path.join(self.param_dict['www_dir'], 'fonts'))
+        assert os.path.exists(os.path.join(self.param_dict['www_dir'], 'js'))
+        assert os.path.exists(os.path.join(self.param_dict['www_dir'], 'mryuck.png'))
+        
 
     def print_baseline_time_info(self):
         """
@@ -116,15 +116,17 @@ class Pano:
         if not isinstance(numeric_level, int):
             raise ValueError('Invalid log level: %s' % loglevel)
 
-        print(f"logging to {logfname}")
         if logfname=='stdout' or logfname==None:
+            print(f"logging to stdout")
             logging.basicConfig(stream=sys.stdout,
                                 level=numeric_level,
                                 format='%(asctime)s %(levelname)-8s %(message)s',
                                 filemode='w')   # overwrite existing logfile
         elif len(logfname) > 0:
+            assert os.path.exists(self.param_dict['log_dir']), f"log directory does not exist: {self.param_dict['log_dir']}  "
             log_dest = os.path.join(self.param_dict['log_dir'], logfname)
-            print(f"prepending log directory: {log_dest}")
+            log_dest = os.path.normpath(log_dest)
+            print(f"logging to {log_dest}")
             logging.basicConfig(filename=log_dest,
                                 level=numeric_level,
                                 format='%(asctime)s %(levelname)-8s %(message)s',
@@ -141,37 +143,23 @@ class Pano:
         logging.critical("CRITICAL logging enabled")
         
     #@timeit.timeit
-    def generate_sym_links(self):
+    def generate_www_sym_links(self):
         """
         generate links in www directory to data directories
         """
-        assert os.path.exists(self.param_dict['www_dir']), "%s does not exist" % self.param_dict['www_dir']
+        www_data_dir = os.path.normpath(os.path.join(self.param_dict['www_dir'],
+                                                     self.param_dict['www_data_dir']))
+        if os.path.exists(www_data_dir):
+            unique = uuid.uuid1()
+            os.rename(www_data_dir, f"{www_data_dir}-{unique}")
+        os.symlink(self.param_dict['base_data_dir'], www_data_dir)
 
-        data_dir_abs_path = os.path.realpath(self.param_dict['base_data_dir'])
-        assert os.path.exists(data_dir_abs_path), "%s does not exist" % data_dir_abs_path
-
-        www_data_dir = os.path.join(self.param_dict['www_dir'], self.param_dict['www_data_dir'])
-        # assert os.path.exists(www_data_dir), f"www_data_dir {www_data_dir} does not exist"
-
-        # if os.path.exists(www_data_dir)==True:
-        #     os.unlink(www_data_dir)
-        # assert False
-        try:
-            os.symlink(data_dir_abs_path, www_data_dir)
-        except FileExistsError:
-            logging.debug(f"www/FTP symlink {www_data_dir} already exists")
-        #end
-        
-        derived_dir_abs_path = os.path.realpath(self.param_dict['derived_dir'])
-        assert os.path.exists(derived_dir_abs_path), "%s does not exist" % derived_dir_abs_path
-
-        www_derived_dir = os.path.join(self.param_dict['www_dir'], self.param_dict['www_derived_dir'])
-            
-        try:
-            os.symlink(derived_dir_abs_path, www_derived_dir)
-        except FileExistsError:
-            logging.debug(f"www/derived symlink {www_derived_dir} already exists")
-        #end
+        www_derived_dir = os.path.normpath(os.path.join(self.param_dict['www_dir'],
+                                                        self.param_dict['www_derived_dir']))
+        if os.path.exists(www_derived_dir):
+            unique = uuid.uuid1()
+            os.rename(www_derived_dir, f"{www_derived_dir}-{unique}")
+        os.symlink(self.param_dict['derived_dir'], www_derived_dir)
 
     #@timeit.timeit
     def slurp_images(self, skip_flag=False):
@@ -449,20 +437,27 @@ class Pano:
 
         #end
 
-        
-    
-@click.command()
-@click.argument('config')
-@click.option('--loopcnt',default=-1,help='number of times to loop; -1 == forever')
-@click.option('--droptable/--no-droptable', default=False,help='delete existing image database')
-@click.option('--logfname', default='logs/pano.log',help='specify \'stdout\' for sys.stdout')
-@click.option('--loglevel',default='warning',help='valid values: \'debug\'|\'info\'|\'warning\'|\'error\'|\'critical\'')
-def pano_main(config, loopcnt,droptable,loglevel,logfname):
-    print("config file=%s" % config)
-    print("loopcnt=%d" % loopcnt)
-    mypano = Pano(config,droptable,loglevel,logfname)
-    mypano.loop(loopcnt)
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--loopcnt",   type=int,  default=-1,help="number of times to loop; -1 == forever")
+    parser.add_argument("--droptable",   metavar='droptable', action="store_true",  help="delete existing image db")
+    parser.add_argument("--nodroptable", metavar='droptable', action="store_false", help="delete existing image db")
+    parser.add_argument("--logfname", type=str, default="pano.log", help="specify 'stdout' for sys.stdout")
+    parser.add_argument("--loglevel", type=str, default="warning", help="valid values: 'debug', 'info', 'warning', 'error', 'critical'")
+    args = parser.parse_args()
+    return args
 
 if __name__=="__main__":
-    pano_main()
+    args = parse_args()
+    
+    print("config file=%s" % config)
+    print("loopcnt=%d" % loopcnt)
+    if droptable==True:
+        droptable_flag = 1
+    else:
+        droptable_flag = 0
+    #end
+    mypano = Pano(config,loglevel,logfname,droptable=droptable_flag)
+    mypano.loop(loopcnt)
+
     

@@ -3,7 +3,6 @@ import time
 import subprocess
 import datastore
 import multiprocessing as mp
-import timeit
 import logging
 import shutil
 

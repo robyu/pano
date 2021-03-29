@@ -1,4 +1,3 @@
-import os
 import datastore
 
 class ip2m_842:
