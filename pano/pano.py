@@ -11,6 +11,8 @@ import logging
 import sys
 import dtutils
 import uuid
+import argparse
+
 """
 data dict
 =========
@@ -67,7 +69,9 @@ class Pano:
         self.print_baseline_time_info()
             
         cam_list = self.get_cam_list()
+        logging.info("")
         logging.info("REGISTERED CAMERAS:")
+        logging.info("===================")
         for cam in cam_list:
             logging.info(cam['name'])
         #end
@@ -81,13 +85,25 @@ class Pano:
         assert os.path.exists(os.path.join(self.param_dict['www_dir'], 'fonts'))
         assert os.path.exists(os.path.join(self.param_dict['www_dir'], 'js'))
         assert os.path.exists(os.path.join(self.param_dict['www_dir'], 'mryuck.png'))
-        
+
+        logging.info("")
+        logging.info("VERIFY CONFIG PATHS")
+        logging.info("===================")
+        logging.info(f"base_data_dir: {self.param_dict['base_data_dir']}...OK")
+        logging.info(f"derived_dir:   {self.param_dict['derived_dir']}...OK")
+        logging.info(f"www_dir:       {self.param_dict['www_dir']}...OK")
+        logging.info(f"www_dir/css:   {self.param_dict['base_data_dir']}/css...OK")
+        logging.info(f"www_dir/fonts: {self.param_dict['base_data_dir']}/fonts...OK")
+        logging.info(f"www_dir/js:    {self.param_dict['base_data_dir']}/js...OK")
+        logging.info(f"www_dir/mryuck.png:    {self.param_dict['base_data_dir']}/mryuck.png...OK")
 
     def print_baseline_time_info(self):
         """
         write some stuff about the configured baseline time and duration
         """
-        logging.info("print_baseline_time_info() ********************************")
+        logging.info("")
+        logging.info("BASELINE TIME INFO")
+        logging.info("==================")
         baseline_datetime = self.param_dict['baseline_datetime']
         max_age_days = self.param_dict['max_age_days']
         logging.info(f"baseline_datetime = {baseline_datetime}")
@@ -99,7 +115,7 @@ class Pano:
         oldest_sec = baseline_sec - max_age_sec
         oldest_datetime = dtutils.sec_to_str(oldest_sec)
         logging.info(f"scanning media from {oldest_datetime} .. {baseline_datetime}")
-        logging.info("print_baseline_time_info() ********************************")
+
         #end
         return
         
@@ -147,19 +163,27 @@ class Pano:
         """
         generate links in www directory to data directories
         """
+        data_dir = self.param_dict['base_data_dir']
         www_data_dir = os.path.normpath(os.path.join(self.param_dict['www_dir'],
                                                      self.param_dict['www_data_dir']))
-        if os.path.exists(www_data_dir):
+        if os.path.islink(www_data_dir) and os.path.realpath(www_data_dir) == data_dir:
+            pass
+        else:
             unique = uuid.uuid1()
             os.rename(www_data_dir, f"{www_data_dir}-{unique}")
-        os.symlink(self.param_dict['base_data_dir'], www_data_dir)
+            os.symlink(data_dir, www_data_dir)
+        #end
 
+        derived_dir = self.param_dict['derived_dir']
         www_derived_dir = os.path.normpath(os.path.join(self.param_dict['www_dir'],
                                                         self.param_dict['www_derived_dir']))
-        if os.path.exists(www_derived_dir):
+        if os.path.islink(www_derived_dir) and os.path.realpath(www_derived_dir)==derived_dir:
+            pass
+        else:
             unique = uuid.uuid1()
             os.rename(www_derived_dir, f"{www_derived_dir}-{unique}")
-        os.symlink(self.param_dict['derived_dir'], www_derived_dir)
+            os.symlink(derived_dir, www_derived_dir)
+        #end
 
     #@timeit.timeit
     def slurp_images(self, skip_flag=False):
@@ -437,27 +461,47 @@ class Pano:
 
         #end
 
+    def clear_derived(self):
+        rows = self.image_db.select_all()
+        count=0
+        for row in rows:
+            if row.d['derive_failed']==1:
+                self.image_db.update_row(row.d['id'],'derive_failed',0)
+                count += 1
+            #end
+        #end
+        logging.info(f"cleared derive_failed in {count} entries")
+        
+        
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--loopcnt",   type=int,  default=-1,help="number of times to loop; -1 == forever")
-    parser.add_argument("--droptable",   metavar='droptable', action="store_true",  help="delete existing image db")
-    parser.add_argument("--nodroptable", metavar='droptable', action="store_false", help="delete existing image db")
+    parser.add_argument("--droptable",   dest='droptable', action="store_true",  help="delete existing image db")
+    parser.add_argument("--nodroptable", dest='droptable', action="store_false", help="delete existing image db")
     parser.add_argument("--logfname", type=str, default="pano.log", help="specify 'stdout' for sys.stdout")
-    parser.add_argument("--loglevel", type=str, default="warning", help="valid values: 'debug', 'info', 'warning', 'error', 'critical'")
+    parser.add_argument("--loglevel", type=str, default="warning",
+                        help="valid values: 'debug', 'info', 'warning', 'error', 'critical'")
+    parser.add_argument("--clearderived", dest="clearderived", action="store_true", help="clear all derive_failed entries in db")
+    parser.add_argument("config", type=str, help="filename of the JSON config file")
     args = parser.parse_args()
     return args
 
 if __name__=="__main__":
     args = parse_args()
     
-    print("config file=%s" % config)
-    print("loopcnt=%d" % loopcnt)
-    if droptable==True:
+    print("config file=%s" % args.config)
+    print("loopcnt=%d" % args.loopcnt)
+    if args.droptable==True:
         droptable_flag = 1
     else:
         droptable_flag = 0
     #end
-    mypano = Pano(config,loglevel,logfname,droptable=droptable_flag)
-    mypano.loop(loopcnt)
+    mypano = Pano(args.config, args.loglevel, args. logfname, droptable=droptable_flag)
+
+    if args.clearderived:
+        mypano.clear_derived()
+    
+    mypano.loop(args.loopcnt)
 
     

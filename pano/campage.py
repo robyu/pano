@@ -373,9 +373,9 @@ class CamPage:
         """
         thumb_path = row.d['derived_fname']
 
-        if os.path.exists(thumb_path)==False:
-            logging.info("THUMB %s does not exist" % thumb_path)
-        #end
+        # if os.path.exists(thumb_path)==False:
+        #     logging.info("THUMB %s does not exist" % thumb_path)
+        # #end
         thumb_path2 = thumb_path.replace(self.derived_dir, self.www_derived_dir)
         return thumb_path2
 

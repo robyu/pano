@@ -112,29 +112,32 @@ def process_media_file(row, derived_dir,cmd_ffmpeg, cmd_magick):
     #                                                                    row.d['derive_failed'],
     #                                                                    row.d['derived_fname'],
     #                                                                    row.d['fname']))
+    path = row.d['path']
+    fname = row.d['fname']
+    mediatype = row.d['mediatype']
     try:
-        if row.d['mediatype']==datastore.MEDIA_DAV:
-            derived_fname=convert_dav_to_mp4(row.d['base_data_dir'], row.d['path'], row.d['fname'], derived_dir,cmd_ffmpeg=cmd_ffmpeg)
-        elif row.d['mediatype']==datastore.MEDIA_JPG:
-            derived_fname=make_thumbnail(row.d['base_data_dir'], row.d['path'], row.d['fname'], derived_dir,cmd_magick=cmd_magick)
-        elif row.d['mediatype']==datastore.MEDIA_MP4:
+        if mediatype == datastore.MEDIA_DAV:
+            derived_fname=convert_dav_to_mp4(row.d['base_data_dir'], path, fname, derived_dir,cmd_ffmpeg=cmd_ffmpeg)
+        elif mediatype == datastore.MEDIA_JPG:
+            derived_fname=make_thumbnail(row.d['base_data_dir'], path, fname, derived_dir,cmd_magick=cmd_magick)
+        elif mediatype == datastore.MEDIA_MP4:
             #
             # no processing; just copy the file straight to derived
-            src_fname = os.path.join(row.d['base_data_dir'], row.d['path'],row.d['fname'])
-            derived_path = os.path.join(derived_dir, row.d['path'])
+            src_fname = os.path.join(row.d['base_data_dir'], path, fname)
+            derived_path = os.path.join(derived_dir, path)
             derived_path = os.path.normpath(derived_path)
-            derived_fname = os.path.join(derived_path,row.d['fname'])
+            derived_fname = os.path.join(derived_path, fname)
             try:
                 os.makedirs(derived_path)
             except:
                 pass
             shutil.copyfile(src_fname, derived_fname)
         else:
-            logger.info("(%s) has unrecognized mediatype (%d)" % (media_fname, media_type))
+            logger.info("(%s/%s) has unrecognized mediatype (%d)" % (path, fname, mediatype))
             derived_fname = None
         #endif
     except:
-        logger.error(f"error deriving {media_fname} of type {media_type}")
+        logger.error(f"error deriving {path}/{fname} of type {mediatype}")
     #end
 
     #
@@ -142,8 +145,8 @@ def process_media_file(row, derived_dir,cmd_ffmpeg, cmd_magick):
     derive_failed =0
     if os.path.exists(derived_fname)==False:
         derive_failed = 1
-        logger.debug(f"{row.d['path']}/{row.d['fname']} -> {derived_fname} failed")
-        if row.d['mediatype']==datastore.MEDIA_JPG:
+        logger.debug(f"{path}/{fname} -> {derived_fname} failed")
+        if mediatype == datastore.MEDIA_JPG:
             derived_fname = "mryuck.png"
         else:
             derived_fname = ''
@@ -198,7 +201,7 @@ def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag
                 if (index % 100)==0:
                     logger.info("derive %s %d of %d" % (row.d['cam_name'], index, len(row_list)))
                 #end
-                if row.d['derive_failed']==0 and len(row.d['derived_fname'])==0:
+                if row.d['derive_failed']==0:
                     if test_thread_flag==True:
                         #
                         # run a fake test fcn, just to test thread pool
@@ -211,7 +214,7 @@ def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag
                     worker_index += 1
                 else:
                     pass
-                    #logger.debug("did not attempt derivation: derive_failed=%d derived_fname=%s" % (row.d['derive_failed'], row.d['derived_fname']))
+                    logger.debug("did not attempt derivation: derive_failed=%d derived_fname=%s" % (row.d['derive_failed'], row.d['derived_fname']))
                 #end
             #end
         #end
@@ -223,7 +226,7 @@ def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag
                 # update datastore with derived fname
                 db.update_row(result_dict['id'], 'derived_fname', result_dict['derived_fname'])
                 db.update_row(result_dict['id'], 'derive_failed', result_dict['derive_failed'])
-                if len(result_dict['derived_fname']) > 0:
+                if result_dict['derive_failed'] == 0:
                     logger.debug("derivation success")
                     count_success += 1
                 else:
@@ -259,7 +262,7 @@ def derive_with_single_thread(db, derived_dir, row_list, test_thread_flag, cmd_f
         if (index % 100)==0:
             logger.info("derive %s %d of %d" % (row.d['cam_name'], index, len(row_list)))
         #end
-        if row.d['derive_failed']==0 and len(row.d['derived_fname'])==0: # previous attempt has not failed 
+        if row.d['derive_failed']==0:
             if test_thread_flag==True:
                 result_dict = sleep_fcn(row, derived_dir)
             else:
@@ -268,7 +271,7 @@ def derive_with_single_thread(db, derived_dir, row_list, test_thread_flag, cmd_f
 
             db.update_row(result_dict['id'], 'derived_fname', result_dict['derived_fname'])
             db.update_row(result_dict['id'], 'derive_failed', result_dict['derive_failed'])
-            if len(result_dict['derived_fname']) > 0:
+            if result_dict['derive_failed']==0:
                 logger.debug("derivation success")
                 count_success += 1
             else:
@@ -277,7 +280,6 @@ def derive_with_single_thread(db, derived_dir, row_list, test_thread_flag, cmd_f
             #end
         else:
             logger.debug("did not attempt derivation: derive_failed=%d derived_fname=%s" % (row.d['derive_failed'], row.d['derived_fname']))
-            assert False
         #end
     #end
     return (count_success, count_failed)

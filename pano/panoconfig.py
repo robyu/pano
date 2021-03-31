@@ -3,6 +3,8 @@ import os
 
 DEFAULTS_JSON = """
 {
+    "@comment": "comment keys start with @",
+
     "base_data_dir" : "FTP",
     "baseline_datetime": "now",
     "database_fname" : "panodb.sqlite",
@@ -110,6 +112,15 @@ def merge_dicts(defaults_dict, user_dict):
         return merged dict
     """
     merged_dict={}
+
+    # delete comments in user_dict
+    key_list = [k for k,v in user_dict.items()]
+    for key in key_list:
+        if key[0]=='@':
+            del user_dict[key]
+        #end
+    #end
+    
     for k, default_val in defaults_dict.items():
         if k[0]=='@':
             #
