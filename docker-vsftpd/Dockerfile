@@ -1,6 +1,6 @@
 FROM centos
 
-RUN yum -y install openssl vsftpd && rm -rf /var/cache/yum/*
+RUN yum -y install nano openssl vsftpd && rm -rf /var/cache/yum/*
 
 #
 # match user id and group id with host

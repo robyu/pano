@@ -12,6 +12,10 @@ RUN apk add --update --no-cache \
   && rm -rf /var/cache/apk/*
 
 #
+# handy for debugging
+RUN apk add nano
+
+#
 # fix timezone
 # see https://serverfault.com/questions/683605/docker-container-time-timezone-will-not-reflect-changes
 RUN apk add --no-cache tzdata
