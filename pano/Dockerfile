@@ -69,7 +69,7 @@ USER pano
 
 COPY *.py          /home/pano/
 COPY *.json        /home/pano/
-COPY start-pano.sh /home/pano
+COPY start-pano-docker.sh /home/pano
 #RUN chown -R pano:pano /home/pano
 # RUN mkdir ${www_dir}
 # RUN mkdir ${www_dir}/css
@@ -95,7 +95,7 @@ VOLUME ${log_dir}
 WORKDIR /home/pano
 
 
-CMD ["./start-pano.sh"]
+CMD ["./start-pano-docker.sh"]
 
 
 

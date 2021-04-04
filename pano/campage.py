@@ -377,24 +377,16 @@ class CamPage:
         #     logging.info("THUMB %s does not exist" % thumb_path)
         # #end
         thumb_path2 = thumb_path.replace(self.derived_dir, self.www_derived_dir)
+        assert os.path.isabs(thumb_path2)==False
         return thumb_path2
 
-    def get_actual_path(self, row):
+    def get_orig_media_path(self, row):
         """
-        return the path to the actual image/video source file
+        return a relative path to the actual image/video source file
         """
-        actual_path = os.path.join(self.base_dir, row.d['path'], row.d['fname'])
-
-        if os.path.exists(actual_path)==False:
-            logging.info("ORIGINAL %s does not exist" % actual_path)
-        #end
-        
-        #
-        # EH? is this necessary?
-        
-        # replace basedir with webpage-friendly path
-        # ./FTP/120/AMC0028V_795UUB/2018-08-24/001/jpg/22/27/22[M][0@0][0].jpg
-        # actual_path2 = actual_path.replace(self.base_dir, self.www_data_dir)
+        actual_path = os.path.join(self.www_data_dir, row.d['path'], row.d['fname'])
+        actual_path = os.path.normpath(actual_path)
+        assert os.path.isabs(actual_path)==False
         
         return actual_path
     
@@ -434,7 +426,7 @@ class CamPage:
             for m in range(self.num_images_per_row):
                 image = image_row_list[n+m]
                 thumb_path  = self.get_thumb_path(image)
-                actual_path = self.get_actual_path(image)
+                actual_path = self.get_orig_media_path(image)
                 html += CamPage.templ_image_link.format(actual_image=actual_path,
                                                         alt_txt=image.d['ctime'],
                                                         thumb_image=thumb_path,
@@ -450,7 +442,7 @@ class CamPage:
         while n < len(image_row_list):
             image = image_row_list[n]
             thumb_path  = self.get_thumb_path(image)
-            actual_path = self.get_actual_path(image)
+            actual_path = self.get_orig_media_path(image)
             html += CamPage.templ_image_link.format(actual_image=actual_path,
                                                     alt_txt=image.d['ctime'],
                                                     thumb_image=thumb_path,
@@ -477,7 +469,7 @@ class CamPage:
             # dav_fname = os.path.join(row.d['base_data_dir'],
             #                          row.d['path'],
             #                          row.d['fname'])
-            dav_fname = self.get_actual_path(row)
+            dav_fname = self.get_orig_media_path(row)
             
             mp4_fname = row.d['derived_fname']
             mp4_fname = mp4_fname.replace(self.derived_dir, self.www_derived_dir)
