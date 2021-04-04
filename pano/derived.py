@@ -170,7 +170,7 @@ def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag
     
     update database with resulting filename, success status
 
-    return (# success, # failed)
+    return (# success, # failed, #processed)
 
     """
     MAX_WAIT_SEC = 60 *2 
@@ -179,6 +179,7 @@ def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag
     index=0
     count_success=0
     count_failed =0
+    num_processed=len(row_list)
 
     #
     # assign only as many workers as specified (pool.apply_async) before
@@ -201,7 +202,10 @@ def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag
                 if (index % 100)==0:
                     logger.info("derive %s %d of %d" % (row.d['cam_name'], index, len(row_list)))
                 #end
-                if row.d['derive_failed']==0:
+                if row.d['derive_failed']==0 and len(row.d['derived_fname']) <= 0:
+                    #
+                    # derivation hasnt failed previously AND there's no existing derived file,
+                    # so try to process
                     if test_thread_flag==True:
                         #
                         # run a fake test fcn, just to test thread pool
@@ -242,7 +246,7 @@ def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag
         
         #end
     #end
-    return (count_success, count_failed)
+    return (count_success, count_failed, num_processed)
     
     
 #@timeit.timeit
@@ -254,15 +258,19 @@ def derive_with_single_thread(db, derived_dir, row_list, test_thread_flag, cmd_f
 
     return (# success, # failed)
     """
+    num_processed = len(row_list)
     count_success = 0
     count_failed = 0
     for index in range(len(row_list)):
         row = row_list[index]
 
         if (index % 100)==0:
-            logger.info("derive %s %d of %d" % (row.d['cam_name'], index, len(row_list)))
+            logger.info("derive %s %d of %d" % (row.d['cam_name'], index, num_processed))
         #end
-        if row.d['derive_failed']==0:
+        if row.d['derive_failed']==0 and len(row.d['derived_fname']) <= 0:
+            #
+            # derivation hasnt failed previously AND there's no existing derived file,
+            # so try to process
             if test_thread_flag==True:
                 result_dict = sleep_fcn(row, derived_dir)
             else:
@@ -282,7 +290,7 @@ def derive_with_single_thread(db, derived_dir, row_list, test_thread_flag, cmd_f
             logger.debug("did not attempt derivation: derive_failed=%d derived_fname=%s" % (row.d['derive_failed'], row.d['derived_fname']))
         #end
     #end
-    return (count_success, count_failed)
+    return (count_success, count_failed, num_processed)
 
 def make_derived_files(db, 
                        cam_name, 
@@ -296,7 +304,7 @@ def make_derived_files(db,
     for each entry in database, create derived files (thumbnails, converted video)
     populate the derived fname column
 
-    returns (count_success, count_failed)
+    returns (count_success, count_failed, num_processed)
     """
     try:
         os.mkdir(derived_dir)
@@ -318,11 +326,11 @@ def make_derived_files(db,
     assert num_workers >= 1
     
     if num_workers >= 2:
-        count_success, count_failed = derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag)
+        count_success, count_failed, num_processed = derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag)
     else:
-        count_success, count_failed = derive_with_single_thread(db, derived_dir, row_list, test_thread_flag, cmd_ffmpeg, cmd_magick_convert)
+        count_success, count_failed, num_processed = derive_with_single_thread(db, derived_dir, row_list, test_thread_flag, cmd_ffmpeg, cmd_magick_convert)
         
-    logger.info("success=%d failed=%d" % (count_success, count_failed))
+    logger.info("success=%d failed=%d processed=%d" % (count_success, count_failed, num_processed))
     logger.info("done with make_derived_files")
-    return (count_success, count_failed)
+    return (count_success, count_failed, num_processed)
     

@@ -71,8 +71,11 @@ def get_param_dict(config_fname, **config_override_args):
 
     #
     # the "www_" paths are meant to be relative to www_dir
-    # config['www_data_dir']      = os.path.abspath(config['www_data_dir'])
-    # config['www_derived_dir']   = os.path.abspath(config['www_derived_dir'])
+    config['www_data_dir'] = os.path.normpath(config['www_data_dir'])
+    assert os.path.isabs(config['www_data_dir'])==False
+
+    config['www_derived_dir'] = os.path.normpath(config['www_derived_dir'])
+    assert os.path.isabs(config['www_derived_dir'])==False
     
     return config
 

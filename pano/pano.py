@@ -55,7 +55,10 @@ class Pano:
         
         self.logger = self.configure_logging(loglevel, logfname)
         self.verify_paths()
-        self.generate_www_sym_links()
+
+        # DO NOT generate symlinks, because the docker 
+        # environment uses different symlinks
+        #self.generate_www_sym_links()
         
         if self.param_dict['drop_table_flag']==0:
             drop_table_flag=False
@@ -77,25 +80,41 @@ class Pano:
         #end
 
     def verify_paths(self):
+        full_www_data_dir = os.path.normpath(os.path.join(self.param_dict['www_dir'], self.param_dict['www_data_dir']))
+        full_www_derived_dir = os.path.normpath(os.path.join(self.param_dict['www_dir'], self.param_dict['www_derived_dir']))
+        logging.info("")
+        logging.info("VERIFY CONFIG PATHS")
+        logging.info("===================")
+        logging.info(f"base_data_dir:   {self.param_dict['base_data_dir']} ")
+        logging.info(f"derived_dir:     {self.param_dict['derived_dir']}. ")
+        logging.info(f"www_dir:         {self.param_dict['www_dir']} ")
+        logging.info(f"www_dir/css:     {self.param_dict['base_data_dir']}/css ")
+        logging.info(f"www_dir/fonts:   {self.param_dict['base_data_dir']}/fonts ")
+        logging.info(f"www_dir/js:      {self.param_dict['base_data_dir']}/js ")
+        logging.info(f"www_dir/mryuck.png:    {self.param_dict['base_data_dir']}/mryuck.png ")
+        logging.info(f"www_data_dir (full):    {full_www_data_dir}")
+        logging.info(f"www_derived_dir (full): {full_www_derived_dir}")
+
+        #
+        # check base and derived directories
         assert os.path.exists(self.param_dict['base_data_dir'])
         assert os.path.exists(self.param_dict['derived_dir'])
 
+        # check www and subdirs
         assert os.path.exists(self.param_dict['www_dir'])
         assert os.path.exists(os.path.join(self.param_dict['www_dir'], 'css'))
         assert os.path.exists(os.path.join(self.param_dict['www_dir'], 'fonts'))
         assert os.path.exists(os.path.join(self.param_dict['www_dir'], 'js'))
         assert os.path.exists(os.path.join(self.param_dict['www_dir'], 'mryuck.png'))
 
-        logging.info("")
-        logging.info("VERIFY CONFIG PATHS")
-        logging.info("===================")
-        logging.info(f"base_data_dir: {self.param_dict['base_data_dir']}...OK")
-        logging.info(f"derived_dir:   {self.param_dict['derived_dir']}...OK")
-        logging.info(f"www_dir:       {self.param_dict['www_dir']}...OK")
-        logging.info(f"www_dir/css:   {self.param_dict['base_data_dir']}/css...OK")
-        logging.info(f"www_dir/fonts: {self.param_dict['base_data_dir']}/fonts...OK")
-        logging.info(f"www_dir/js:    {self.param_dict['base_data_dir']}/js...OK")
-        logging.info(f"www_dir/mryuck.png:    {self.param_dict['base_data_dir']}/mryuck.png...OK")
+        # www/FTP must be a link
+        assert os.path.isabs(self.param_dict['www_data_dir'])==False
+        assert os.path.islink(full_www_data_dir)
+
+        # www/derived must be a link
+        assert os.path.isabs(self.param_dict['www_derived_dir'])==False
+        assert os.path.islink(full_www_derived_dir)
+        
 
     def print_baseline_time_info(self):
         """

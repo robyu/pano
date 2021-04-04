@@ -17,8 +17,18 @@
     "skip_cull_empty_dirs": 0,
 
     "sleep_interval_min": 10.0,
-    "num_worker_threads": 4,
+    "num_worker_threads": 1,
     "camera_list" : [
+	{
+            "name": "cam-07",
+	    "model": "amcrest-ip3m-943",
+            "live_url": "rtsp://admin:jiggy001@192.168.2.127:80/cam/realmonitor?channel=1&subtype=0",
+	    "admin_url": "http://192.168.2.127",
+            "description": "new cam"
+	}
+	
+    ],
+     "@@@camera_list" : [
 	{
             "name": "cam-00",
 	    "model": "amcrest-ip2m-842",

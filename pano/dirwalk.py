@@ -35,7 +35,13 @@ def walk_cam_dir(db, base_data_dir, cam_name, cam_model):
                 row.d['ctime'] = ctime
                 row.d['fname'] = fname
                 row.d['mediatype'] = media_type
+
+                # I keep running into problem here with badly
+                # formed file paths, so add some code to verify
+                # the path should look like "cam_name/blah/blah/blah"
                 row.d['path'] = dir_path[len(base_data_dir)+1:]
+                assert (row.d['path'])[0:len(cam_name)]==cam_name
+                
                 assert row.d['path'][0] != '/'
                 db.add_row(row)
             #end

@@ -1,3 +1,2 @@
 #!/bin/bash
-
-python3 pano.py --loglevel info --logfname pano.log  pano-docker.json
+python3 pano.py --loglevel info --logfname stdout  pano-docker.json
