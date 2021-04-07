@@ -423,21 +423,21 @@ class Pano:
         return cam_list
 
     def print_summary(self, num_added, num_deleted_ext, num_deleted_age):
-        logging.info("== SUMMARY ==")
-        logging.info("CAMERAS:")
+        logging.warning("== SUMMARY ==")
+        logging.warning("CAMERAS:")
         cam_list = self.get_cam_list()
         for cam in cam_list:
-            logging.info("%s" % cam['name'])
+            logging.warning("%s" % cam['name'])
         #end
-        logging.info("")
-        logging.info("FILE PROCESSING:")
-        logging.info("Files Deleted (wrong extension): %d" % num_deleted_ext)
-        logging.info("Files Added: %d" % num_added)
-        logging.info("")
-        logging.info("DATASTORE:")
-        logging.info("Num Entries deleted (age): %d" % num_deleted_age)
+        logging.warning("")
+        logging.warning("FILE PROCESSING SUMMARY:")
+        logging.warning("Files Deleted (wrong extension): %d" % num_deleted_ext)
+        logging.warning("Files Added: %d" % num_added)
+        logging.warning("")
+        logging.warning("DATASTORE:")
+        logging.warning("Num Entries deleted (age): %d" % num_deleted_age)
         all_rows = self.image_db.select_all()
-        logging.info("Num Entries after processing: %d" % len(all_rows))
+        logging.warning("Num Entries after processing: %d" % len(all_rows))
         
         return
 

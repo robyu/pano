@@ -19,3 +19,6 @@ docker run -d -v "$PANO_WWW":/var/www -v "$PANO_FTP":/var/FTP -v "$PANO_DERIVED"
 docker run -d -t -v "$PANO_WWW":/var/www/localhost/htdocs -v "$PANO_FTP":/var/FTP -v "$PANO_DERIVED":/var/derived -v "$PANO_LOG":/var/log -p 8080:80 --name lighttpd lighttpd
 
 docker ps
+
+# for debugging, you can run the pano docker directly and stay attached:
+# docker run  -it -v /mnt/HD2/pano/www:/var/www -v /mnt/HD2/pano/FTP:/var/FTP -v /mnt/HD2/pano/derived:/var/derived -v /mnt/HD2/pano/logs:/home/pano/logs --name pano pano
