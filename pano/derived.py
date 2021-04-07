@@ -80,8 +80,14 @@ def make_thumbnail(base_data_dir, path, fname, derived_dir,cmd_magick='convert')
         pass
     #end
 
-    cmd = [cmd_magick,src_fname, '-resize', '10%',dest_fname]
-    subprocess_with_logging(cmd)
+    #
+    # if the dest file already exists, then just say we're done
+    if os.path.exists(dest_fname)==True:
+        logger.debug("%s already exists" % dest_fname)
+    else:
+        cmd = [cmd_magick,src_fname, '-resize', '10%',dest_fname]
+        subprocess_with_logging(cmd)
+    #end
 
     return dest_fname
 
@@ -246,6 +252,7 @@ def derive_with_threads(num_workers, db, derived_dir, row_list, test_thread_flag
         
         #end
     #end
+    pool.close()
     return (count_success, count_failed, num_processed)
     
     
