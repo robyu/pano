@@ -51,14 +51,11 @@ ARG GROUP_ID
 
 RUN groupadd -r --gid $GROUP_ID pano
 RUN useradd --uid $USER_ID --gid $GROUP_ID -ms /bin/bash pano
-#RUN groupadd -r pano && useradd --no-log-init -r -m -g pano pano
 
 RUN mkdir ${ftp_dir}
-#RUN chmod -R ugo+rw ${ftp_dir}
 VOLUME ${ftp_dir}
 
 RUN mkdir ${derived_dir}
-#RUN chmod ugo+rw -R ${derived_dir}
 VOLUME ${derived_dir}
 
 RUN mkdir ${www_dir}
@@ -70,11 +67,6 @@ USER pano
 COPY *.py          /home/pano/
 COPY *.json        /home/pano/
 COPY start-pano-docker.sh /home/pano
-#RUN chown -R pano:pano /home/pano
-# RUN mkdir ${www_dir}
-# RUN mkdir ${www_dir}/css
-# RUN mkdir ${www_dir}/fonts
-# RUN mkdir ${www_dir}/js
 
 #
 # for www files such as css, fonts, etc.
@@ -82,9 +74,6 @@ COPY start-pano-docker.sh /home/pano
 # then symlink the files into /var/www once pano starts (see start-pano.sh)
 #
 COPY www/       /home/pano/www/
-#COPY www/css    ${www_dir}/css/
-#COPY www/fonts  ${www_dir}/fonts/
-#COPY www/js     ${www_dir}/js/
 
 VOLUME /home/pano
 
