@@ -1,0 +1,44 @@
+#
+# use run-docker-compose.sh to set variables appropriately
+#
+version: '3'
+services:
+   lighttpd:
+      build:
+         context: ./lighttpd-docker
+         args:
+            - USER_ID=${USERID}
+            - GROUP_ID=${GROUPID}
+      ports:
+         - "8080:80"
+      volumes:
+         - ${PANO_WWW}:/var/www/localhost/htdocs
+         - ${PANO_FTP}:/var/FTP
+         - ${PANO_DERIVED}:/var/derived
+         - ${PANO_LOG}:/var/log
+   vsftpd:
+      build:
+         context: ./docker-vsftpd
+         args:
+            - USER_ID=${USERID}
+            - GROUP_ID=${GROUPID}
+      ports:
+         - "21:21"
+         - "21100-21110:21100-21110"
+      volumes:
+         - ${PANO_FTP}:/home/ftpupload
+         - ${PANO_LOG}:/var/log/vsftpd
+      environment:
+         - PASV_ADDRESS="${LOCAL_IP}"
+   pano:
+      build:
+        context: ./pano
+        args:
+         - USER_ID=${USERID}
+         - GROUP_ID=${GROUPID}
+      volumes:
+         - ${PANO_WWW}:/var/www
+         - ${PANO_FTP}:/var/FTP
+         - ${PANO_DERIVED}:/var/derived
+         - ${PANO_LOG}:/home/pano/logs
+       
