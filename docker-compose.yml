@@ -30,7 +30,7 @@ services:
          - ${PANO_FTP}:/home/ftpupload
          - ${PANO_LOG}:/var/log/vsftpd
       environment:
-         - PASV_ADDRESS="${LOCAL_IP}"
+         - PASV_ADDRESS=${LOCAL_IP}
       restart: unless-stopped
    pano:
       build:

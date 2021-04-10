@@ -1,7 +1,7 @@
 #!/bin/bash
 
-export USERID=$(id -u)
-export GROUPID=$(id -g)
+export USER_ID=$(id -u)
+export GROUP_ID=$(id -g)
 export LOCAL_IP=192.68.2.8
 export PANO_WWW=/mnt/HD2/pano/www
 export PANO_FTP=/mnt/HD2/pano/FTP
@@ -24,8 +24,8 @@ cd ..
 
 #
 # here we go...
-USERID=$USERID \
-      GROUPID=$GROUPID \
+USERID=$USER_ID \
+      GROUPID=$GROUP_ID \
       LOCAL_IP=$LOCAL_IP \
       PANO_WWW=$PANO_WWW \
       PANO_FTP=$PANO_FTP \

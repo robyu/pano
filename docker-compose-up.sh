@@ -24,12 +24,12 @@ cd ..
 
 #
 # here we go...
-USERID=$USERID \
-      GROUPID=$GROUPID \
-      LOCAL_IP=$LOCAL_IP \
+USER_ID=$USERID \
+      GROUP_ID=$GROUPID \
+      PASV_ADDRESS=$LOCAL_IP \
       PANO_WWW=$PANO_WWW \
       PANO_FTP=$PANO_FTP \
       PANO_DERIVED=$PANO_DERIVED \
       PANO_LOG=$PANO_LOG \
-      docker-compose up -d
+      docker-compose up -d --build
 
