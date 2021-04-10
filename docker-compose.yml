@@ -16,6 +16,7 @@ services:
          - ${PANO_FTP}:/var/FTP
          - ${PANO_DERIVED}:/var/derived
          - ${PANO_LOG}:/var/log
+      restart: unless-stopped
    vsftpd:
       build:
          context: ./docker-vsftpd
@@ -30,6 +31,7 @@ services:
          - ${PANO_LOG}:/var/log/vsftpd
       environment:
          - PASV_ADDRESS="${LOCAL_IP}"
+      restart: unless-stopped
    pano:
       build:
         context: ./pano
@@ -41,4 +43,5 @@ services:
          - ${PANO_FTP}:/var/FTP
          - ${PANO_DERIVED}:/var/derived
          - ${PANO_LOG}:/home/pano/logs
+      restart: unless-stopped
        
