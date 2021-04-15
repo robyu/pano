@@ -16,12 +16,12 @@ class Row:
     col_defs = ( \
                  ['id',            'INTEGER PRIMARY KEY', ''],
                  ['base_data_dir', 'STRING',   ''],
-                 ['cam_name',      'STRING',   ''],
-                 ['ctime',         'STRING',   ''],
-                 ['ctime_unix',    'INTEGER',  -1],
-                 ['fname',         'STRING',   ''],
-                 ['derive_failed', 'INTEGER',   0],
-                 ['derived_fname', 'STRING',   ''],
+                 ['cam_name',      'STRING',   ''], 
+                 ['ctime',         'STRING',   ''],  # creation time in ISO-8601 format
+                 ['ctime_unix',    'INTEGER',  -1],  # creation time in unix seconds
+                 ['fname',         'STRING',   ''],  # filename of source file
+                 ['derive_failed', 'INTEGER',   0],  # 1 = derivation failed
+                 ['derived_fname', 'STRING',   ''],  
                  ['mediatype',     'STRING',   MEDIA_UNKNOWN],
                  ['path',          'STRING',   '']
     )

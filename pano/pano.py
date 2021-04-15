@@ -8,6 +8,7 @@ import time
 import panoconfig
 import datetime
 import logging
+import logging.handlers
 import sys
 import dtutils
 import uuid
@@ -155,17 +156,23 @@ class Pano:
             print(f"logging to stdout")
             logging.basicConfig(stream=sys.stdout,
                                 level=numeric_level,
-                                format='%(asctime)s %(levelname)-8s %(message)s',
-                                filemode='w')   # overwrite existing logfile
+                                format='%(asctime)s %(levelname)-8s %(message)s')
+
         elif len(logfname) > 0:
             assert os.path.exists(self.param_dict['log_dir']), f"log directory does not exist: {self.param_dict['log_dir']}  "
             log_dest = os.path.join(self.param_dict['log_dir'], logfname)
             log_dest = os.path.normpath(log_dest)
+
+
             print(f"logging to {log_dest}")
-            logging.basicConfig(filename=log_dest,
+
+            logger = logging.getLogger(log_dest)
+            logHandler = logging.handlers.RotatingFileHandler(log_dest, maxBytes=1e+6, backupCount=6)
+
+            logging.basicConfig(
                                 level=numeric_level,
                                 format='%(asctime)s %(levelname)-8s %(message)s',
-                                filemode='w')   # overwrite existing logfile
+                                handlers=[logHandler])
         else:
             assert False, "invalid logfname"
         #end
@@ -178,7 +185,7 @@ class Pano:
         logging.critical("CRITICAL logging enabled")
         
     #@timeit.timeit
-    def generate_www_sym_links(self):
+    def NOTINUSEgenerate_www_sym_links(self):
         """
         generate links in www directory to data directories
         """
@@ -277,8 +284,12 @@ class Pano:
         sleep_sec = self.param_dict['sleep_interval_min'] * 60.0
         assert sleep_sec >= 0.0
 
-        logging.debug("sleep for %f sec" % sleep_sec)
-        time.sleep(sleep_sec)
+
+        while sleep_sec >= 0:
+            sleep_interval_sec = min(20, sleep_sec)
+            sleep_sec = sleep_sec - sleep_interval_sec
+            logging.info(f"sleep for {sleep_interval_sec} sec ({sleep_sec} sec remaining)")
+            time.sleep(sleep_interval_sec)
         return
 
 

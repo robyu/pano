@@ -13,7 +13,6 @@ class ip2m_842:
         """
         dir_element_list = dir_path.split('/')
 
-
         # at this point, dir_element_list contains:
         # 
         # >>> dir_element_list
@@ -38,7 +37,6 @@ class ip2m_842:
         # end
 
         return media_type, ctime
-    
 
     def parse_info_amcrest_jpg(self, dir_element_list, fname):
         # >>> dir_element_list
@@ -72,7 +70,6 @@ class ip2m_842:
         ctime = '%sT%02d:%02d:%02d' % (date, hour, minute, sec)
         return media_type, ctime
 
-
 class ip3m_943:
     def __init__(self):
         pass
@@ -81,7 +78,6 @@ class ip3m_943:
         """
         """
         dir_element_list = dir_path.split('/')
-
 
         # FTP/cam-07/AMC01848_F01N44/2021-03-06/10hour/jpg
         # 10.14.26[M][0@0][0].jpg
@@ -100,7 +96,6 @@ class ip3m_943:
         # end
 
         return media_type, ctime
-    
 
     def parse_info_amcrest_jpg(self, dir_element_list, fname):
         """
@@ -133,7 +128,6 @@ class ip3m_943:
         sec = int(fname[6:8])
         ctime = '%sT%02d:%02d:%02d' % (date, hour, minute, sec)
         return media_type, ctime
-
     
 def create(cam_model):
     if cam_model == 'amcrest-ip2m-842':

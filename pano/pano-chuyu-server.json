@@ -17,7 +17,7 @@
     "skip_cull_empty_dirs": 0,
 
     "sleep_interval_min": 10.0,
-    "num_worker_threads": 4,
+    "num_worker_threads": 2,
     "camera_list" : [
 	{
             "name": "cam-00",
@@ -35,7 +35,7 @@
 	}
 	
     ],
-     "@@@camera_list" : [
+    "@@camera_list" : [
 	{
             "name": "cam-00",
 	    "model": "amcrest-ip2m-842",

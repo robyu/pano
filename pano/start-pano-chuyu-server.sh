@@ -6,4 +6,4 @@
 CP=/usr/bin/cp
 $CP -rfv -f www/ /mnt/HD2/pano/www
 
-python3 pano.py --loglevel info --logfname stdout  --nodroptable pano-chuyu-server.json
+python3 pano.py --loglevel info --logfname /mnt/HD2/pano/logs/pano.log  --nodroptable pano-chuyu-server.json
