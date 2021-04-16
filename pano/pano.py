@@ -167,7 +167,7 @@ class Pano:
             print(f"logging to {log_dest}")
 
             logger = logging.getLogger(log_dest)
-            logHandler = logging.handlers.RotatingFileHandler(log_dest, maxBytes=1e+6, backupCount=6)
+            logHandler = logging.handlers.RotatingFileHandler(log_dest, maxBytes=5e+8, backupCount=6)
 
             logging.basicConfig(
                                 level=numeric_level,
@@ -285,7 +285,7 @@ class Pano:
         assert sleep_sec >= 0.0
 
 
-        while sleep_sec >= 0:
+        while sleep_sec > 0:
             sleep_interval_sec = min(20, sleep_sec)
             sleep_sec = sleep_sec - sleep_interval_sec
             logging.info(f"sleep for {sleep_interval_sec} sec ({sleep_sec} sec remaining)")
