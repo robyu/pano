@@ -163,7 +163,6 @@ class Pano:
             log_dest = os.path.join(self.param_dict['log_dir'], logfname)
             log_dest = os.path.normpath(log_dest)
 
-
             print(f"logging to {log_dest}")
 
             logger = logging.getLogger(log_dest)
@@ -288,7 +287,7 @@ class Pano:
         while sleep_sec > 0:
             sleep_interval_sec = min(20, sleep_sec)
             sleep_sec = sleep_sec - sleep_interval_sec
-            logging.info(f"sleep for {sleep_interval_sec} sec ({sleep_sec} sec remaining)")
+            logging.info(f"sleep for {sleep_interval_sec} sec ({sleep_sec/60.0} min remaining)")
             time.sleep(sleep_interval_sec)
         return
 
