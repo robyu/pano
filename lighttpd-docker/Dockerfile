@@ -1,8 +1,9 @@
 # Dockerfile for lighttpd
+# see https://github.com/spujadas/lighttpd-docker/blob/master/Dockerfile
 
 FROM alpine
 
-ENV LIGHTTPD_VERSION=1.4.54-r0
+ENV LIGHTTPD_VERSION=1.4.61-r1
 
 RUN apk add --update --no-cache \
 	lighttpd=${LIGHTTPD_VERSION} \

@@ -4,7 +4,7 @@
 # docker run -t -d  -v /Users/chuyu/Documents/2020/docker-pano/pano:/home/pano  mypano:13
 # docker exec -it -u root agitated_joliot /bin/bash
 #
-FROM phusion/baseimage:latest
+FROM phusion/baseimage:master-amd64
 
 ENV www_dir /var/www
 ENV ftp_dir /var/FTP
