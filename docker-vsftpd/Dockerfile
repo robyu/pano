@@ -1,4 +1,4 @@
-FROM centos
+FROM centos:centos8.4.2105
 
 RUN yum -y install nano openssl vsftpd && rm -rf /var/cache/yum/*
 

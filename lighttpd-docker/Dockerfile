@@ -1,7 +1,7 @@
 # Dockerfile for lighttpd
 # see https://github.com/spujadas/lighttpd-docker/blob/master/Dockerfile
 
-FROM alpine
+FROM alpine:3.15.0
 
 ENV LIGHTTPD_VERSION=1.4.61-r1
 
