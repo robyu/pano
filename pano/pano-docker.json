@@ -82,16 +82,29 @@
 	    "model": "amcrest-ip2m-842",
             "live_url": "rtsp://admin:jiggy001@192.168.2.126:80/cam/realmonitor?channel=1&subtype=0",
 	    "admin_url": "http://192.168.2.126",
-            "description": "back yard"
+            "description": "back yard/north"
 	},
 	{
             "name": "cam-07",
 	    "model": "amcrest-ip3m-943",
             "live_url": "rtsp://admin:jiggy001@192.168.2.127:80/cam/realmonitor?channel=1&subtype=0",
 	    "admin_url": "http://192.168.2.127",
-            "description": "new front north"
+            "description": "new front north 2021"
+	},
+	{
+            "name": "cam-08",
+	    "model": "amcrest-ip3m-943",
+            "live_url": "rtsp://admin:jiggy001@192.168.2.138:80/cam/realmonitor?channel=1&subtype=0",
+	    "admin_url": "http://192.168.2.138",
+            "description": "front/north/2022"
+	},
+	{
+            "name": "cam-09",
+	    "model": "amcrest-ip3m-943",
+            "live_url": "rtsp://admin:jiggy001@192.168.2.129:80/cam/realmonitor?channel=1&subtype=0",
+	    "admin_url": "http://192.168.2.129",
+            "description": "front/south/2022"
 	}
-	
     ],
 
     "watchdog_enable_reboot": 0,

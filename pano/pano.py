@@ -463,6 +463,14 @@ class Pano:
 
     def loop(self, maxloops=-1):
         loop_flag = True
+
+        #
+        # generate the index before processing any files
+        # this gives the user a quick way to check if the json file is correct
+        # without having to wait for indexing/deriving/etc
+        cam_list = self.get_cam_list()
+        self.gen_index_page(cam_list)
+        
         loop_index=0
         while True:
             self.write_breadcrumb()
