@@ -18,3 +18,5 @@ To monitor pano (other dockers write logs to the same directory)
 To bring things down:
 > docker-compose down
 
+# manually starting dockers
+The scripts start-dockers.sh, stop-dockers.sh, stop-start-dockers.sh are for starting the dockers "manually," without docker-compose. They're used when developing and testing.
