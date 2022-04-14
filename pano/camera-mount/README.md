@@ -12,5 +12,13 @@ https://art.illinois.edu/about/resources-for-current-students/facilities/digital
 
 Need to print in ABS plastic (for outdoor use) on the Zortrax
 
-I dont remember the parameters I used when running Z-suite.
+I downloaded the latest ZSuite software from https://support.zortrax.com/downloads/software/ and opened SECURITY_mount2.zprojx: 
+
+
+
+![Screen Shot 2022-04-14 at 9.34.38 AM](./images/Screen Shot 2022-04-14 at 9.34.38 AM.png)
+
+
+
+So I should be able take SECURITY_mount2.zcode to the Zortrax to print.
 
