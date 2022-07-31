@@ -98,24 +98,45 @@ class Pano:
 
         #
         # check base and derived directories
-        assert os.path.exists(self.param_dict['base_data_dir'])
-        assert os.path.exists(self.param_dict['derived_dir'])
+        logging.error('starting checks')
+        try:
+            assert os.path.exists(self.param_dict['base_data_dir'])
+            assert os.path.exists(self.param_dict['derived_dir'])
+        except:
+            logging.error("group 1 directories failed")
+            sys.exit(-1)
 
         # check www and subdirs
-        assert os.path.exists(self.param_dict['www_dir'])
-        assert os.path.exists(os.path.join(self.param_dict['www_dir'], 'css'))
-        assert os.path.exists(os.path.join(self.param_dict['www_dir'], 'fonts'))
-        assert os.path.exists(os.path.join(self.param_dict['www_dir'], 'js'))
-        assert os.path.exists(os.path.join(self.param_dict['www_dir'], 'mryuck.png'))
+        try:
+            assert os.path.exists(self.param_dict['www_dir'])
+            assert os.path.exists(os.path.join(self.param_dict['www_dir'], 'css'))
+            assert os.path.exists(os.path.join(self.param_dict['www_dir'], 'fonts'))
+            assert os.path.exists(os.path.join(self.param_dict['www_dir'], 'js'))
+            assert os.path.exists(os.path.join(self.param_dict['www_dir'], 'mryuck.png'))
+        except:
+            logging.error("group 2 directories failed")
+            sys.exit(-1)
+            
 
         # www/FTP must be a link
-        assert os.path.isabs(self.param_dict['www_data_dir'])==False
-        assert os.path.islink(full_www_data_dir)
+        try:
+            assert os.path.isabs(self.param_dict['www_data_dir'])==False
+            assert os.path.islink(full_www_data_dir)
+        except:
+            logging.error("group 3 directories failed")
+            sys.exit(-1)
+        
 
         # www/derived must be a link
-        assert os.path.isabs(self.param_dict['www_derived_dir'])==False
-        assert os.path.islink(full_www_derived_dir)
+        try:
+            assert os.path.isabs(self.param_dict['www_derived_dir'])==False
+            assert os.path.islink(full_www_derived_dir)
+        except:
+            logging.error("group 3 directories failed")
+            sys.exit(-1)
         
+
+        logging.info("ALL PATHS VERIFIED")
 
     def print_baseline_time_info(self):
         """

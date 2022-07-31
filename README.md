@@ -20,3 +20,7 @@ To bring things down:
 
 # manually starting dockers
 The scripts start-dockers.sh, stop-dockers.sh, stop-start-dockers.sh are for starting the dockers "manually," without docker-compose. They're used when developing and testing.
+
+# Project Log
+
+https://docs.google.com/document/d/1UDShbouFjIxBU0mpFkE1or6D4iOpjN0G8gaLTpkIcR4/edit?usp=sharing

@@ -12,13 +12,18 @@ export PANO_LOG=/mnt/HD2/pano/logs
 ###########################3
 #read  -n 1 -p "type enter to run containers:" mainmenuinput
 
-docker run -d -p 21:21 -p21100-21110:21100-21110 -v "$PANO_FTP":/home/ftpupload -v "$PANO_LOG":/var/log/vsftpd --env PASV_ADDRESS="$LOCAL_IP" --name vsftpd vsftpd
+docker run -d -p 21:21 -p21100-21110:21100-21110 -v "$PANO_FTP":/home/ftpupload -v "$PANO_LOG":/var/log/vsftpd --env PASV_ADDRESS="$LOCAL_IP" --name vsftpd pano-docker_vsftpd
 
-docker run -d -v "$PANO_WWW":/var/www -v "$PANO_FTP":/var/FTP -v "$PANO_DERIVED":/var/derived  -v "$PANO_LOG":/home/pano/logs --name pano pano
+docker run -d -t -v "$PANO_WWW":/var/www/localhost/htdocs -v "$PANO_FTP":/var/FTP -v "$PANO_DERIVED":/var/derived -v "$PANO_LOG":/var/log -p 8080:80 --name lighttpd pano-docker_lighttpd
 
-docker run -d -t -v "$PANO_WWW":/var/www/localhost/htdocs -v "$PANO_FTP":/var/FTP -v "$PANO_DERIVED":/var/derived -v "$PANO_LOG":/var/log -p 8080:80 --name lighttpd lighttpd
 
-docker ps
+#
+# COMMENT ONE OF FOLLOWING TWO LINES:
+#
+# RUN DOCKER AND RETURN (normal mode)
+#docker run -d -v "$PANO_WWW":/var/www -v "$PANO_FTP":/var/FTP -v "$PANO_DERIVED":/var/derived  -v "$PANO_LOG":/home/pano/logs --name pano pano
 
 # for debugging, you can run the pano docker directly and stay attached:
-# docker run  -it -v /mnt/HD2/pano/www:/var/www -v /mnt/HD2/pano/FTP:/var/FTP -v /mnt/HD2/pano/derived:/var/derived -v /mnt/HD2/pano/logs:/home/pano/logs --name pano pano
+docker run -it -v "$PANO_WWW":/var/www -v "$PANO_FTP":/var/FTP -v "$PANO_DERIVED":/var/derived  -v "$PANO_LOG":/home/pano/logs --name pano-docker_pano /bin/bash
+
+
