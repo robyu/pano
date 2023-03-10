@@ -1,5 +1,5 @@
 #
-# use run-docker-compose.sh to set variables appropriately
+# use run-docker-compose.sh to set variables first!
 #
 version: '3'
 services:

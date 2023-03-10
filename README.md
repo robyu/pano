@@ -1,6 +1,10 @@
 # pano-docker
 pano + vsftpd + lighttpd
 
+To build the images, run a script which sets appropriate env variables and then 
+runs docker-compose build:
+./docker-compose-build.sh
+
 To build and run the three dockers, run the script
 > docker-compose-up.sh
 
@@ -19,7 +23,7 @@ To bring things down:
 > docker-compose down
 
 # manually starting dockers
-The scripts start-dockers.sh, stop-dockers.sh, stop-start-dockers.sh are for starting the dockers "manually," without docker-compose. They're used when developing and testing.
+The scripts start-dockers.sh and stop-dockers.sh  are for starting the dockers "manually," without docker-compose. They're used when developing and testing.
 
 # Project Log
 

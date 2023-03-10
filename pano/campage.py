@@ -553,7 +553,7 @@ class CamPage:
         navbar_html = self.make_html_navbar(prev_fname, next_fname)
         html_doc = self.make_html_doc(carousel_html, media_html, navbar_html)
         self.write_html(dest_fname, html_doc)
-        logging.info("wrote %s" % dest_fname)
+        logging.debug("wrote %s" % dest_fname)
 
         return dest_fname
 

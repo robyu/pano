@@ -122,7 +122,7 @@ def cull_empty_dirs(base_data_dir):
     #subprocess.call(['find',base_data_dir,'-type','d','-empty','-exec','rm','-rf','{}',';'])
     cmd_list = ['find',base_data_dir,'-type','d','-empty','-delete']
     cp=subprocess.run(cmd_list)
-    assert cp.returncode==0
+    assert cp.returncode==0, f"error while culling {base_data_dir}"
 
 #@timeit.timeit        
 def walk_dir_and_load_db(db, base_data_dir, cam_name_model_list):

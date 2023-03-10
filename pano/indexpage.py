@@ -296,6 +296,13 @@ class IndexPage:
                 
             #end
         #end
+        if len(cards_html)==0:
+            cards_html = """
+<p>
+<p><strong>Camera image processing in progress...</strong></p>
+<p>"""
+
+            
         return cards_html
         
     def make_index(self, cam_list):

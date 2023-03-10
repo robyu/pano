@@ -87,7 +87,7 @@ class Pano:
         logging.info("VERIFY CONFIG PATHS")
         logging.info("===================")
         logging.info(f"base_data_dir:   {self.param_dict['base_data_dir']} ")
-        logging.info(f"derived_dir:     {self.param_dict['derived_dir']}. ")
+        logging.info(f"derived_dir:     {self.param_dict['derived_dir']}")
         logging.info(f"www_dir:         {self.param_dict['www_dir']} ")
         logging.info(f"www_dir/css:     {self.param_dict['base_data_dir']}/css ")
         logging.info(f"www_dir/fonts:   {self.param_dict['base_data_dir']}/fonts ")
@@ -308,7 +308,7 @@ class Pano:
         while sleep_sec > 0:
             sleep_interval_sec = min(20, sleep_sec)
             sleep_sec = sleep_sec - sleep_interval_sec
-            logging.info(f"sleep for {sleep_interval_sec} sec ({sleep_sec/60.0} min remaining)")
+            logging.info(f"sleep for {sleep_interval_sec} sec ({sleep_sec/60.0:.1f} min remaining)")
             time.sleep(sleep_interval_sec)
         return
 
@@ -421,8 +421,8 @@ class Pano:
         for index in range(len(cam_list)):
         
             cam_page_base_fname =  'cam_%02d' % index  # webpage generator will add suffix + .html
-
             cam_name = cam_list[index]['name']
+            logging.info(f"generating pages for {cam_page_base_fname}")
 
 
             #
@@ -501,7 +501,7 @@ class Pano:
             self.derive_media(self.param_dict['skip_derive_media'])
 
             cam_list = self.gen_camera_pages(self.param_dict['skip_gen_cam_pages'])
-            logging.info("generated camera pages")
+            logging.info("generated all camera pages")
 
             index_fname = self.gen_index_page(cam_list)
             logging.info("updated index page (%s)" % index_fname)
