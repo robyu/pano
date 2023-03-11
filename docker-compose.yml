@@ -1,9 +1,10 @@
 #
-# use run-docker-compose.sh to set variables first!
+# first run docker-compose-setup.sh to set variables!
 #
 version: '3'
 services:
    lighttpd:
+      image: robyu/pano-docker_lighttpd:${IMAGE_TAG}
       build:
          context: ./lighttpd-docker
          args:
@@ -18,6 +19,7 @@ services:
          - ${PANO_LOG}:/var/log
       restart: unless-stopped
    vsftpd:
+      image: robyu/pano-docker_vsftpd:${IMAGE_TAG}
       build:
          context: ./docker-vsftpd
          args:
@@ -33,6 +35,7 @@ services:
          - PASV_ADDRESS=${LOCAL_IP}
       restart: unless-stopped
    pano:
+      image: robyu/pano-docker_pano:${IMAGE_TAG}
       build:
         context: ./pano
         args:
