@@ -62,7 +62,7 @@ In the end, I settled on the Amcrest  "bullet" IP cameras: the IP2M-842 and its 
 
 For mounting, I found a 3D-printable mount on [Thingiverse](https://www.thingiverse.com/thing:2022254/files) , which made installing the cameras outside a bit easier.
 
-<img src="file:///Users/ryu/Documents/p2023/pano/readme-images/cam-mount-0.jpg" title="" alt="mounted cmaera" width="300">
+<img src="./readme-images/cam-mount-0.jpg" title="" alt="mounted cmaera" width="300">
 
 ## My Home Network
 
@@ -132,7 +132,7 @@ Air squirrel!
 
 A nocturnal gentleman filching my childrens' shoes
 
-![59[M][0@0][0].jpg](/Users/ryu/Documents/p2023/pano/readme-images/59[M][0@0][0].jpg)
+![59[M][0@0][0].jpg](./readme-images/59[M][0@0][0].jpg)
 
 
 
