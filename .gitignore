@@ -7,6 +7,7 @@ derived/
 www/*.html
 *~
 pano-breadcrumb.txt
+.DS_STORE
 
 # these are links to directories
 FTP
