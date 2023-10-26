@@ -9,7 +9,5 @@ docker stop pano
 
 # delete containers
 ######################
-docker rm lighttpd
-docker rm vsftpd
-docker rm pano
+echo y | docker container prune
 
