@@ -1,6 +1,6 @@
 export USERID=$(id -u)
 export GROUPID=$(id -g)
-export LOCAL_IP=192.68.2.8
+export LOCAL_IP=192.168.2.8
 export PANO_WWW=/mnt/HD2/pano/www
 export PANO_FTP=/mnt/HD2/pano/FTP
 export PANO_DERIVED=/mnt/HD2/pano/derived
