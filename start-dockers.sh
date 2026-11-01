@@ -31,7 +31,7 @@ docker run -d  -v "$PANO_WWW":/var/www/localhost/htdocs -v "$PANO_FTP":/var/FTP 
 # COMMENT ONE OF FOLLOWING TWO LINES:
 #
 # RUN DOCKER AND RETURN (normal mode)
-docker run -d -v "$PANO_WWW":/var/www -v "$PANO_FTP":/var/FTP -v "$PANO_DERIVED":/var/derived  -v "$PANO_LOG":/home/pano/logs --name pano "$IMAGE_PANO":"$IMAGE_TAG"
+docker run -d -v "$PANO_CONFIG":/home/pano/pano-docker.json:ro -v "$PANO_WWW":/var/www -v "$PANO_FTP":/var/FTP -v "$PANO_DERIVED":/var/derived  -v "$PANO_LOG":/home/pano/logs --name pano "$IMAGE_PANO":"$IMAGE_TAG"
 
 # for debugging, you can run the pano docker interactively and stay attached
 # also, /home/pano/develop should be mapped to the ./pano code directrory

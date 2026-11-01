@@ -1,5 +1,9 @@
 # pano procedures
 
+> NOTE (2026-10-31): Docker commands below are historical (imported from the log).
+> Current scripts use the Compose v2 plugin: `./docker-compose-up.sh`,
+> `./docker-compose-down.sh`, `./docker-compose-build.sh`. v1 `docker-compose` is EOL.
+
 Imported from the **text** of `~/pano-log.pdf`. Step-by-step operational procedures
 recorded there. Credentials omitted.
 

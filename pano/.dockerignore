@@ -1,0 +1,18 @@
+# build context is ./pano but only *.py, start-pano-docker.sh and www/ are copied.
+# exclude runtime data, docs/media, and config (pano-docker.json is bind-mounted).
+__pycache__/
+*.py[cod]
+*.json
+*.json~
+*.sqlite
+pano.log*
+pano-breadcrumb.txt
+FTP/
+derived/
+amcrest-plugin.zip
+home/
+amcrest-camera-support/
+camera-mount/
+writeup/
+config/
+.DS_Store

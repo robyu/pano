@@ -147,23 +147,24 @@ pano + vsftpd + lighttpd
 1. Pull images from docker hub:
 > ./docker-compose-pull.sh
 
-To build and run the three dockers, run the script
-
-> docker-compose-up.sh
->>>>>>> main
+Or build them locally:
+> ./docker-compose-build.sh
 
 2. Start the dockers:
 > ./docker-compose-up.sh
 
 3. Stop the dockers:
-> docker compose down
+> ./docker-compose-down.sh
+
+The scripts use the Docker Compose v2 plugin (`pano_compose` in
+`docker-compose-setup.sh`), not the obsolete v1 `docker-compose`.
 
 
 ## Building the Images
-1. Set the tag, e.g. "rel001", in docker-compose-setup.sh
+1. Set the tag, e.g. "rel002", in docker-compose-setup.sh
 
 2. Build:
-> docker-compose-build.sh
+> ./docker-compose-build.sh
 
 ## Pushing New Images to Docker Hub
 git login
@@ -177,7 +178,7 @@ To monitor pano (other dockers write logs to the same directory)
 
 To bring things down:
 
-> docker-compose down
+> ./docker-compose-down.sh
 
 
 # Manually starting dockers

@@ -1,10 +1,10 @@
 #
 # first run docker-compose-setup.sh to set variables!
 #
-version: '3'
 services:
    lighttpd:
       image: robyu/pano-docker_lighttpd:${IMAGE_TAG}
+      container_name: pano-docker_lighttpd_1
       build:
          context: ./lighttpd-docker
          args:
@@ -18,8 +18,15 @@ services:
          - ${PANO_DERIVED}:/var/derived
          - ${PANO_LOG}:/var/log
       restart: unless-stopped
+      healthcheck:
+         test: ["CMD-SHELL", "nc -z 127.0.0.1 80 || exit 1"]
+         interval: 30s
+         timeout: 5s
+         start_period: 10s
+         retries: 3
    vsftpd:
       image: robyu/pano-docker_vsftpd:${IMAGE_TAG}
+      container_name: pano-docker_vsftpd_1
       build:
          context: ./docker-vsftpd
          args:
@@ -34,17 +41,31 @@ services:
       environment:
          - PASV_ADDRESS=${LOCAL_IP}
       restart: unless-stopped
+      healthcheck:
+         test: ["CMD-SHELL", "timeout 5 bash -c '</dev/tcp/127.0.0.1/21' || exit 1"]
+         interval: 30s
+         timeout: 10s
+         start_period: 10s
+         retries: 3
    pano:
       image: robyu/pano-docker_pano:${IMAGE_TAG}
+      container_name: pano-docker_pano_1
       build:
         context: ./pano
         args:
          - USER_ID=${USERID}
          - GROUP_ID=${GROUPID}
       volumes:
+         - ${PANO_CONFIG:-./pano/pano-docker.json}:/home/pano/pano-docker.json:ro
          - ${PANO_WWW}:/var/www
          - ${PANO_FTP}:/var/FTP
          - ${PANO_DERIVED}:/var/derived
          - ${PANO_LOG}:/home/pano/logs
       restart: unless-stopped
+      healthcheck:
+         test: ["CMD-SHELL", "pgrep -f '[p]ython3 pano.py' >/dev/null || exit 1"]
+         interval: 30s
+         timeout: 5s
+         start_period: 30s
+         retries: 3
        

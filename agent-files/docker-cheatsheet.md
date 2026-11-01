@@ -70,3 +70,17 @@ rm hello-world                 # (as written) remove image
   then `docker push robyu/pano-docker_<svc>:rel001`.
 - Alpine package pinning breaks rebuilds over time (old packages are removed from the
   repo) — update the pinned versions when a build fails.
+
+## chuyu server actuals (2026-10-31)
+
+- Compose scripts use `pano_compose` (defined in `docker-compose-setup.sh`), which
+  prefers the v2 plugin at `/usr/libexec/docker/cli-plugins/docker-compose`
+  (v2.35.1). The `docker compose` resolved by the Docker CLI here is an old
+  experimental compose-cli that **drops build args**; v1 `docker-compose` is EOL and
+  fails recreation under Docker 28 (`KeyError: 'ContainerConfig'`).
+- Use `./docker-compose-build.sh`, `./docker-compose-up.sh`, `./docker-compose-down.sh`
+  rather than calling `docker-compose`/`docker compose` directly.
+- Current images: `robyu/pano-docker_{pano,lighttpd,vsftpd}:rel002`; containers keep
+  legacy names `pano-docker_{pano,lighttpd,vsftpd}_1` via `container_name`.
+- pano config is bind-mounted from `$PWD/pano/pano-docker.json` (read-only): edit it,
+  then `docker restart pano-docker_pano_1`; no rebuild needed.

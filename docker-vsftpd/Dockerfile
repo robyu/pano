@@ -1,6 +1,6 @@
-FROM centos:centos8.4.2105
+FROM almalinux:9@sha256:245f8aab832fe800aa42bdab5fad75ebbd8e0b4c9f24820a83c638b177857ae2
 
-RUN yum -y install nano openssl vsftpd && rm -rf /var/cache/yum/*
+RUN dnf -y install nano openssl vsftpd && dnf clean all
 
 #
 # match user id and group id with host
@@ -32,5 +32,8 @@ VOLUME /home/ftpupload
 VOLUME /var/log/vsftpd
 
 EXPOSE 20 21 21100-21110
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD timeout 5 bash -c '</dev/tcp/127.0.0.1/21' || exit 1
 
 ENTRYPOINT ["/start.sh"]

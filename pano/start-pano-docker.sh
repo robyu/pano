@@ -18,10 +18,10 @@ ln -s -f -v /var/FTP     /var/www/FTP
 #
 # run pano
 #################3##
-python3 pano.py --loglevel info --logfname /home/pano/logs/pano.log --nodroptable  pano-docker.json
+exec python3 pano.py --loglevel info --logfname /home/pano/logs/pano.log --nodroptable  pano-docker.json
 
 #
 # you can run pano.py in the debugger with
-# python3 -m pudb pano.py ...
+# python3 -m pdb pano.py ...
 #
 # python3 pano.py --loglevel info --logfname stdout --nodroptable  pano-docker-test.json

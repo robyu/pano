@@ -2,7 +2,7 @@
 
 source docker-compose-setup.sh
 
-docker-compose build
+pano_compose build
 
 docker images --filter=reference='robyu/pano*'
 

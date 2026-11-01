@@ -7,11 +7,12 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
 * AGENTS.md - agent instructions (DOIT, HEY, self-documentation protocols)
 * README.md - project readme
 * update-docker-2026.md - plan to modernize the three Dockerfiles (pano/lighttpd/vsftpd)
-* docker-compose.yml - compose file wiring the pano/lighttpd/vsftpd stacks
-* docker-compose-build.sh - build images via compose
+* docker-compose.yml - compose file wiring the pano/lighttpd/vsftpd stacks; pano config is bind-mounted read-only
+* docker-compose-build.sh - build images via Compose v2 (`pano_compose`)
 * docker-compose-pull.sh - pull images via compose
-* docker-compose-setup.sh - one-time setup via compose
+* docker-compose-setup.sh - one-time setup: env vars, config check, `pano_compose`
 * docker-compose-up.sh - bring the stack up via compose
+* docker-compose-down.sh - bring the stack down via compose
 * start-dockers.sh - start all docker containers
 * stop-dockers.sh - stop all docker containers
 * .gitignore - ignore rules
@@ -32,9 +33,12 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
 * agent-files/pano-procedures.md - operational procedures from pano-log.pdf text
   (add camera, FTP setup, camera networking, start/stop, debug, permissions)
 * agent-files/docker-cheatsheet.md - docker command reference from pano-log.pdf text
+* agent-files/update-docker-2026.md - executed 2026 Docker modernization plan (rel002
+  bases, config bind-mount, toolchain caveats)
 
 ## docker-vsftpd/
-* docker-vsftpd/Dockerfile - vsftpd image build
+* docker-vsftpd/Dockerfile - almalinux:9 vsftpd image build
+* docker-vsftpd/.dockerignore - build context exclusions
 * docker-vsftpd/start.sh - container entrypoint
 * docker-vsftpd/vsftp.conf - plain vsftpd config
 * docker-vsftpd/vsftp_ftps.conf - FTPS (explicit TLS) config
@@ -43,7 +47,8 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
 * docker-vsftpd/README.md - vsftpd image notes
 
 ## lighttpd-docker/
-* lighttpd-docker/Dockerfile - lighttpd image build
+* lighttpd-docker/Dockerfile - alpine:3.20 lighttpd image build
+* lighttpd-docker/.dockerignore - build context exclusions
 * lighttpd-docker/start.sh - container entrypoint
 * lighttpd-docker/etc/lighttpd/lighttpd.conf - main lighttpd config
 * lighttpd-docker/etc/lighttpd/mime-types.conf - mime type map
@@ -58,7 +63,9 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
 
 ## pano/
 Application code and runtime data.
-* pano/Dockerfile - pano image build
+* pano/Dockerfile - pano image build (python:3.14-slim-trixie)
+* pano/.dockerignore - build context exclusions (runtime data, config, media)
+* pano/requirements.txt - pinned pip deps (click)
 * pano/pano.py - main pano application
 * pano/campage.py - camera page renderer
 * pano/indexpage.py - index page renderer

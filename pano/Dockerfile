@@ -1,50 +1,48 @@
-# ubuntu:latest maps to latest LTS
+# pano application image
 #
 # docker build -t imagename:00 .
-# docker run -t -d  -v /Users/chuyu/Documents/2020/docker-pano/pano:/home/pano  mypano:13
-# docker exec -it -u root agitated_joliot /bin/bash
 #
-#FROM phusion/baseimage:master-amd64
-FROM phusion/baseimage:focal-1.0.0
+# Base is the official Python image pinned by digest (Python 3.14.x on Debian trixie).
+FROM python:3.14-slim-trixie@sha256:cd89c30eda26ee911a4611b18680086e0ea42e6f5f8cbe653d07fa7958c9cec8
 
-ENV www_dir /var/www
-ENV ftp_dir /var/FTP
-ENV derived_dir /var/derived
-ENV log_dir /home/pano/logs
+ENV www_dir=/var/www
+ENV ftp_dir=/var/FTP
+ENV derived_dir=/var/derived
+ENV log_dir=/home/pano/logs
 
-RUN add-apt-repository -y ppa:deadsnakes/ppa
-RUN apt update
-
-RUN apt install -y nano 
-RUN apt install -y ffmpeg
-RUN apt install -y python3.7
-RUN apt install -y python3.7-distutils # https://askubuntu.com/questions/1239829/modulenotfounderror-no-module-named-distutils-util
-RUN apt install -y sqlite3
-RUN apt install -y python3-pip
-RUN apt install -y imagemagick
-
-###################
-# set timezone
-# see https://serverfault.com/questions/683605/docker-container-time-timezone-will-not-reflect-changes
-# and https://stackoverflow.com/questions/44331836/apt-get-install-tzdata-noninteractive
-#
-
-# need to set the symbolic link BEFORE installing tzdata!!!
-# otherwise tzdata sets the timezone to Etc/UTC
 ENV TZ=America/Los_Angeles
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-# make tzdata installation non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt install -y tzdata
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PIP_NO_CACHE_DIR=1
 
 #
-# make python3.7 the default
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.7 1
+# runtime tools: ffmpeg (video), imagemagick (thumbnails), sqlite3,
+# tzdata, ca-certificates; procps provides pgrep for the healthcheck.
+#
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        ffmpeg \
+        imagemagick \
+        nano \
+        procps \
+        sqlite3 \
+        tzdata \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN python3.7 -m pip install --upgrade pip
-RUN python3.7 -m pip install dtutils
-RUN python3.7 -m pip install click
-RUN python3.7 -m pip install pudb
+#
+# set timezone (must happen after tzdata is installed)
+#
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
+    && echo $TZ > /etc/timezone
+
+#
+# python deps (dtutils is the local /home/pano/dtutils.py, not the PyPI package)
+#
+COPY requirements.txt /tmp/requirements.txt
+RUN python3 -m pip install --no-cache-dir -r /tmp/requirements.txt \
+    && rm /tmp/requirements.txt
 
 #
 # match user id and group id with host
@@ -70,31 +68,35 @@ VOLUME ${www_dir}
 # so I can make changes on the code and see them in the container
 RUN mkdir /home/pano/develop
 VOLUME /home/pano/develop
+
 ###############
 # remaining operations are done as user 'pano'
 USER pano
 
 COPY --chown=pano:pano *.py          /home/pano/
-COPY --chown=pano:pano *.json        /home/pano/
 COPY --chown=pano:pano start-pano-docker.sh /home/pano
 
 #
 # for www files such as css, fonts, etc.
 # we need to copy the files into the container,
-# then symlink the files into /var/www once pano starts (see start-pano.sh)
+# then symlink the files into /var/www once pano starts (see start-pano-docker.sh)
 #
 COPY --chown=pano:pano www/       /home/pano/www/
 
-VOLUME /home/pano
-
-RUN mkdir ${log_dir} 
-#RUN chmod ugo+rw -R ${log_dir}
+#
+# note: pano-docker.json is NOT baked into the image. It is bind-mounted
+# read-only at /home/pano/pano-docker.json (see docker-compose.yml).
+#
+# Do NOT declare VOLUME /home/pano here: an anonymous volume would mask the
+# code COPYed into the image and survive image upgrades. Only /home/pano/logs
+# and /home/pano/develop are volumes.
+#
+RUN mkdir ${log_dir}
 VOLUME ${log_dir}
 
 WORKDIR /home/pano
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD pgrep -f "[p]ython3 pano.py" >/dev/null || exit 1
 
 CMD ["./start-pano-docker.sh"]
-
-
-
