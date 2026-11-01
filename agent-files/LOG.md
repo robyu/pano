@@ -12,3 +12,5 @@
 2026-10-31 Verified rel002 runtime: config edit+restart changes max_age_days, camera pages regenerate, FTP uploads/derive work, lighttpd auth and vsftpd login OK
 2026-10-31 Noted chuyu toolchain caveat: build with legacy docker-compose; recreate with /usr/libexec/docker/cli-plugins/docker-compose v2 (legacy 1.29.2 fails on Docker 28)
 2026-10-31 Migrated scripts to Compose v2 via pano_compose in docker-compose-setup.sh; added docker-compose-down.sh; updated README/INDEX/docs
+2026-11-01 Created agent-files/amcrest-plugin.md - analysis of npmedia NPAPI plugin (packaging, glue, JS API, Dahua SDK layers, Firefox 51 requirement)
+2026-11-01 Moved amcrest plugin artifacts (amcrest-camera-support/, amcrest-plugin.zip, npmedia.bundle/) into repo-root amcrest-support/; updated INDEX.md and amcrest-plugin.md paths

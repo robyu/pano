@@ -20,6 +20,8 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
 ## agent-files/
 * agent-files/INDEX.md - this catalog
 * agent-files/LOG.md - change log for agent-files
+* agent-files/amcrest-plugin.md - Amcrest/Dahua NPMedia browser plugin: packaging,
+  NPAPI/Cocoa glue, JS API, SDK/framework layers, Firefox 51 requirement
 * agent-files/amcrest-cameras-from-log.md - Amcrest cam config (TCP/IP, FTP, encode,
   Auto Maintain, P2P serials, mobile-app onboarding) extracted from pano-log.pdf images
 * agent-files/shinobi-from-log.md - (OBSOLETE) Shinobi NVR config (monitor/stream/
@@ -83,7 +85,6 @@ Application code and runtime data.
 * pano/panodb.sqlite - sqlite database
 * pano/pano.log - runtime log
 * pano/pano-breadcrumb.txt - breadcrumb text
-* pano/amcrest-plugin.zip - camera plugin archive
 * pano/start-pano-docker.sh - start pano under docker
 * pano/start-pano-chuyu-server.sh - start chuyu server
 
@@ -104,15 +105,15 @@ Frontend assets (bootstrap + custom).
 * pano/www/fonts/glyphicons-halflings-regular.* - glyphicons fonts
 * pano/www/mryuck.png - logo image
 
-### pano/home/ryu/npmedia.bundle/
-Dahua/Amcrest Netscape (NPAPI) plugin bundle: Contents/Info.plist, MacOS/npmedia
-binary, Frameworks/*.so|dylib (dhnetsdk, dhplay, etc.), Resources (icons/bmp/cur,
-en.lproj strings). Provided for camera browser plugin support.
-
-### pano/amcrest-camera-support/
-* pano/amcrest-camera-support/README.md - amcrest plugin support notes
-* pano/amcrest-camera-support/Firefox 51.0b9.dmg - old firefox installer for plugin
-* pano/amcrest-camera-support/webplugin_alps.pkg - web plugin package
+## amcrest-support/
+Amcrest/Dahua camera browser plugin artifacts (not used by pano at runtime).
+* amcrest-support/amcrest-plugin.zip - camera plugin archive (npmedia.bundle)
+* amcrest-support/npmedia.bundle/ - Dahua/Amcrest Netscape (NPAPI) plugin bundle:
+  Contents/Info.plist, MacOS/npmedia binary, Frameworks/*.so|dylib (dhnetsdk, dhplay,
+  etc.), Resources (icons/bmp/cur, en.lproj strings)
+* amcrest-support/amcrest-camera-support/README.md - amcrest plugin support notes
+* amcrest-support/amcrest-camera-support/Firefox 51.0b9.dmg - old firefox installer for plugin
+* amcrest-support/amcrest-camera-support/webplugin_alps.pkg - web plugin package
 
 ### pano/camera-mount/
 * pano/camera-mount/README.md - printed camera mount notes
