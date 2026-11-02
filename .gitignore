@@ -13,3 +13,6 @@ pano-breadcrumb.txt
 FTP
 testdata
 www/derived
+
+# local camera discovery output (may include snapshots/config)
+amcrest-console/fixtures/

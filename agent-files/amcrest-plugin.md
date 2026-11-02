@@ -1,3 +1,8 @@
+---
+update: 2026-11-01 16:24 PST
+tags: amcrest-plugin, npapi, obsolete-path
+---
+
 # Amcrest / Dahua browser plugin (NPMedia)
 
 The "Amcrest browser plugin" is a Dahua **NPMedia NPAPI** plugin (the Flash-era
@@ -84,11 +89,33 @@ Intel binaries. So the plugin only loads on x86 macOS with Firefox ≤ 51 (hence
 `agent-files/pano-log-chronology.md` records repeated crashes and the fallback to
 the Amcrest iOS app / old x86 Mac.
 
+## Status on macOS 26 (Tahoe) — 2026-11-01
+
+Firefox 51.0b9 does **not** run on an x86 Mac running macOS 26 (Tahoe). The
+plugin is 32-bit i386, and macOS 26 has no 32-bit support; Rosetta 2 also does
+not support i386. The old "x86 Mac + Firefox 51 + NPMedia" path is therefore
+dead on this machine.
+
+The plugin only provides the live-video widget. The camera's login page and CGI
+API still work in modern browsers:
+
+* `http://<cam>/` loads and accepts the admin login.
+* `http://<cam>/cgi-bin/configManager.cgi?action=getConfig&name=MotionDetect`
+  returns the motion config after Basic/Digest auth.
+* The old UI's live view/plugin is what fails.
+
+Use the CGI API or the replacement console (`amcrest-console-plan.md`); do not
+try to run Firefox 51 on Tahoe.
+
 ## Operational notes
 
-* To configure an Amcrest camera: use an old x86 Mac (e.g. macOS 10.13), install
-  Firefox 51, install the NPMedia plugin (auto-downloaded by the camera or via
-  `webplugin_alps.pkg`), browse to the camera's IP, log in.
+* Modern replacement plan (ARM Mac, plugin-free Config + mask-editing Live View):
+  see `agent-files/amcrest-modern-access.md` and
+  `agent-files/amcrest-console-plan.md`.
+
+* Legacy procedure, only for an old x86 macOS VM/host (e.g. macOS 10.13):
+  install Firefox 51, install the NPMedia plugin, browse to the camera's IP,
+  log in. This procedure does **not** apply to macOS 26.
 * If the plugin misbehaves, clear Firefox history/cookies and relaunch
   (`agent-files/network-and-misc-from-log.md`).
 * Firefox 51 must not auto-update (updates break NPAPI).

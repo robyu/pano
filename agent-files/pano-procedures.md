@@ -1,3 +1,8 @@
+---
+update: 2026-11-01 16:30 PST
+tags: pano, procedures, config
+---
+
 # pano procedures
 
 > NOTE (2026-10-31): Docker commands below are historical (imported from the log).
@@ -38,6 +43,19 @@ recorded there. Credentials omitted.
 
 > Note: an invalid JSON silently produces no new web page; it can take hours before you
 > notice. Always validate with `python -m json.tool`.
+
+## pano-docker.json conventions
+
+- **Keys beginning with `@` are comments.** `pano/panoconfig.py:122` deletes any
+  top-level key whose first character is `@` before merging defaults, and
+  `panoconfig.py:128` skips `@` keys in the defaults dict. Example in
+  `pano/pano-docker.json`: `"@camera_list"` is a commented-out/example list; only
+  `"camera_list"` is read.
+- JSON itself has no comments, so use this `@` prefix instead of `//` or `#`.
+- The convention is applied by pano's config loader, **not** by generic JSON tooling;
+  scripts that read the file directly (e.g. `amcrest-console/discover.py`) do not strip
+  `@` keys automatically.
+- Since `@` keys are top-level-only, do not put comment keys inside camera objects.
 
 ## Configure the camera's FTP destination
 

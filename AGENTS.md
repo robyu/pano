@@ -29,6 +29,10 @@ This includes operational and system architecture notes.
 Updates should be logged in agent-files/LOG.md in the form: <date> <short description of change>
 Markdown files should be logged in agent-files/INDEX.md
 
+Files in agent-files/ should include frontmatter:
+* update: date & time of update or creation
+* tags: topic(s)
+
 ### HEY protocol
 Prefix all responses with "hey" so I know that these instructions have been read.
 

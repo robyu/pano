@@ -21,7 +21,17 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
 * agent-files/INDEX.md - this catalog
 * agent-files/LOG.md - change log for agent-files
 * agent-files/amcrest-plugin.md - Amcrest/Dahua NPMedia browser plugin: packaging,
-  NPAPI/Cocoa glue, JS API, SDK/framework layers, Firefox 51 requirement
+  NPAPI/Cocoa glue, JS API, SDK layers, Firefox 51 requirement, macOS 26 failure
+* agent-files/amcrest-modern-access.md - plan for replacing the plugin on ARM Mac:
+  why emulation is dead, vendor-app dead ends, CGI/snapshot + motion-mask model,
+  browser-based local console design (no signing), MVP, optional live-streaming
+  effort assessment, camera-replacement exit path
+* agent-files/amcrest-console-plan.md - implementation plan for the plugin-free
+  console: CLI (`--camera-ip`), browser login screen, Basic/Digest proxy, layout,
+  HTTP/security model, phases, tests, risks
+* agent-files/amcrest-camera-contact.md - 2026-11-01 camera probe: reachable
+  IP3M-943B units, IP2M-842 Basic-auth correction, cam-01 firmware/mask/mirror,
+  ARP, next steps
 * agent-files/amcrest-cameras-from-log.md - Amcrest cam config (TCP/IP, FTP, encode,
   Auto Maintain, P2P serials, mobile-app onboarding) extracted from pano-log.pdf images
 * agent-files/shinobi-from-log.md - (OBSOLETE) Shinobi NVR config (monitor/stream/
@@ -33,10 +43,20 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
 * agent-files/pano-log-chronology.md - condensed dated history from pano-log.pdf text
   (2024→2017; pre-pano/Zoneminder/Shinobi entries marked obsolete)
 * agent-files/pano-procedures.md - operational procedures from pano-log.pdf text
-  (add camera, FTP setup, camera networking, start/stop, debug, permissions)
+  (add camera, FTP setup, camera networking, start/stop, debug, permissions,
+  pano-docker.json `@`-prefixed comment-key convention)
 * agent-files/docker-cheatsheet.md - docker command reference from pano-log.pdf text
 * agent-files/update-docker-2026.md - executed 2026 Docker modernization plan (rel002
   bases, config bind-mount, toolchain caveats)
+
+## amcrest-console/
+* amcrest-console/discover.py - phase 0 discovery: CLI camera target, preemptive
+  Basic (IP2M-842) / Digest (IP3M-943) with model detection, skips the
+  IP2M-842 getSoftwareVersion web-server crash, sanitized config/snapshot fixtures,
+  opt-in full-18-row legacy mask write
+* amcrest-console/tests/test_discover.py - unittest coverage for parsing, redaction,
+  pano credential lookup, Basic/Digest auth, JPEG dimensions, full-row mask writes
+* amcrest-console/fixtures/ - local discovery output (snapshots/configs; gitignored)
 
 ## docker-vsftpd/
 * docker-vsftpd/Dockerfile - almalinux:9 vsftpd image build
