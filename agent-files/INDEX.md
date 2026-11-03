@@ -50,12 +50,24 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
   bases, config bind-mount, toolchain caveats)
 
 ## amcrest-console/
+* amcrest-console/README.md - run steps, SSH-tunnel remote access, security model, tests
+* amcrest-console/camera.py - shared stdlib CGI client: explicit Basic/Digest,
+  request lock, throttle/backoff, identity cache, legacy mask codec helpers
+* amcrest-console/console.py - phase 1 CLI: `--camera-ip`, loopback bind, tokenized
+  URL, reachability check, browser launch
+* amcrest-console/server.py - phase 1 loopback server: token/Host/Origin checks,
+  browser login, in-memory session, snapshot proxy
+* amcrest-console/static/ - phase 1 frontend (index.html, app.js, style.css)
 * amcrest-console/discover.py - phase 0 discovery: CLI camera target, preemptive
   Basic (IP2M-842) / Digest (IP3M-943) with model detection, skips the
   IP2M-842 getSoftwareVersion web-server crash, sanitized config/snapshot fixtures,
   opt-in full-18-row legacy mask write
 * amcrest-console/tests/test_discover.py - unittest coverage for parsing, redaction,
   pano credential lookup, Basic/Digest auth, JPEG dimensions, full-row mask writes
+* amcrest-console/tests/test_camera.py - client tests: credential verify, identity
+  caching/skip, backoff, request serialization
+* amcrest-console/tests/test_server.py - server tests: token/Host/Origin rejection,
+  login/cookie, snapshot proxy, logout, static serving
 * amcrest-console/fixtures/ - local discovery output (snapshots/configs; gitignored)
 
 ## docker-vsftpd/

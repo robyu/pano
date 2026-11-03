@@ -43,3 +43,5 @@
 2026-11-01 Root-caused IP2M-842 web-server crashes: getSoftwareVersion crashes/restarts the web server. discover.py now queries getMachineName/getDeviceType first, skips getSoftwareVersion for IP2M-842, and uses a short Mozilla UA + Connection: close; full 8-camera discovery passes (24 tests)
 2026-11-01 Reworded IP2M-842 getSoftwareVersion docs/code: "resets the HTTP server" -> "crashes/restarts the web server"
 2026-11-01 Recorded cam-01 (192.168.2.121) IP2M-842 firmware 2.212.0000.2.R (build 2016-08-11) and WEB 3.2.1.273284 from its built-in webpage; serial AMC002A34HATK2G7HH confirmed
+2026-11-01 Added remote-access note to amcrest-console-plan.md: keep loopback bind, reach from mac-mini via SSH tunnel (ssh -L 8765:127.0.0.1:8765 ryu@chuyu-server.local)
+2026-11-01 Implemented amcrest-console phase 1: camera.py (shared client, lock/backoff/identity), server.py (token/Host/Origin, login/session, snapshot), console.py (CLI, loopback, tokenized URL), static UI, README; 43 tests passing + mock-camera smoke test

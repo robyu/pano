@@ -1,5 +1,5 @@
 ---
-update: 2026-11-01 16:24 PST
+update: 2026-11-01 21:05 PST
 tags: amcrest-console, implementation-plan
 ---
 
@@ -192,24 +192,40 @@ Startup prints a tokenized URL, e.g.
 `http://127.0.0.1:8765/s/<token>/`, and fails fast on a bad/missing IP or an
 unreachable camera. Login errors are shown in the form.
 
+## Remote access (SSH tunnel)
+
+The console stays bound to `127.0.0.1` on chuyu-server. To use it from another
+machine (e.g. mac-mini-2024.local), forward the port over SSH:
+
+```bash
+ssh -L 8765:127.0.0.1:8765 ryu@chuyu-server.local
+# then browse http://127.0.0.1:8765/s/<token>/
+```
+
+This keeps the loopback-only security model: traffic is encrypted by SSH, no
+new port is exposed on the LAN, and the token/Host/Origin checks still apply.
+Do not bind the console to `0.0.0.0` or a LAN address.
+
 ## Proposed layout
 
 ```text
 amcrest-console/
   discover.py           # phase 0 discovery tool (implemented)
-  console.py            # argparse, startup, URL printing
-  server.py             # ThreadingHTTPServer, login/session, static, token/Host checks
-  camera.py             # CGI client: explicit Basic + Digest, timeout, single-writer lock
-  cgi_config.py         # getConfig/setConfig parsing + read-modify-write
-  mask.py               # legacy 18x22 grid codec (windows are read-only)
-  schemas.py            # allowlisted config sections and form metadata
-  static/index.html
-  static/app.js
-  static/style.css
+  console.py            # phase 1 CLI: argparse, startup, URL printing (implemented)
+  server.py             # phase 1 ThreadingHTTPServer, login/session, static, token/Host checks (implemented)
+  camera.py             # shared CGI client: explicit Basic + Digest, timeout, lock, backoff (implemented)
+  static/index.html     # phase 1 login + snapshot UI (implemented)
+  static/app.js         # phase 1 frontend logic (implemented)
+  static/style.css      # phase 1 styles (implemented)
+  cgi_config.py         # phase 3 getConfig/setConfig parsing + read-modify-write
+  mask.py               # phase 2 legacy 18x22 grid codec (windows are read-only)
+  schemas.py            # phase 3 allowlisted config sections and form metadata
   cameras.example.json  # optional future multi-camera example; unused by MVP
-  tests/test_discover.py
+  tests/test_discover.py  # phase 0 tests (implemented)
+  tests/test_camera.py    # phase 1 client tests (implemented)
+  tests/test_server.py    # phase 1 server tests (implemented)
   fixtures/             # local discovery output, gitignored
-  README.md
+  README.md             # run steps, SSH tunnel, security model (implemented)
 ```
 
 ## HTTP surface
@@ -267,11 +283,17 @@ No arbitrary URL proxying; the camera host is fixed by `--camera-ip`.
 * Determined the legacy mask is the only safe writable model and verified
   LSB=leftmost with full-18-row round-trips.
 
-**1. Server + snapshot (0.5–1 day)**
+**1. Server + snapshot (done 2026-11-01)**
 * `console.py`, `server.py`, `camera.py`; tokenized static serving.
 * Browser login screen and in-memory session; Basic/Digest per challenge.
 * Long timeouts, one request at a time, backoff on reset/refusal.
 * Snapshot endpoint and startup failure messages.
+* Implemented: `camera.py` (shared client, lock, throttle/backoff, identity
+  cache), `server.py` (token/Host/Origin checks, login/logout, session cookie,
+  `/api/session`, `/api/camera`, `/api/snapshot`), `console.py` (CLI, loopback
+  bind, reachability check, tokenized URL), `static/` UI, `README.md`.
+* Tests: 43 passing (`test_discover.py` 24, `test_camera.py` 8,
+  `test_server.py` 11). End-to-end smoke test with a mock camera passes.
 
 **2. Mask editor (1–2 days)**
 * `mask.py`: decode/encode legacy `Region[0..17]` (18 rows x 22 blocks; 32-bit
