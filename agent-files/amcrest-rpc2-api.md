@@ -1,6 +1,6 @@
 ---
 title: Amcrest/Dahua RPC2 API (reverse-engineered)
-update: 2026-11-03 17:25 PST
+update: 2026-11-03 18:59 PST
 tags: amcrest, dahua, rpc2, api, motion-mask
 ---
 
@@ -11,9 +11,9 @@ in `amcrest-support/amcrest-ip2m-842b-docs/AMCREST_CGI_SDK_API.pdf`; that PDF
 documents only the CGI interface. Everything below was read from the camera's
 served JavaScript and probed against cam-01 (IP2M-842, fw 2.212.0000.2.R).
 
-Status: implemented as a fallback in `amcrest-console/camera.py`, but **not yet
-confirmed by a successful live motion write** because cam-01 entered its login
-lockout during testing on 2026-11-03. The CGI rejection is confirmed.
+Status: implemented as a fallback in `amcrest-console/camera.py`. The CGI
+rejection is confirmed. RPC2 login now uses the camera's uppercase MD5 variant;
+a live motion write still needs re-testing after the 2026-11-03 lockout window.
 
 ## Sources (camera web UI)
 
@@ -21,7 +21,7 @@ Fetched read-only from `http://192.168.2.121/`:
 
 * `jsCore/rpcCore.js` — request wrapper, session handling, `sendRequest`
 * `jsCore/rpcLogin.js` — `RPCLogin.login` handshake and error mapping
-* `jsCore/md5.js` — `hex_md5` used by the handshake
+* `jsCore/md5.js` — `hex_md5` used by the handshake (returns uppercase hex)
 * `js/set.js` — web UI settings pages, `ConfigManager` wrapper
 * `index.html` — page shell and settings menu
 
@@ -111,14 +111,30 @@ The camera's UI also uses `configManager.getDefault`, `system.listService`,
 
 ## Open questions / risks
 
-* **Login password mismatch.** On 2026-11-03 RPC2 login returned
-  `PasswordNotValid` for the credential that works for CGI Basic. It may be a
-  different web password or an active lockout; several failed attempts then
-  made CGI Basic return 401 as well. Retry only after the lockout expires
-  (cam-01 `General.LoginFailLockTime=1800`, 30 minutes).
-* **Cookie requirement.** The UI sets `DhWebClientSessionID`; the current Python
-  implementation sends only the JSON session. If `/RPC2` calls fail while login
-  succeeds, add the cookie on subsequent requests.
+* **Login hash case (resolved 2026-11-03).** RPC2 login returned
+  `PasswordNotValid` for credentials that worked with CGI Basic. Root cause:
+  the camera's `jsCore/md5.js` returns **uppercase** hex
+  (`.toUpperCase()`), and the firmware compares it exactly. `camera.py` now
+  uppercases both `h1` and `h2` via `rpc_default_password`. Repeated failures
+  before the fix may have started the 1800 s lockout; wait it out if
+  `PasswordNotValid` persists.
+* **`LockLogin*` settings not in UI.** The web interface does not expose
+  `LockLoginEnable`, `LockLoginTimes`, `LoginFailLockTime`, or
+  `LoginFailLoginTime`. They exist in the `General` config and must be set via
+  `configManager.setConfig` (RPC2) or the CGI `setConfig` call.
+* **Cookie requirement (resolved 2026-11-03).** `/RPC2` requires a
+  `DhWebClientSessionID` cookie whose value is the login `session`, but the
+  camera **never sends `Set-Cookie`**. Its web UI sets the cookie client-side in
+  `jsCore/rpcLogin.js` after the 401 challenge:
+  `Cookie.write("DhWebClientSessionID", session, {path:"/"})`. The JSON `session`
+  field alone is not enough: without the cookie `POST /RPC2` returns
+  `301 Location: /` and the client follows the redirect to the web-UI HTML
+  page, surfacing as `invalid RPC2 JSON ... <!DOCTYPE html>` (and
+  `PUT /api/motion` -> 502). `camera.py` now sends
+  `Cookie: DhWebClientSessionID=<session>` explicitly on non-login `/RPC2`
+  calls (a cookie jar alone does not help). Verified against cam-03:
+  `configManager.getConfig` and `configManager.setConfig` both succeed.
+  Regression symptom: login succeeds, first `/RPC2` call returns HTML, 502.
 * **Field coverage.** Only `MotionDetect` is exercised. Other config sections
   should use the same envelope; verify each table's JSON shape against CGI.
 * **Firmware variance.** The handshake and error strings come from the IP2M-842
@@ -143,6 +159,9 @@ Differences / additions from our IP2M-842 firmware:
 * Challenge error code: the repo says `268632079`; our camera returns
   `error.code: 401`. Treat the numeric code as firmware-dependent and branch on
   `result`/message instead.
+* Hash case: the repo/reference client uses lowercase MD5 hex; this IP2M-842
+  web UI's `hex_md5` returns uppercase and the firmware rejects the lowercase
+  form with `PasswordNotValid`.
 * The camera's `rpcLogin.js` also has a `WatchNet` mode (username characters
   shifted by +3, plain password); the repo's README lists only Basic/Default.
 * The repo's sample Python client always uses the doubled-MD5 formula and
@@ -161,7 +180,8 @@ Differences / additions from our IP2M-842 firmware:
 
 ## Implementation pointers
 
-* `amcrest-console/camera.py`: `rpc_login`, `rpc_call`, `rpc_get_config`,
+* `amcrest-console/camera.py`: `rpc_default_password` (uppercase doubled MD5),
+  `rpc_login`, `rpc_call`, `rpc_get_config`,
   `rpc_set_config`, `set_motion_via_rpc`, `write_motion_mask`.
 * `amcrest-console/server.py`: motion apply calls `write_motion_mask`, which
   uses CGI first and falls back to RPC2 when the CGI body contains `error`.

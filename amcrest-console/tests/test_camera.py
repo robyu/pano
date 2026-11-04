@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import sys
 import threading
 import time
@@ -86,6 +87,19 @@ class MirrorTests(unittest.TestCase):
             camera.mirror_region_values(camera.mirror_region_values(values)),
             values,
         )
+
+
+class RpcLoginHashTests(unittest.TestCase):
+    def test_default_hash_is_uppercase(self):
+        h1 = hashlib.md5(b"admin:realm:testpass").hexdigest().upper()
+        expected = hashlib.md5(
+            "admin:random:{}".format(h1).encode()
+        ).hexdigest().upper()
+        result = camera.rpc_default_password(
+            "admin", "realm", "random", "testpass"
+        )
+        self.assertEqual(result, expected)
+        self.assertTrue(any(char.isalpha() and char.isupper() for char in result))
 
 
 class LoggingTests(unittest.TestCase):

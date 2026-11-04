@@ -29,6 +29,7 @@ class MockCamera:
         self.rpc_realm = "Login to TestCam"
         self.rpc_random = "1234567"
         self.rpc_session = 98765
+        self.rpc_unauthorized = 0
         self.lock = threading.Lock()
         outer = self
 
@@ -83,11 +84,13 @@ class MockCamera:
                     }
                 ]
 
-            def send_json(self, value):
+            def send_json(self, value, headers=None):
                 body = json.dumps(value).encode()
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self.send_header("Content-Length", str(len(body)))
+                for name, header_value in (headers or {}).items():
+                    self.send_header(name, header_value)
                 self.end_headers()
                 self.wfile.write(body)
 
@@ -123,12 +126,12 @@ class MockCamera:
                         "{}:{}:{}".format(
                             "admin", outer.rpc_realm, "testpass"
                         ).encode()
-                    ).hexdigest()
+                    ).hexdigest().upper()
                     expected = hashlib.md5(
                         "{}:{}:{}".format(
                             "admin", outer.rpc_random, digest
                         ).encode()
-                    ).hexdigest()
+                    ).hexdigest().upper()
                     ok = params.get("password") == expected
                     body = {
                         "id": payload.get("id"),
@@ -141,6 +144,23 @@ class MockCamera:
                     self.send_json(body)
                     return
                 if self.path.startswith("/RPC2"):
+                    cookie = self.headers.get("Cookie", "")
+                    expected_cookie = "DhWebClientSessionID={}".format(
+                        outer.rpc_session
+                    )
+                    if expected_cookie not in cookie:
+                        with outer.lock:
+                            outer.rpc_unauthorized += 1
+                        body = (
+                            b"<!DOCTYPE html>\n<html><head><title></title>"
+                            b"</head></html>\n"
+                        )
+                        self.send_response(200)
+                        self.send_header("Content-Type", "text/html")
+                        self.send_header("Content-Length", str(len(body)))
+                        self.end_headers()
+                        self.wfile.write(body)
+                        return
                     method = payload.get("method")
                     params = payload.get("params") or {}
                     if method == "configManager.getConfig":
@@ -567,6 +587,7 @@ class MotionTests(ServerTestCase):
         self.assertFalse(any("MotionDetectWindow" in key for key in sent))
         self.assertEqual(len(self.mock.rpc_set_configs), 1)
         self.assertGreaterEqual(self.mock.rpc_logins, 1)
+        self.assertEqual(self.mock.rpc_unauthorized, 0)
         rpc_table = self.mock.rpc_set_configs[0]["table"]
         self.assertEqual(len(rpc_table[0]["Region"]), 18)
         self.assertEqual(rpc_table[0]["Region"][0] & 1, 0)

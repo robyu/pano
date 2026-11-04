@@ -35,6 +35,8 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
 * agent-files/amcrest-rpc2-api.md - reverse-engineered RPC2 JSON API: endpoints,
   login handshake (realm/random + doubled MD5), session/cookie, configManager
   getConfig/setConfig tables, CGI-vs-RPC2 behavior, open questions
+* agent-files/dahua-rpc-api-index.md - index of the third_party/dahua-rpc-api
+  submodule: module-by-module contents, session/keepalive notes, cookie caveat
 * agent-files/amcrest-cameras-from-log.md - Amcrest cam config (TCP/IP, FTP, encode,
   Auto Maintain, P2P serials, mobile-app onboarding) extracted from pano-log.pdf images
 * agent-files/shinobi-from-log.md - (OBSOLETE) Shinobi NVR config (monitor/stream/
@@ -57,7 +59,8 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
   logging/diagnostics, tests
 * amcrest-console/camera.py - shared stdlib CGI client: explicit Basic/Digest,
   request lock, throttle/backoff, identity cache, legacy mask codec helpers,
-  RPC2 fallback, redacted protocol logging
+  RPC2 fallback with the client-set DhWebClientSessionID cookie, redacted
+  protocol logging
 * amcrest-console/console.py - phase 1 CLI: `--camera-ip`, LAN bind (`--bind`,
   `--allow-host`), root URL, reachability check, browser launch,
   `--state-dir`/`--state-file`, protocol logging to
@@ -183,6 +186,11 @@ Amcrest/Dahua camera browser plugin artifacts (not used by pano at runtime).
 * pano/writeup/dfd/ - data-flow-diagram images (jpeg/resized)
 * pano/writeup/ - screenshots/photos (media-page, status screens, alley day/night,
   cam-config, cam-mount photos, halo, resolution tests, readme media)
+
+## third_party/
+* third_party/dahua-rpc-api/ - git submodule: Dahua/Amcrest JSON-RPC API
+  reference (13 module docs, README, MIT) plus a minimal `requests` client;
+  catalogued in agent-files/dahua-rpc-api-index.md
 
 ## readme-images/
 Documentation screenshot/photos used by README: Panopticon jpegs, cam-mount-0,

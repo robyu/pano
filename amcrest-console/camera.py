@@ -21,6 +21,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import http.client
+import http.cookiejar
 import json
 import logging
 import re
@@ -216,6 +217,22 @@ def parse_mask(config: Dict[str, str], channel: int = 0) -> Dict[str, Any]:
     return result
 
 
+def rpc_default_password(
+    user: str, realm: str, random_value: str, password: str
+) -> str:
+    """Return the Dahua ``Default`` RPC2 password hash.
+
+    The camera's ``jsCore/md5.js`` returns uppercase hex, and the firmware
+    compares the string exactly, so both hashes must be uppercase.
+    """
+    digest = hashlib.md5(
+        "{}:{}:{}".format(user, realm, password).encode("utf-8")
+    ).hexdigest().upper()
+    return hashlib.md5(
+        "{}:{}:{}".format(user, random_value, digest).encode("utf-8")
+    ).hexdigest().upper()
+
+
 class CameraClient:
     def __init__(
         self,
@@ -263,7 +280,13 @@ class CameraClient:
             "Accept": "*/*",
             "Connection": "close",
         }
-        self._opener = urllib.request.build_opener()
+        # RPC2 sessions are bound to the DhWebClientSessionID cookie. This
+        # firmware never sends Set-Cookie; its web UI sets the cookie in JS
+        # from the login session, so the client must send it explicitly.
+        self._cookie_jar = http.cookiejar.CookieJar()
+        self._opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(self._cookie_jar)
+        )
         self._digest_opener: Optional[urllib.request.OpenerDirector] = None
         self.log.info(
             "camera client ready host=%s port=%s auth=%s model=%s timeout=%.1fs delay=%.2fs",
@@ -566,6 +589,9 @@ class CameraClient:
             "X-Request": "JSON",
         }
         headers.update(self._headers)
+        session = payload.get("session")
+        if session is not None and not path.startswith("/RPC2_Login"):
+            headers["Cookie"] = "DhWebClientSessionID={}".format(session)
         url = self.base + path
         try:
             _status, _headers, body = self._open(
@@ -681,16 +707,9 @@ class CameraClient:
             if encryption == "Default":
                 realm = str(params.get("realm") or "")
                 random_value = str(params.get("random") or "")
-                digest = hashlib.md5(
-                    "{}:{}:{}".format(self.user, realm, self.password).encode(
-                        "utf-8"
-                    )
-                ).hexdigest()
-                password = hashlib.md5(
-                    "{}:{}:{}".format(self.user, random_value, digest).encode(
-                        "utf-8"
-                    )
-                ).hexdigest()
+                password = rpc_default_password(
+                    self.user, realm, random_value, self.password
+                )
             elif encryption == "Basic":
                 password = base64.b64encode(
                     "{}:{}".format(self.user, self.password).encode("utf-8")

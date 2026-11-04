@@ -130,12 +130,18 @@ from another host, allow TCP 8765 in the server firewall.
 
 - `camera rejected motion write: error`: the IP2M-842 rejects CGI
   `MotionDetect` writes. The console retries through RPC2 automatically.
+- `invalid RPC2 JSON ... <!DOCTYPE html>`: the camera redirected `/RPC2` to its
+  login page. RPC2 requires a `DhWebClientSessionID=<session>` cookie, which
+  this firmware never sends via `Set-Cookie`; the client sets it from the login
+  session. If it recurs, the camera may have invalidated the session.
 - `RPC2 login failed: PasswordNotValid`: the camera's RPC2/web password may
   differ from the CGI password, or the account is in a login lockout. cam-01's
   `General.LoginFailLockTime` is 1800 seconds (30 minutes). Stop retrying until
   it expires; each failed attempt can extend it.
 - The camera config `General` section has `LockLoginEnable`, `LockLoginTimes`,
   `LoginFailLockTime`, and `LoginFailLoginTime` if you need to adjust this.
+  Note: `LockLogin*` settings are not available via the camera's web UI; set
+  them through the config API (`configManager.setConfig`) instead.
 
 ## Tests
 
