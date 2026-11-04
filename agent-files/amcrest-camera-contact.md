@@ -227,3 +227,28 @@ the IP3M-943B firmware (`2.400.AC02.15.R`, build 2017-07-31).
 * `amcrest-console/discover.py` (read-only probe, Digest/Basic)
 * TCP connect scan of the known camera IPs only
 * `ip neigh show` for ARP confirmation
+
+## IP2M-842 mask writes require RPC2 (2026-11-03)
+
+Full protocol notes: `amcrest-rpc2-api.md`.
+
+While fixing the console "apply mask" failure on cam-01, the CGI path was
+verified to be read-only for motion configuration:
+
+* `configManager.cgi?action=getConfig&name=MotionDetect` works with Basic auth.
+* `action=setConfig` with all 18 legacy `Region` rows returns the body `Error`
+  (HTTP 200), even when every value is unchanged.
+* `action=setConfig` with all 18 `MotionDetectWindow[0].Region` rows also
+  returns `Error`.
+* POSTing the same `setConfig` parameters returns HTTP 500.
+* The camera's own web UI uses RPC2 (`/RPC2_Login`, `/RPC2`,
+  `configManager.setConfig` with the full MotionDetect table), so the console
+  now falls back to RPC2 when the CGI write is rejected.
+
+RPC2 login testing on 2026-11-03 returned `PasswordNotValid` for the pano
+credential even though the same credential works for CGI Basic. Several failed
+RPC2 attempts then made Basic return 401 as well, consistent with the camera's
+short login lockout (`LoginFailLockTime=300`). Stop probing for at least five
+minutes before retrying. If RPC2 login still fails after the lockout expires,
+confirm that the camera's web UI accepts the same password (the web/ONVIF
+account may be separate from the credential pano uses).

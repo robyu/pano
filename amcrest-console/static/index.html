@@ -33,8 +33,34 @@
       <p id="camera-info" class="muted"></p>
       <div class="snapshot-wrap">
         <img id="snapshot" alt="Camera snapshot">
+        <svg id="mask-overlay" viewBox="0 0 22 18" preserveAspectRatio="none"
+             aria-label="Motion mask overlay" hidden></svg>
       </div>
       <p id="status" class="error" role="alert"></p>
+
+      <section class="panel" id="motion-panel">
+        <div class="toolbar">
+          <h2>Motion mask</h2>
+          <span id="motion-status" class="muted"></span>
+        </div>
+        <p id="mirror-info" class="muted"></p>
+        <div id="windows" class="windows"></div>
+        <div class="toolbar editor-toolbar">
+          <button id="motion-refresh" type="button" class="secondary">Reload mask</button>
+          <button id="mode-paint" type="button" class="secondary" aria-pressed="true">Paint</button>
+          <button id="mode-erase" type="button" class="secondary" aria-pressed="false">Erase</button>
+          <button id="mask-clear" type="button" class="secondary">Clear</button>
+          <button id="mask-invert" type="button" class="secondary">Invert</button>
+          <button id="mask-revert" type="button" class="secondary">Revert</button>
+          <span id="mask-count" class="muted"></span>
+          <button id="mask-apply" type="button" disabled>Apply mask</button>
+        </div>
+        <p class="muted small">
+          Drag to paint (or right-click to erase). Apply sends all 18 legacy rows
+          and re-reads the camera to verify. The window model below is read-only.
+        </p>
+        <p id="motion-error" class="error" role="alert"></p>
+      </section>
     </section>
   </main>
   <script src="static/app.js"></script>

@@ -77,6 +77,40 @@ class MockCamera:
         return self.httpd.server_address[1]
 
 
+class MirrorTests(unittest.TestCase):
+    def test_mirror_region_values(self):
+        self.assertEqual(camera.mirror_region_values([1]), [1 << 21])
+        self.assertEqual(camera.mirror_region_values([1 << 21]), [1])
+        values = [0x3FFFFF, 4194291, 0]
+        self.assertEqual(
+            camera.mirror_region_values(camera.mirror_region_values(values)),
+            values,
+        )
+
+
+class LoggingTests(unittest.TestCase):
+    def test_loggable_redacts_secrets(self):
+        text = camera.loggable(
+            {
+                "Password": "secret-value",
+                "session": "session-value",
+                "Cookie": "cookie-value",
+                "nested": [{"token": "token-value"}],
+                "Region": [1, 2],
+            }
+        )
+        self.assertNotIn("secret-value", text)
+        self.assertNotIn("session-value", text)
+        self.assertNotIn("cookie-value", text)
+        self.assertNotIn("token-value", text)
+        self.assertIn("<redacted>", text)
+
+    def test_loggable_truncates(self):
+        text = camera.loggable({"data": "x" * 2000}, limit=100)
+        self.assertLessEqual(len(text), 140)
+        self.assertIn("chars)", text)
+
+
 class CredentialTests(unittest.TestCase):
     def test_verify_credentials_uses_machine_name(self):
         with MockCamera() as mock:

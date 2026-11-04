@@ -32,6 +32,9 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
 * agent-files/amcrest-camera-contact.md - 2026-11-01 camera probe: reachable
   IP3M-943B units, IP2M-842 Basic-auth correction, cam-01 firmware/mask/mirror,
   ARP, next steps
+* agent-files/amcrest-rpc2-api.md - reverse-engineered RPC2 JSON API: endpoints,
+  login handshake (realm/random + doubled MD5), session/cookie, configManager
+  getConfig/setConfig tables, CGI-vs-RPC2 behavior, open questions
 * agent-files/amcrest-cameras-from-log.md - Amcrest cam config (TCP/IP, FTP, encode,
   Auto Maintain, P2P serials, mobile-app onboarding) extracted from pano-log.pdf images
 * agent-files/shinobi-from-log.md - (OBSOLETE) Shinobi NVR config (monitor/stream/
@@ -50,14 +53,23 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
   bases, config bind-mount, toolchain caveats)
 
 ## amcrest-console/
-* amcrest-console/README.md - run steps, SSH-tunnel remote access, security model, tests
+* amcrest-console/README.md - run steps, LAN access, security model,
+  logging/diagnostics, tests
 * amcrest-console/camera.py - shared stdlib CGI client: explicit Basic/Digest,
-  request lock, throttle/backoff, identity cache, legacy mask codec helpers
-* amcrest-console/console.py - phase 1 CLI: `--camera-ip`, loopback bind, tokenized
-  URL, reachability check, browser launch
-* amcrest-console/server.py - phase 1 loopback server: token/Host/Origin checks,
-  browser login, in-memory session, snapshot proxy
-* amcrest-console/static/ - phase 1 frontend (index.html, app.js, style.css)
+  request lock, throttle/backoff, identity cache, legacy mask codec helpers,
+  RPC2 fallback, redacted protocol logging
+* amcrest-console/console.py - phase 1 CLI: `--camera-ip`, LAN bind (`--bind`,
+  `--allow-host`), root URL, reachability check, browser launch,
+  `--state-dir`/`--state-file`, protocol logging to
+  `<state-dir>/log-<slug>.log` with `--log-level`/`--log-file`
+* amcrest-console/server.py - LAN server: Host/Origin checks, browser login,
+  single in-memory session, snapshot proxy, motion mask GET/PUT, state endpoint,
+  API/protocol logging
+* amcrest-console/mask.py - phase 2 legacy 18x22 mask codec, validation, revision
+* amcrest-console/state.py - phase 2 per-camera JSON mirror: atomic writes, lock,
+  redaction, corrupt-file quarantine
+* amcrest-console/static/ - frontend (index.html, app.js, style.css), snapshot +
+  motion mask editor
 * amcrest-console/discover.py - phase 0 discovery: CLI camera target, preemptive
   Basic (IP2M-842) / Digest (IP3M-943) with model detection, skips the
   IP2M-842 getSoftwareVersion web-server crash, sanitized config/snapshot fixtures,
@@ -65,9 +77,20 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
 * amcrest-console/tests/test_discover.py - unittest coverage for parsing, redaction,
   pano credential lookup, Basic/Digest auth, JPEG dimensions, full-row mask writes
 * amcrest-console/tests/test_camera.py - client tests: credential verify, identity
-  caching/skip, backoff, request serialization
-* amcrest-console/tests/test_server.py - server tests: token/Host/Origin rejection,
-  login/cookie, snapshot proxy, logout, static serving
+  caching/skip, backoff, request serialization, mask mirroring, log redaction and
+  truncation
+* amcrest-console/tests/test_server.py - server tests: Host/Origin rejection,
+  single-session replacement, login/cookie, snapshot proxy, logout, static
+  serving, motion get/apply, stale revision, write verification, mirror creation
+* amcrest-console/tests/test_mask.py - mask codec tests: LSB order, round-trip,
+  boundaries, invalid shapes, revision
+* amcrest-console/tests/test_state.py - mirror tests: slug/path, atomic write,
+  0600, redaction, corrupt/schema quarantine
+* amcrest-console/tests/test_console.py - CLI tests: default `log-<slug>.log`,
+  IP fallback, `--log-file` override, parent creation, 0600, bind/allow-host
+  forwarding, LAN URL listing
+* amcrest-console/cameras/ - per-camera JSON mirrors and `log-<slug>.log`
+  protocol logs (runtime; gitignored)
 * amcrest-console/fixtures/ - local discovery output (snapshots/configs; gitignored)
 
 ## docker-vsftpd/

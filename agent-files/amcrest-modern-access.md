@@ -1,5 +1,5 @@
 ---
-update: 2026-11-01 16:24 PST
+update: 2026-11-03 18:49 PST
 tags: amcrest-console
 ---
 
@@ -72,14 +72,16 @@ removes the RTSP/decoder/webview-video complexity from the app entirely.
 desktop bundle.
 
 * **Backend:** Python 3.x **stdlib only** (`http.server`, `urllib`), a
-  **standalone webserver** bound to `127.0.0.1` only. It
-  serves the static frontend and proxies the camera CGI, handling Basic or
-  Digest auth server-side. **Do not reuse pano's docker/lighttpd stack**; the console owns its
-  own process and assets.
+  **standalone webserver** bound to `0.0.0.0` by default (LAN access; use
+  `--bind 127.0.0.1` for local only). It serves the static frontend and
+  proxies the camera CGI, handling Basic or Digest auth server-side. **Do not
+  reuse pano's docker/lighttpd stack**; the console owns its own process and
+  assets.
 * **Frontend:** plain HTML/CSS/JS. Snapshot via
   `<img src="/proxy/snapshot.cgi?channel=0">`; mask grid as a canvas/SVG overlay;
   config forms via `/proxy/config?action=...`.
-* **Launch:** `python3 console.py` → open Safari at `http://127.0.0.1:<port>`.
+* **Launch:** `python3 console.py` → open `http://<server-lan-ip>:<port>/` from
+  any LAN browser (or `http://127.0.0.1:<port>/` locally).
 * **No `.app`, no PyInstaller/Briefcase, therefore no code signing, notarization,
   Gatekeeper, or TCC-identity churn.** Do not wrap it in Electron/pywebview/
   PyInstaller — that reintroduces signing.
@@ -116,10 +118,11 @@ the real lifetime limit, not the client code.
 ## Credential UX (settled 2026-11-01)
 
 The console queries the user via a **browser login screen** on first load:
-username (prefilled `admin`) and password. The form posts to the tokenized local
-proxy; credentials stay in proxy memory only and are never placed in the URL,
-cookie, localStorage, page source, or logs. Success sets a random `HttpOnly`,
-`SameSite=Strict` session cookie; logout clears it. The proxy selects Basic or
+username (prefilled `admin`) and password. The form posts to the local proxy
+(root URL, no token); credentials stay in proxy memory only and are never
+placed in the URL, cookie, localStorage, page source, or logs. Success sets a
+random `HttpOnly`, `SameSite=Strict`, `Path=/` session cookie; logout clears
+it. Only one browser session is kept at a time. The proxy selects Basic or
 Digest from the camera's `401` challenge and uses explicit Basic or a separate
 Digest opener. It does not auto-retry failed logins, to avoid camera lockouts.
 
@@ -170,8 +173,9 @@ sub-second latency becomes a real requirement.
 
 * Auth varies by model: IP2M-842 uses Basic; IP3M-943 uses Digest. Support both
   explicitly; do not combine both handlers in one opener.
-* Bind the local proxy to `127.0.0.1`, never `0.0.0.0`; do not log credentials.
-  Query them via the browser login screen; keep them in memory only.
+* The proxy binds `0.0.0.0` by default for LAN access; `--bind 127.0.0.1`
+  restricts it locally. Do not log credentials. Query them via the browser
+  login screen; keep them in memory only. LAN traffic is plain HTTP.
 * The IP2M-842 HTTP server is slow and single-connection. Use one request at a
   time, long timeouts, and backoff; stop the P2P stream if a request hangs.
 * Two mask models coexist. Phase 0 found the legacy `Region` is the only safe

@@ -45,3 +45,9 @@
 2026-11-01 Recorded cam-01 (192.168.2.121) IP2M-842 firmware 2.212.0000.2.R (build 2016-08-11) and WEB 3.2.1.273284 from its built-in webpage; serial AMC002A34HATK2G7HH confirmed
 2026-11-01 Added remote-access note to amcrest-console-plan.md: keep loopback bind, reach from mac-mini via SSH tunnel (ssh -L 8765:127.0.0.1:8765 ryu@chuyu-server.local)
 2026-11-01 Implemented amcrest-console phase 1: camera.py (shared client, lock/backoff/identity), server.py (token/Host/Origin, login/session, snapshot), console.py (CLI, loopback, tokenized URL), static UI, README; 43 tests passing + mock-camera smoke test
+2026-11-03 Implemented amcrest-console phase 2: mask.py codec, state.py per-camera JSON mirror, server motion GET/PUT + stale/verification handling, console --state-dir/--state-file, motion editor UI; added test_mask/test_state and server motion tests
+2026-11-03 Diagnosed cam-01 apply-mask failure: IP2M-842 CGI setConfig rejects legacy and window Region writes with 'Error'; implemented RPC2 configManager.setConfig fallback in camera.py and updated server/tests/docs
+2026-11-03 Recorded RPC2 API analysis in agent-files/amcrest-rpc2-api.md (endpoints, login handshake, session/cookie, configManager tables, CGI-vs-RPC2, open risks); added INDEX entry
+2026-11-03 Added configurable protocol diagnostics: --log-level/--log-file, structured camera/server logs, redacted payload logging, logging tests; 82 tests passing
+2026-11-03 Changed default log destination from stderr to <state-dir>/log-<slug>.log (append, 0600); kept --log-file override, added test_console.py, updated README/plan/INDEX; 91 tests passing
+2026-11-03 Made console LAN-accessible by default (--bind 0.0.0.0), removed URL token (/ routes), cookie Path=/, Host allowlist + private-IP literals, Origin==Host, per-IP login delay; single browser session confirmed; 97 tests passing; README/plan/modern-access/INDEX updated

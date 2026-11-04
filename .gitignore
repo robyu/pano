@@ -16,3 +16,6 @@ www/derived
 
 # local camera discovery output (may include snapshots/config)
 amcrest-console/fixtures/
+
+# per-camera JSON configuration mirrors (local state)
+amcrest-console/cameras/

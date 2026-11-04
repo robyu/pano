@@ -1,13 +1,13 @@
 ---
-update: 2026-11-01 21:05 PST
-tags: amcrest-console, implementation-plan
+update: 2026-11-03 18:49 PST
+tags: amcrest-console, implementation-plan, motion-mask, json-mirror
 ---
 
 # Amcrest console implementation plan
 
-Implements the decisions in `amcrest-modern-access.md`: a standalone, loopback-only
-Python web console for camera Config + snapshot-based motion-mask editing. No
-Docker, no desktop bundle, no live video in the MVP.
+Implements the decisions in `amcrest-modern-access.md`: a standalone,
+LAN-accessible Python web console for camera Config + snapshot-based motion-mask
+editing. No Docker, no desktop bundle, no live video in the MVP.
 
 ## Fixed decisions
 
@@ -15,13 +15,22 @@ Docker, no desktop bundle, no live video in the MVP.
 * Single explicit camera target per process, supplied with `--camera-ip`.
 * Python **stdlib only** (`urllib`, `http.server`, `json`, `argparse`, `ipaddress`,
   `getpass`) so it runs on the installed Python 3.7 and pano's Python 3.14.
-* Bind `127.0.0.1` only; never `0.0.0.0`.
+* Bind `0.0.0.0` by default so any LAN browser can connect; `--bind 127.0.0.1`
+  restores local-only access.
+* Serve routes from `/`; no URL token. Camera login plus a single in-memory
+  session is the access gate; one browser at a time.
+* `Host` must be a local/allowlisted name and `Origin` must match `Host` for
+  writes, preserving DNS-rebinding and cross-origin protection.
 * Local proxy handles Digest **and** Basic auth server-side; the browser stays
   same-origin.
 * Snapshot-only preview; no RTSP/MJPEG/HLS in MVP.
 * Credentials are queried through a browser login screen and kept only in
   proxy memory; never command-line arguments, never logged, never written to
   disk.
+* One JSON configuration mirror per camera under `amcrest-console/cameras/`.
+  The camera remains authoritative; the mirror is updated after successful
+  reads and verified writes, is marked stale when the camera is unreachable,
+  and redacts secret-looking keys.
 
 ## Phase 0 findings (2026-11-01)
 
@@ -148,6 +157,13 @@ retest with the fixed client; cam-00/02/10/11 are down or inactive. See
 **Implementation consequences**
 
 * Use legacy `Region` for the mask editor and always write all 18 rows.
+* **IP2M-842 CGI writes are rejected.** On cam-01, both legacy
+  `MotionDetect[0].Region[...]` and `MotionDetect[0].MotionDetectWindow[0].Region[...]`
+  `setConfig` calls return `Error` over `configManager.cgi` (verified
+  2026-11-03). The camera's web API is RPC2 (`/RPC2_Login` + `/RPC2`
+  `configManager.setConfig` with the full MotionDetect table), so the console
+  falls back to RPC2 when the CGI write is rejected. The CGI read path still
+  works and is used for verification.
 * Read-only display of the window model is fine; hide or disable window writes.
 * Query credentials through the browser login screen; keep them in memory only.
 * Use explicit Basic auth or a separate Digest opener; never combine both in one
@@ -158,6 +174,32 @@ retest with the fixed client; cam-00/02/10/11 are down or inactive. See
   Digest explicitly, but still makes several identity requests; do not use it
   as a rapid poller on a fragile camera.
 * Prefer `General` over `System` and `NAS` over `FTP`.
+
+## Per-camera JSON mirror
+
+Implemented in phase 2 (`amcrest-console/state.py`). One file per camera:
+`amcrest-console/cameras/<slug>.json`, where the slug comes from `--name` or
+falls back to the camera IP. `--state-dir` and `--state-file` override the
+location; `cameras/` is gitignored. Protocol logs share the directory as
+`log-<slug>.log` (appended, mode 0600); `--log-file` overrides the destination.
+`--state-file` moves only the JSON mirror, not the log.
+
+* `schema_version: 1` so later sections can be added under `configuration`
+  without breaking old files.
+* `camera` holds name/host/port/model/firmware; `configuration` currently holds
+  `MotionDetect` (legacy `region_values`, decoded `rows`, `revision`, plus the
+  read-only windows); `mirror` holds `updated`, `last_apply`, `verified`, and
+  `stale`.
+* The camera is the source of truth. The mirror is written after every
+  successful read and every verified write, never updated when verification
+  fails, and served marked `stale: true` (Apply disabled) when the camera is
+  unreachable.
+* Writes are atomic (temp file + `os.replace`), mode 0600, serialized with an
+  advisory lock, and sanitized with `camera.sanitize` so secret-looking keys are
+  stored as `<redacted>`. Camera login credentials and session tokens are never
+  stored.
+* A corrupt or unsupported mirror is renamed to `<file>.bad-<timestamp>` and
+  rebuilt from the camera rather than crashing.
 
 ## Command-line interface
 
@@ -177,34 +219,41 @@ python3 console.py --camera-ip 192.168.2.120 \
 * `--camera-port` — camera HTTP port; default `80`.
 * `--port` — local console port; default `8765`.
 * `--no-browser` — print the URL without opening a browser.
+* `--state-dir` — mirror and log directory; default `amcrest-console/cameras/`.
+* `--state-file` — explicit mirror file for this camera, overriding the
+  derived per-camera path.
+* `--log-level` — `DEBUG`, `INFO`, `WARNING`, or `ERROR`; default `INFO`.
+* `--log-file` — override the default `<state-dir>/log-<slug>.log` path.
 
 **Credential prompt:** the console does not ask for the password on the command
 line. The first browser load shows a login screen with username (prefilled from
 `--user`, default `admin`) and password. It posts to
-`/s/<token>/api/login`; the proxy verifies the credentials with a harmless
-camera request and keeps them **only in memory** for the session. Success sets
-a random `HttpOnly`, `SameSite=Strict` session cookie. A logout action clears
-the cookie and in-memory credentials. `AMCREST_PASSWORD` may remain an optional
-noninteractive escape hatch, but the normal path is the browser form. Never
-accept `--password`.
+`/api/login`; the proxy verifies the credentials with a harmless camera request
+and keeps them **only in memory** for the session. Success sets a random
+`HttpOnly`, `SameSite=Strict`, `Path=/` session cookie. A logout action clears
+the cookie and in-memory credentials. A second login replaces the previous
+session, so only one browser is active at a time. `AMCREST_PASSWORD` may remain
+an optional noninteractive escape hatch, but the normal path is the browser
+form. Never accept `--password`.
 
-Startup prints a tokenized URL, e.g.
-`http://127.0.0.1:8765/s/<token>/`, and fails fast on a bad/missing IP or an
-unreachable camera. Login errors are shown in the form.
+Startup prints LAN URLs, e.g. `http://192.168.2.5:8765/` and
+`http://127.0.0.1:8765/`, and fails fast on a bad/missing IP or an unreachable
+camera. Login errors are shown in the form.
 
-## Remote access (SSH tunnel)
+## Network access
 
-The console stays bound to `127.0.0.1` on chuyu-server. To use it from another
-machine (e.g. mac-mini-2024.local), forward the port over SSH:
+The console binds `0.0.0.0:8765` by default and is reachable from any browser on
+the LAN; no token or SSH tunnel is needed. `--bind 127.0.0.1` restores
+local-only access. Hostnames other than IP literals/`localhost` require
+`--allow-host HOST[:PORT]`. For off-LAN access, forward the port over SSH:
 
 ```bash
 ssh -L 8765:127.0.0.1:8765 ryu@chuyu-server.local
-# then browse http://127.0.0.1:8765/s/<token>/
+# then browse http://127.0.0.1:8765/
 ```
 
-This keeps the loopback-only security model: traffic is encrypted by SSH, no
-new port is exposed on the LAN, and the token/Host/Origin checks still apply.
-Do not bind the console to `0.0.0.0` or a LAN address.
+Traffic is plain HTTP on the LAN (the camera password is not encrypted in
+transit), so use a trusted network/VLAN.
 
 ## Proposed layout
 
@@ -212,20 +261,25 @@ Do not bind the console to `0.0.0.0` or a LAN address.
 amcrest-console/
   discover.py           # phase 0 discovery tool (implemented)
   console.py            # phase 1 CLI: argparse, startup, URL printing (implemented)
-  server.py             # phase 1 ThreadingHTTPServer, login/session, static, token/Host checks (implemented)
+  server.py             # phase 1 ThreadingHTTPServer, login/session, static, Host/Origin checks (implemented)
   camera.py             # shared CGI client: explicit Basic + Digest, timeout, lock, backoff (implemented)
-  static/index.html     # phase 1 login + snapshot UI (implemented)
-  static/app.js         # phase 1 frontend logic (implemented)
-  static/style.css      # phase 1 styles (implemented)
+  static/index.html     # login, snapshot, motion editor UI (implemented)
+  static/app.js         # login/snapshot/motion frontend logic (implemented)
+  static/style.css      # styles (implemented)
   cgi_config.py         # phase 3 getConfig/setConfig parsing + read-modify-write
-  mask.py               # phase 2 legacy 18x22 grid codec (windows are read-only)
+  mask.py               # phase 2 legacy 18x22 grid codec (implemented)
+  state.py              # phase 2 per-camera JSON mirror (implemented)
   schemas.py            # phase 3 allowlisted config sections and form metadata
+  cameras/              # per-camera JSON mirrors + log-<slug>.log, gitignored (runtime)
   cameras.example.json  # optional future multi-camera example; unused by MVP
   tests/test_discover.py  # phase 0 tests (implemented)
   tests/test_camera.py    # phase 1 client tests (implemented)
-  tests/test_server.py    # phase 1 server tests (implemented)
+  tests/test_server.py    # phase 1+2 server tests (implemented)
+  tests/test_mask.py      # phase 2 mask codec tests (implemented)
+  tests/test_state.py     # phase 2 mirror tests (implemented)
+  tests/test_console.py   # CLI logging destination tests (implemented)
   fixtures/             # local discovery output, gitignored
-  README.md             # run steps, SSH tunnel, security model (implemented)
+  README.md             # run steps, LAN access, security model (implemented)
 ```
 
 ## HTTP surface
@@ -236,7 +290,7 @@ Allowlist only these camera CGI endpoints:
 * `/cgi-bin/configManager.cgi` — getConfig/setConfig.
 * `/cgi-bin/magicBox.cgi` — firmware/device info for backup metadata.
 
-Console routes (all under `/s/<token>/`):
+Console routes (served from `/`):
 
 * `GET /api/session` — whether the proxy has an authenticated in-memory session.
 * `POST /api/login` — username/password from the browser form; verifies against
@@ -246,8 +300,14 @@ Console routes (all under `/s/<token>/`):
 * `GET /api/snapshot` — proxied JPEG, `Cache-Control: no-store`.
 * `GET /api/config?name=<Name>` — parsed config section.
 * `POST /api/config` — apply only changed keys, read-modify-write, verify.
-* `GET /api/motion` — parsed legacy mask + read-only window info.
-* `PUT /api/motion` — write all 18 legacy rows only; never write windows.
+* `GET /api/motion` — parsed legacy mask, read-only windows, and mirror
+  metadata; falls back to the last mirror marked `stale` when the camera is
+  unreachable.
+* `PUT /api/motion` — body `{rows, revision, confirm}`; rejects unknown fields,
+  requires confirmation, verifies the revision against a fresh read, writes all
+  18 legacy rows in one call, re-reads, and updates the mirror only on exact
+  verification. Returns 409 on a stale revision and 502 on failed verification.
+* `GET /api/state` — the per-camera JSON mirror (read-only).
 * `GET /api/backup` — timestamped JSON dump.
 * `POST /api/restore` — diff-only restore with confirmation.
 
@@ -255,24 +315,32 @@ No arbitrary URL proxying; the camera host is fixed by `--camera-ip`.
 
 ## Security model
 
-* Loopback bind plus per-run random token in the path.
-* Check `Host` and, when present, `Origin` against the own origin; reject
-  cross-origin writes. This blocks DNS rebinding and CSRF against the proxy.
+* LAN bind (`0.0.0.0`) with camera login as the only access gate; no URL token.
+  One in-memory session, so one browser at a time (a new login replaces it).
+* `Host` must be a local IP literal, `localhost`, or an explicit
+  `--allow-host` name; private/link-local IP literals are accepted on the
+  console port. `Origin` must match `Host` for writes. This blocks DNS
+  rebinding and cross-origin CSRF against the proxy.
+* Plain HTTP on the LAN; the camera password is not encrypted in transit, so
+  use a trusted network/VLAN. TLS is not implemented.
 * Reject any path outside the allowlist before constructing a camera request.
 * Browser login screen; credentials stay in proxy memory only. Never in the
   URL, cookie, localStorage, page source, or logs. Redact `Authorization`,
   `password`, and query strings.
-* Session cookie is random, `HttpOnly`, and `SameSite=Strict`; logout clears
-  both the cookie and the in-memory credentials.
+* Session cookie is random, `HttpOnly`, `SameSite=Strict`, and `Path=/`;
+  logout clears both the cookie and the in-memory credentials.
 * Auth scheme is chosen per camera from the `401` challenge. Basic uses an
   explicit `Authorization: Basic` header; Digest uses a separate opener. Do
   not combine Digest and Basic handlers in one opener.
-* Login failures are not auto-retried; add a short delay to avoid camera login
-  lockouts.
+* Login failures are not auto-retried; a per-source delay (1-5 s) reduces
+  camera login lockout churn.
 * Be gentle with the IP2M-842: one camera request at a time, long timeout
   (20-30 s), backoff on reset/refusal, cache identity, and avoid rapid
   multi-request probes.
 * Explicit confirmation in the UI for every write; no auto-apply.
+* Mirrors are local state only: mode 0600, atomic writes with a per-file lock,
+  and secret-looking keys redacted. Camera credentials and session tokens are
+  never written to a mirror.
 
 ## Phases
 
@@ -284,25 +352,44 @@ No arbitrary URL proxying; the camera host is fixed by `--camera-ip`.
   LSB=leftmost with full-18-row round-trips.
 
 **1. Server + snapshot (done 2026-11-01)**
-* `console.py`, `server.py`, `camera.py`; tokenized static serving.
+* `console.py`, `server.py`, `camera.py`; static serving at `/`.
 * Browser login screen and in-memory session; Basic/Digest per challenge.
 * Long timeouts, one request at a time, backoff on reset/refusal.
 * Snapshot endpoint and startup failure messages.
 * Implemented: `camera.py` (shared client, lock, throttle/backoff, identity
-  cache), `server.py` (token/Host/Origin checks, login/logout, session cookie,
-  `/api/session`, `/api/camera`, `/api/snapshot`), `console.py` (CLI, loopback
-  bind, reachability check, tokenized URL), `static/` UI, `README.md`.
+  cache), `server.py` (Host/Origin checks, login/logout, session cookie,
+  `/api/session`, `/api/camera`, `/api/snapshot`), `console.py` (CLI, LAN bind,
+  reachability check, LAN URLs), `static/` UI, `README.md`.
 * Tests: 43 passing (`test_discover.py` 24, `test_camera.py` 8,
   `test_server.py` 11). End-to-end smoke test with a mock camera passes.
 
-**2. Mask editor (1–2 days)**
+**2. Mask editor + JSON mirror (done 2026-11-03)**
 * `mask.py`: decode/encode legacy `Region[0..17]` (18 rows x 22 blocks; 32-bit
-  ints; bit = monitored); round-trip unit tests.
+  ints; bit = monitored); validation, revision hash, invert/clear helpers;
+  round-trip unit tests.
 * Read and display `MotionDetectWindow[0..3]` as read-only information, never
   write it (phase 0 found window writes do not persist and reset legacy).
-* Canvas/SVG overlay scaled to snapshot; paint/drag/erase/clear/invert.
-* Apply always sends all 18 legacy rows in one `setConfig`; re-read and verify
-  the full mask before marking clean.
+* SVG overlay scaled to the snapshot; paint/drag/erase/clear/invert/revert.
+* Apply always sends all 18 legacy rows in one `setConfig`; re-reads and verifies
+  the full mask before marking clean. Stale revisions return 409; verification
+  mismatches return 502 with expected/actual.
+* IP2M-842: when the CGI write returns `Error`, fall back to the RPC2
+  `configManager.setConfig` path (full MotionDetect table) and verify via CGI.
+  RPC2 login is cached per camera client.
+* `state.py` maintains one JSON mirror per camera (atomic, 0600, locked,
+  sanitized), updated on successful reads and verified writes, marked stale
+  when the camera is unreachable.
+* Implemented: `mask.py`, `state.py`, `GET /api/motion`, `PUT /api/motion`,
+  `GET /api/state`, `--state-dir`/`--state-file`, motion editor UI, mirror/stale
+  display.
+* Diagnostics: `--log-level`/`--log-file`; structured protocol logs in
+  `camera.py`/`server.py` (request/response summaries, RPC2 login steps, CGI
+  writes, backoff, verification); secret redaction in log payloads; NullHandler
+  keeps the library quiet when tests do not configure logging.
+* Tests: mask codec, mirror atomicity/redaction/quarantine, motion auth,
+  validation, stale revision, all-18-row writes, verification failure.
+* Suite: 82 passing (`test_discover` 24, `test_camera` 9, `test_server` 26,
+  `test_mask` 12, `test_state` 11).
 
 **3. Config browser + forms (1–1.5 days)**
 * Read-only raw viewer for each allowlisted section, then full JSON backup.
@@ -331,20 +418,27 @@ Total: about 4–6 days without live streaming, plus discovery.
 
 ## Tests
 
-* `mask.py` round-trip and boundary tests for both mask models.
+* `mask.py` round-trip, LSB-leftmost, boundary, and invalid-shape tests for the
+  legacy mask model.
+* `state.py` tests: one file per camera, atomic writes, 0600 mode, redaction,
+  corrupt-file quarantine, schema rejection.
 * CGI key=value parser and serializer tests, including duplicate keys and
   malformed lines.
 * Read-modify-write test proving unrelated keys are untouched.
 * Mock Digest camera server for proxy/auth/failure tests.
-* Token/Origin rejection tests.
+* Host/Origin rejection tests, single-session replacement, and cookie path.
 * One manual smoke test per release: snapshot, read config, toggle one mask
   cell, re-read, restore backup.
 
 ## Acceptance criteria
 
-* Starts with the documented CLI and listens only on loopback.
+* Starts with the documented CLI and is reachable from LAN browsers (default
+  `0.0.0.0`), with login required and one browser session at a time.
 * Snapshot renders and refreshes on demand.
 * Current mask loads, edits, applies, and verifies by re-read.
+* Exactly one JSON mirror exists per camera; it matches the last successful
+  camera read and is marked stale when the camera is unreachable.
+* Secrets never appear in a mirror, and mirrors are mode 0600.
 * Config sections load read-only; curated forms round-trip without touching
   unrelated keys.
 * Backup/restore produces and consumes usable JSON.
