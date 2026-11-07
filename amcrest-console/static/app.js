@@ -21,7 +21,14 @@
   var motionStatus = document.getElementById("motion-status");
   var motionError = document.getElementById("motion-error");
   var mirrorInfo = document.getElementById("mirror-info");
-  var windowsBox = document.getElementById("windows");
+  var tabLegacy = document.getElementById("tab-legacy");
+  var tabRegions = document.getElementById("tab-regions");
+  var panelLegacy = document.getElementById("panel-legacy");
+  var panelRegions = document.getElementById("panel-regions");
+  var regionOverlay = document.getElementById("region-overlay");
+  var regionLegend = document.getElementById("region-legend");
+  var regionStatus = document.getElementById("region-status");
+  var regionError = document.getElementById("region-error");
   var maskCount = document.getElementById("mask-count");
   var applyButton = document.getElementById("mask-apply");
   var paintButton = document.getElementById("mode-paint");
@@ -38,6 +45,8 @@
   var mode = "paint";
   var dragging = false;
   var cellNodes = [];
+  var regionWindows = [];
+  var regionHasCells = false;
 
   function api(path, options) {
     return fetch(BASE + path, options).then(function (response) {
@@ -180,28 +189,32 @@
     maskStale = Boolean(
       motion.stale || (data.mirror && data.mirror.stale)
     );
+    regionWindows = motion.windows || [];
     motionError.textContent = "";
 
     if (!legacy || !legacy.rows) {
       maskRows = null;
       baseRows = null;
       maskRevision = null;
-      overlay.hidden = true;
       applyButton.disabled = true;
+      motionStatus.textContent = maskStale ? "stale mirror (read-only)" : "";
       motionError.textContent = "This camera did not report a legacy motion mask.";
-      renderWindows(motion.windows || []);
+      buildRegionOverlay();
+      renderRegionLegend();
       updateMirrorInfo(data.mirror);
+      syncOverlays();
       return;
     }
 
     maskRevision = legacy.revision;
     maskRows = cloneRows(legacy.rows);
     baseRows = cloneRows(legacy.rows);
-    overlay.hidden = false;
     buildOverlay();
     renderOverlay();
-    renderWindows(motion.windows || []);
+    buildRegionOverlay();
+    renderRegionLegend();
     updateMirrorInfo(data.mirror);
+    syncOverlays();
   }
 
   function updateMirrorInfo(meta) {
@@ -214,25 +227,114 @@
     mirrorInfo.textContent = parts.join(" \u00b7 ");
   }
 
-  function renderWindows(windows) {
-    while (windowsBox.firstChild) {
-      windowsBox.removeChild(windowsBox.firstChild);
+  function syncOverlays() {
+    var legacyActive = tabLegacy.getAttribute("aria-selected") === "true";
+    overlay.hidden = !legacyActive || !maskRows;
+    regionOverlay.hidden = legacyActive || !regionHasCells;
+  }
+
+  function selectTab(name, focus) {
+    var legacy = name === "legacy";
+    tabLegacy.setAttribute("aria-selected", String(legacy));
+    tabRegions.setAttribute("aria-selected", String(!legacy));
+    tabLegacy.setAttribute("tabindex", legacy ? "0" : "-1");
+    tabRegions.setAttribute("tabindex", legacy ? "-1" : "0");
+    panelLegacy.hidden = !legacy;
+    panelRegions.hidden = legacy;
+    syncOverlays();
+    if (focus) {
+      (legacy ? tabLegacy : tabRegions).focus();
     }
-    if (!windows.length) { return; }
-    var heading = document.createElement("p");
-    heading.className = "muted small";
-    heading.textContent = "Window model (read-only; pano uses the legacy mask):";
-    windowsBox.appendChild(heading);
-    windows.forEach(function (window) {
-      var line = document.createElement("p");
-      line.className = "muted small";
-      var parts = [];
-      if (window.name) { parts.push(window.name); }
+  }
+
+  function onTabKey(event) {
+    if (event.key === "Home") {
+      event.preventDefault();
+      selectTab("legacy", true);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      selectTab("regions", true);
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+      event.preventDefault();
+      var legacy = tabLegacy.getAttribute("aria-selected") === "true";
+      selectTab(legacy ? "regions" : "legacy", true);
+    }
+  }
+
+  function countRows(rows) {
+    var total = 0;
+    rows.forEach(function (row) {
+      row.forEach(function (cell) { total += cell ? 1 : 0; });
+    });
+    return total;
+  }
+
+  function flipRows(rows) {
+    return rows.map(function (row) { return row.slice().reverse(); });
+  }
+
+  function clearRegionOverlay() {
+    while (regionOverlay.firstChild) {
+      regionOverlay.removeChild(regionOverlay.firstChild);
+    }
+    regionHasCells = false;
+  }
+
+  function buildRegionOverlay() {
+    clearRegionOverlay();
+    var namespace = "http://www.w3.org/2000/svg";
+    regionWindows.forEach(function (window, index) {
+      if (!window.rows) { return; }
+      var rows = flipRows(window.rows);
+      var group = document.createElementNS(namespace, "g");
+      group.setAttribute("class", "region-group r" + index);
+      for (var row = 0; row < ROWS; row += 1) {
+        for (var col = 0; col < COLS; col += 1) {
+          if (!rows[row][col]) { continue; }
+          var rect = document.createElementNS(namespace, "rect");
+          rect.setAttribute("x", String(col));
+          rect.setAttribute("y", String(row));
+          rect.setAttribute("width", "1");
+          rect.setAttribute("height", "1");
+          rect.setAttribute("class", "region r" + index + " on");
+          group.appendChild(rect);
+          regionHasCells = true;
+        }
+      }
+      if (group.childNodes.length) {
+        regionOverlay.appendChild(group);
+      }
+    });
+  }
+
+  function renderRegionLegend() {
+    while (regionLegend.firstChild) {
+      regionLegend.removeChild(regionLegend.firstChild);
+    }
+    regionStatus.textContent = maskStale ? "stale mirror (read-only)" : "";
+    if (!regionWindows.length) {
+      regionError.textContent = "This camera did not report region windows.";
+      return;
+    }
+    regionError.textContent = "";
+    regionWindows.forEach(function (window, index) {
+      var item = document.createElement("li");
+      var swatch = document.createElement("span");
+      swatch.className = "swatch region-swatch r" + index;
+      swatch.setAttribute("aria-hidden", "true");
+      item.appendChild(swatch);
+      var parts = [window.name || ("Region" + (index + 1))];
       if (window.sensitive) { parts.push("sensitive " + window.sensitive); }
       if (window.threshold) { parts.push("threshold " + window.threshold); }
-      parts.push("read-only");
-      line.textContent = parts.join(" \u00b7 ");
-      windowsBox.appendChild(line);
+      if (window.rows) {
+        parts.push(countRows(window.rows) + " cells");
+      } else {
+        parts.push("region grid unavailable");
+      }
+      var text = document.createElement("span");
+      text.textContent = parts.join(" \u00b7 ");
+      item.appendChild(text);
+      regionLegend.appendChild(item);
     });
   }
 
@@ -242,8 +344,15 @@
       motionError.textContent = error.message;
       maskRows = null;
       baseRows = null;
-      overlay.hidden = true;
       applyButton.disabled = true;
+      regionWindows = [];
+      clearRegionOverlay();
+      while (regionLegend.firstChild) {
+        regionLegend.removeChild(regionLegend.firstChild);
+      }
+      regionStatus.textContent = "";
+      regionError.textContent = error.message;
+      syncOverlays();
     });
   }
 
@@ -290,6 +399,11 @@
 
   paintButton.addEventListener("click", function () { setMode("paint"); });
   eraseButton.addEventListener("click", function () { setMode("erase"); });
+
+  tabLegacy.addEventListener("click", function () { selectTab("legacy"); });
+  tabRegions.addEventListener("click", function () { selectTab("regions"); });
+  tabLegacy.addEventListener("keydown", onTabKey);
+  tabRegions.addEventListener("keydown", onTabKey);
 
   document.getElementById("motion-refresh").addEventListener("click", loadMotion);
 
@@ -383,6 +497,8 @@
   document.getElementById("logout").addEventListener("click", function () {
     api("api/logout", { method: "POST" }).then(showLogin).catch(showLogin);
   });
+
+  selectTab("legacy");
 
   api("api/session").then(function (session) {
     if (session.authenticated) {

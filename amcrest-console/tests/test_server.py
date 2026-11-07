@@ -636,6 +636,10 @@ class StaticTests(ServerTestCase):
         self.assertIn(b"mask-legend", body)
         self.assertIn(b"motion-sensitive", body)
         self.assertIn(b"unpainted cells are ignored", body)
+        self.assertIn(b"Legacy mask", body)
+        self.assertIn(b"Region masks", body)
+        self.assertIn(b"Region masks are read-only", body)
+        self.assertIn(b"region-overlay", body)
 
     def test_unknown_static_is_not_found(self):
         status, _headers, _body = self.request("GET", BASE + "static/../server.py")

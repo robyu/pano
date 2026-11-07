@@ -31,21 +31,31 @@
         <button id="logout" type="button" class="secondary">Log out</button>
       </div>
       <p id="camera-info" class="muted"></p>
+
       <div class="snapshot-wrap">
         <img id="snapshot" alt="Camera snapshot">
         <svg id="mask-overlay" viewBox="0 0 22 18" preserveAspectRatio="none"
-             aria-label="Motion mask: red cells are motion-sensitive, unpainted cells are ignored"
+             aria-label="Legacy motion mask: red cells are motion-sensitive, unpainted cells are ignored"
              aria-describedby="mask-legend" hidden></svg>
+        <svg id="region-overlay" viewBox="0 0 22 18" preserveAspectRatio="none"
+             aria-hidden="true" hidden></svg>
       </div>
       <p id="status" class="error" role="alert"></p>
 
-      <section class="panel" id="motion-panel">
+      <div class="tabs" role="tablist" aria-label="Motion mask views">
+        <button id="tab-legacy" type="button" role="tab" aria-selected="true"
+                aria-controls="panel-legacy" tabindex="0">Legacy mask</button>
+        <button id="tab-regions" type="button" role="tab" aria-selected="false"
+                aria-controls="panel-regions" tabindex="-1">Region masks</button>
+      </div>
+
+      <section class="panel" id="panel-legacy" role="tabpanel"
+               aria-labelledby="tab-legacy">
         <div class="toolbar">
-          <h2>Motion mask</h2>
+          <h2>Legacy mask</h2>
           <span id="motion-status" class="muted"></span>
         </div>
         <p id="mirror-info" class="muted"></p>
-        <div id="windows" class="windows"></div>
         <div class="toolbar editor-toolbar">
           <button id="motion-refresh" type="button" class="secondary">Reload mask</button>
           <button id="mode-paint" type="button" class="secondary" aria-pressed="true">Paint</button>
@@ -65,10 +75,20 @@
         <p class="muted small">
           Drag to paint motion-sensitive cells (right-click to erase). Painted
           cells are monitored; unpainted cells are ignored. Apply sends all 18
-          legacy rows and re-reads the camera to verify. The window model below
-          is read-only.
+          legacy rows and re-reads the camera to verify.
         </p>
         <p id="motion-error" class="error" role="alert"></p>
+      </section>
+
+      <section class="panel" id="panel-regions" role="tabpanel"
+               aria-labelledby="tab-regions" hidden>
+        <div class="toolbar">
+          <h2>Region masks</h2>
+          <span id="region-status" class="muted"></span>
+        </div>
+        <p class="muted small">Region masks are read-only.</p>
+        <ul id="region-legend" class="region-legend"></ul>
+        <p id="region-error" class="error" role="alert"></p>
       </section>
     </section>
   </main>

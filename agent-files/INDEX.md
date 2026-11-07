@@ -58,7 +58,8 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
 
 ## amcrest-console/
 * amcrest-console/README.md - run steps, LAN access, security model,
-  logging/diagnostics, tests
+  logging/diagnostics, two-tab mask UI (legacy editor + read-only region
+  overlays), tests
 * amcrest-console/camera.py - shared stdlib CGI client: explicit Basic/Digest,
   request lock, throttle/backoff, identity cache, legacy mask codec helpers,
   RPC2 fallback with the client-set DhWebClientSessionID cookie, redacted
@@ -73,8 +74,9 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
 * amcrest-console/mask.py - phase 2 legacy 18x22 mask codec, validation, revision
 * amcrest-console/state.py - phase 2 per-camera JSON mirror: atomic writes, lock,
   redaction, corrupt-file quarantine
-* amcrest-console/static/ - frontend (index.html, app.js, style.css), snapshot +
-  motion mask editor
+* amcrest-console/static/ - frontend (index.html, app.js, style.css): Legacy mask
+  editor tab plus read-only Region masks tab (all four MotionDetectWindow grids,
+  color legend, horizontal flip for legacy alignment), snapshot + motion mask
 * amcrest-console/discover.py - phase 0 discovery: CLI camera target, preemptive
   Basic (IP2M-842) / Digest (IP3M-943) with model detection, skips the
   IP2M-842 getSoftwareVersion web-server crash, sanitized config/snapshot fixtures,

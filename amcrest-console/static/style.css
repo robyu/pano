@@ -105,6 +105,32 @@ button.secondary {
   margin-right: auto;
 }
 
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tabs [role="tab"] {
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 8px 14px;
+}
+
+.tabs [role="tab"][aria-selected="true"] {
+  color: var(--fg);
+  border-bottom-color: var(--accent);
+}
+
+.tabs [role="tab"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .snapshot-wrap {
   position: relative;
   margin-top: 12px;
@@ -138,6 +164,24 @@ button.secondary {
   stroke: rgba(255, 255, 255, 0.25);
   stroke-width: 0.03;
 }
+
+#region-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+#region-overlay .region.on {
+  stroke: rgba(255, 255, 255, 0.25);
+  stroke-width: 0.03;
+}
+
+#region-overlay .region.r0.on { fill: rgba(200, 40, 40, 0.40); }
+#region-overlay .region.r1.on { fill: rgba(40, 120, 220, 0.40); }
+#region-overlay .region.r2.on { fill: rgba(40, 170, 90, 0.40); }
+#region-overlay .region.r3.on { fill: rgba(230, 150, 20, 0.45); }
 
 .mask-legend {
   list-style: none;
@@ -174,6 +218,50 @@ button.secondary {
   border: 1px dashed var(--muted);
 }
 
+.region-legend {
+  list-style: none;
+  margin: 10px 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.region-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.region-legend .swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+
+.region-legend .swatch.r0 {
+  background: rgba(200, 40, 40, 0.40);
+  border: 1px solid rgba(200, 40, 40, 0.7);
+}
+
+.region-legend .swatch.r1 {
+  background: rgba(40, 120, 220, 0.40);
+  border: 1px solid rgba(40, 120, 220, 0.7);
+}
+
+.region-legend .swatch.r2 {
+  background: rgba(40, 170, 90, 0.40);
+  border: 1px solid rgba(40, 170, 90, 0.7);
+}
+
+.region-legend .swatch.r3 {
+  background: rgba(230, 150, 20, 0.45);
+  border: 1px solid rgba(230, 150, 20, 0.75);
+}
+
 .panel {
   margin-top: 28px;
   padding-top: 18px;
@@ -200,5 +288,3 @@ h2 {
   opacity: 0.5;
   cursor: default;
 }
-
-.windows p { margin: 2px 0; }

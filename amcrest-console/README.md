@@ -63,6 +63,15 @@ write (the IP2M-842 does), the console falls back to the camera's RPC2 web API
 through CGI. The newer `MotionDetectWindow` model is displayed read-only and is
 never written directly.
 
+The UI has two tabs. **Legacy mask** is the editable view above. The **Region
+masks** tab overlays all four `MotionDetectWindow` regions on the snapshot in
+distinct colors and is read-only (no paint or apply controls). On the current
+cameras only the first window has cells; the other three are empty, so their
+legend entries show `0 cells`. Window rows are flipped horizontally for display
+so the first region aligns with the legacy mask. A window whose grid cannot be
+decoded (for example cam-05's 12-row variant) is listed as
+`region grid unavailable`.
+
 One JSON file per camera is kept in `cameras/<name>.json` (or the IP when no
 `--name` is given). The camera is the source of truth: the file is updated
 after every successful read and every verified write. If the camera is
