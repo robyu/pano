@@ -34,7 +34,8 @@
       <div class="snapshot-wrap">
         <img id="snapshot" alt="Camera snapshot">
         <svg id="mask-overlay" viewBox="0 0 22 18" preserveAspectRatio="none"
-             aria-label="Motion mask overlay" hidden></svg>
+             aria-label="Motion mask: red cells are motion-sensitive, unpainted cells are ignored"
+             aria-describedby="mask-legend" hidden></svg>
       </div>
       <p id="status" class="error" role="alert"></p>
 
@@ -55,9 +56,17 @@
           <span id="mask-count" class="muted"></span>
           <button id="mask-apply" type="button" disabled>Apply mask</button>
         </div>
+        <ul id="mask-legend" class="mask-legend">
+          <li><span class="swatch sensitive" aria-hidden="true"></span>
+              Motion-sensitive: motion here triggers detection.</li>
+          <li><span class="swatch ignored" aria-hidden="true"></span>
+              Ignored: unpainted cells do not trigger motion detection.</li>
+        </ul>
         <p class="muted small">
-          Drag to paint (or right-click to erase). Apply sends all 18 legacy rows
-          and re-reads the camera to verify. The window model below is read-only.
+          Drag to paint motion-sensitive cells (right-click to erase). Painted
+          cells are monitored; unpainted cells are ignored. Apply sends all 18
+          legacy rows and re-reads the camera to verify. The window model below
+          is read-only.
         </p>
         <p id="motion-error" class="error" role="alert"></p>
       </section>

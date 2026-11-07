@@ -633,6 +633,9 @@ class StaticTests(ServerTestCase):
         self.assertEqual(status, 200)
         self.assertIn("text/html", headers.get("Content-Type", ""))
         self.assertIn(b"Amcrest Console", body)
+        self.assertIn(b"mask-legend", body)
+        self.assertIn(b"motion-sensitive", body)
+        self.assertIn(b"unpainted cells are ignored", body)
 
     def test_unknown_static_is_not_found(self):
         status, _headers, _body = self.request("GET", BASE + "static/../server.py")

@@ -1,5 +1,5 @@
 ---
-update: 2026-11-03 18:49 PST
+update: 2026-11-06 PST
 tags: amcrest-console, implementation-plan, motion-mask, json-mirror
 ---
 
@@ -165,6 +165,14 @@ retest with the fixed client; cam-00/02/10/11 are down or inactive. See
   falls back to RPC2 when the CGI write is rejected. The CGI read path still
   works and is used for verification.
 * Read-only display of the window model is fine; hide or disable window writes.
+* Verified 2026-11-06 on all eight online cameras: only
+  `MotionDetectWindow[0]` has cells (it mirrors the legacy mask); windows 1-3
+  are empty and their `Sensitive` values are inert. The edited legacy mask is
+  therefore the operative mask. Details and live counts:
+  `amcrest-camera-contact.md` (Motion mask / window model).
+* **cam-05 12-row anomaly:** cam-05 returns only 12 `Region` rows, so
+  `parse_mask` (which requires 18) reports `legacy=None` and the console cannot
+  read/edit its mask. Needs a parser fix before cam-05 is editable.
 * Query credentials through the browser login screen; keep them in memory only.
 * Use explicit Basic auth or a separate Digest opener; never combine both in one
   opener.

@@ -31,7 +31,9 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
   HTTP/security model, phases, tests, risks
 * agent-files/amcrest-camera-contact.md - 2026-11-01 camera probe: reachable
   IP3M-943B units, IP2M-842 Basic-auth correction, cam-01 firmware/mask/mirror,
-  ARP, next steps
+  ARP, next steps; plus 2026-11-06 live motion-model verification (legacy mask
+  operative, only window0 populated, windows 1-3 empty/inert) and the cam-05
+  12-row anomaly
 * agent-files/amcrest-rpc2-api.md - reverse-engineered RPC2 JSON API: endpoints,
   login handshake (realm/random + doubled MD5), session/cookie, configManager
   getConfig/setConfig tables, CGI-vs-RPC2 behavior, open questions

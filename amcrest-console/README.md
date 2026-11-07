@@ -53,8 +53,10 @@ Useful options:
 ## Motion mask and JSON mirror
 
 The console loads the camera's legacy `MotionDetect[0].Region[0..17]` mask,
-draws it over the snapshot, and lets you paint or erase cells. Apply sends all
-18 rows in one `setConfig` call, re-reads the mask, and only reports success if
+draws it over the snapshot, and lets you paint or erase cells. Painted cells are
+motion-sensitive (motion there triggers detection); unpainted cells are ignored.
+Apply sends all 18 rows in one `setConfig` call, re-reads the mask, and only
+reports success if
 the camera returns exactly what was written. If the camera rejects the CGI
 write (the IP2M-842 does), the console falls back to the camera's RPC2 web API
 (`configManager.setConfig` with the full MotionDetect table) and still verifies

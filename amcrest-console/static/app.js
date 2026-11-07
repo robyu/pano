@@ -129,7 +129,7 @@
       return;
     }
     var dirty = isDirty();
-    maskCount.textContent = countCells(maskRows) + " monitored cells" +
+    maskCount.textContent = countCells(maskRows) + " motion-sensitive cells" +
       (dirty ? " (unsaved)" : "");
     applyButton.disabled = !dirty || maskStale;
     motionStatus.textContent = maskStale ? "stale mirror (read-only)" : "";

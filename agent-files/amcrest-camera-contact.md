@@ -1,5 +1,5 @@
 ---
-update: 2026-11-01 20:08 PST
+update: 2026-11-06 PST
 tags: amcrest-console, camera-contact
 ---
 
@@ -252,3 +252,74 @@ short login lockout (`LoginFailLockTime=300`). Stop probing for at least five
 minutes before retrying. If RPC2 login still fails after the lockout expires,
 confirm that the camera's web UI accepts the same password (the web/ONVIF
 account may be separate from the credential pano uses).
+
+## Motion mask / window model (2026-11-06 live verification)
+
+Read-only `configManager.cgi?action=getConfig&name=MotionDetect` against all
+eight cameras in the active pano config. No writes were made.
+
+Both firmware families expose two motion models:
+
+* Legacy `MotionDetect[0].Region[0..17]`: 18x22 binary cells. A set bit means
+  the cell is motion-sensitive/monitored; an unset bit means ignored.
+* Four `MotionDetectWindow[0..3]`: each has `Region` rows, `Window` coordinates,
+  `Sensitive` (0-100), and `Threshold`. IP2M-842 names them `Region0`-`Region3`;
+  IP3M-943B names them `Region1`-`Region4`.
+* Sensitivity is per window, not per cell. `MotionDetect[0].Level` and
+  `PirMotionLevel` are global.
+
+Observed structure:
+
+* Only the first window (`MotionDetectWindow[0]`) has region cells, and it is
+  the exact horizontal mirror of the legacy `Region` mask. The other three
+  windows have zero region cells on every online camera.
+* Empty windows still carry `Sensitive`/`Threshold` values (e.g. cam-09
+  window[3] sensitive 94), but those values are inert without cells.
+* Therefore the console-edited legacy mask is the operative mask, equivalent to
+  the first window. Writing it does not disable or override windows 1-3; they
+  are simply empty and left unchanged.
+* After console writes, the first window again mirrors the new legacy mask
+  (verified on cam-01/03/09), so the firmware keeps the two in sync.
+
+Live cell counts (2026-11-06):
+
+| Camera | Model | Host | Legacy cells | Window[0] cells | Window[1..3] cells |
+|---|---|---|---|---|---|
+| cam-01 | IP2M-842 | 192.168.2.121 | 340 | 340 | 0 / 0 / 0 |
+| cam-03 | IP2M-842 | 192.168.2.123 | 396 | 396 | 0 / 0 / 0 |
+| cam-04 | IP2M-842 | 192.168.2.134 | 383 | 383 | 0 / 0 / 0 |
+| cam-05 | IP2M-842 | 192.168.2.125 | 12-row variant (48) | 48 | 0 / 0 / 0 |
+| cam-06 | IP2M-842 | 192.168.2.126 | 341 | 341 | 0 / 0 / 0 |
+| cam-07 | IP3M-943B | 192.168.2.127 | 396 | 396 | 0 / 0 / 0 |
+| cam-08 | IP3M-943B | 192.168.2.138 | 302 | 302 | 0 / 0 / 0 |
+| cam-09 | IP3M-943B | 192.168.2.129 | 289 | 289 | 0 / 0 / 0 |
+
+Cam-04 is reached at its wired address; cam-08 at its wired address. Live cell
+counts differ slightly from the 2026-11-01 fixtures; the masks were edited
+between probes, but the model structure is unchanged.
+
+### cam-05 12-row anomaly
+
+cam-05 returns only `Region` rows 0-11 for the legacy model and
+`MotionDetectWindow[0]` (12 rows, not 18). Windows 1-3 return only
+`Region[0]=0` with all-zero `Window` coordinates. Within those 12 rows, the
+first window still mirrors the legacy mask (e.g. legacy rows 5-10 = 8128;
+window[0] rows 5-10 = 65024).
+
+This is persistent: both the 2026-11-01 fixture and the 2026-11-06 live read
+show 12 rows. Impact: `camera.parse_mask`/`get_motion` require all 18 rows, so
+cam-05 reports `legacy=None` and window regions `None`. The console cannot read
+or edit cam-05's mask, even though the camera has one. A parser fix (accept a
+12-row variant or derive the row count from the device) is needed before cam-05
+is editable.
+
+### Console write behavior (summary)
+
+* Writes only legacy `Region`, always all 18 rows.
+* IP3M-943B accepts the CGI write (`OK`) and verifies by re-read.
+* IP2M-842 rejects CGI (`Error`); the RPC2 fallback fetches the full
+  `MotionDetect` table, replaces only `table[0].Region`, and writes it back.
+  Window `Sensitive`/`Threshold` are preserved, not edited.
+* Per-window sensitivity is not settable through the console, and window-model
+  writes are unreliable (non-persistent; `Window` writes can reset the legacy
+  mask). See `amcrest-console-plan.md`.
