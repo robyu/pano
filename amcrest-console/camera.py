@@ -266,6 +266,8 @@ class CameraClient:
         self._auth_scheme: Optional[str] = None
         self._lock = threading.RLock()
         self._identity: Optional[Dict[str, Any]] = None
+        self._machine_name: Optional[Dict[str, str]] = None
+        self._device_type: Optional[str] = None
         self._rpc_session: Optional[Any] = None
         self._rpc_id = 100
         self._rpc_lock = threading.Lock()
@@ -956,6 +958,36 @@ class CameraClient:
         self.log.info("RPC2 motion fallback succeeded channel=%d", channel)
         return result
 
+    def detect_model(self) -> Optional[str]:
+        """Ask the camera for its model unless the caller supplied one.
+
+        The console no longer needs ``--model``: the first authenticated login
+        asks ``magicBox.cgi`` for the device type and caches it for the rest of
+        the session.
+        """
+        if self.model:
+            return self.model
+        if self._device_type:
+            return self._device_type
+        try:
+            values = self.magic("getDeviceType")
+        except CameraError as error:
+            self.log.warning("camera model detection failed: %s", error)
+            return None
+        model = (
+            values.get("type")
+            or values.get("deviceType")
+            or values.get("DeviceType")
+            or ""
+        ).strip()
+        if not model:
+            self.log.warning("camera model detection returned no device type")
+            return None
+        self.model = model
+        self._device_type = model
+        self.log.info("camera model detected model=%s", model)
+        return model
+
     def verify_credentials(self) -> Dict[str, str]:
         """Prove the credentials work with a harmless identity request.
 
@@ -964,6 +996,7 @@ class CameraClient:
         """
         self.log.info("verifying camera credentials via magicBox getMachineName")
         values = self.magic("getMachineName")
+        self._machine_name = values
         self.log.info(
             "camera credentials verified; machine_name_present=%s",
             bool(values.get("MachineName")),
@@ -976,17 +1009,53 @@ class CameraClient:
             self.log.debug("camera identity served from cache")
             return self._identity
         identity: Dict[str, Any] = {"magic": {}, "errors": []}
-        for action in ("getMachineName", "getDeviceType"):
+        if self._machine_name is not None:
+            identity["magic"]["getMachineName"] = self._machine_name
+        else:
             try:
-                self.log.debug("camera identity request action=%s", action)
-                identity["magic"][action] = self.magic(action)
+                self.log.debug("camera identity request action=getMachineName")
+                identity["magic"]["getMachineName"] = self.magic(
+                    "getMachineName"
+                )
             except CameraError as error:
                 self.log.warning(
-                    "camera identity action=%s failed: %s", action, error
+                    "camera identity action=getMachineName failed: %s", error
                 )
-                identity["errors"].append({"magicBox": action, "error": str(error)})
+                identity["errors"].append(
+                    {"magicBox": "getMachineName", "error": str(error)}
+                )
+        if self._device_type is not None:
+            identity["magic"]["getDeviceType"] = {"type": self._device_type}
+        else:
+            try:
+                self.log.debug("camera identity request action=getDeviceType")
+                device_values = self.magic("getDeviceType")
+                identity["magic"]["getDeviceType"] = device_values
+                detected = (
+                    device_values.get("type")
+                    or device_values.get("deviceType")
+                    or device_values.get("DeviceType")
+                )
+                if detected:
+                    self._device_type = detected
+                    if not self.model:
+                        self.model = detected
+            except CameraError as error:
+                self.log.warning(
+                    "camera identity action=getDeviceType failed: %s", error
+                )
+                identity["errors"].append(
+                    {"magicBox": "getDeviceType", "error": str(error)}
+                )
         device_type = identity["magic"].get("getDeviceType", {})
-        if skip_software_version(self.model, device_type.get("type")):
+        detected_model = (
+            device_type.get("type")
+            or device_type.get("deviceType")
+            or device_type.get("DeviceType")
+        )
+        if detected_model and not self.model:
+            self.model = detected_model
+        if skip_software_version(self.model, detected_model):
             self.log.info("camera identity skipping getSoftwareVersion for model")
             identity["magic_skipped"] = ["getSoftwareVersion"]
         else:
@@ -1003,7 +1072,8 @@ class CameraClient:
                     {"magicBox": "getSoftwareVersion", "error": str(error)}
                 )
         self.log.info(
-            "camera identity done actions=%s errors=%d",
+            "camera identity done model=%s actions=%s errors=%d",
+            self.model or "unknown",
             ",".join(sorted(identity["magic"].keys())) or "none",
             len(identity["errors"]),
         )

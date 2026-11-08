@@ -181,6 +181,56 @@ class CredentialTests(unittest.TestCase):
         self.assertEqual(len(mock.requests), count)
 
 
+class ModelDetectionTests(unittest.TestCase):
+    def test_detect_model_queries_camera_and_caches(self):
+        with MockCamera() as mock:
+            client = camera.CameraClient(
+                "127.0.0.1", mock.port, "admin", "testpass", timeout=2, auth="basic"
+            )
+            client.verify_credentials()
+            model = client.detect_model()
+            identity = client.identity()
+        self.assertEqual(model, "IP2M-842")
+        self.assertEqual(client.model, "IP2M-842")
+        self.assertEqual(identity["magic"]["getDeviceType"]["type"], "IP2M-842")
+        self.assertNotIn("getSoftwareVersion", identity["magic"])
+        device_requests = [
+            path for path in mock.requests if "getDeviceType" in path
+        ]
+        machine_requests = [
+            path for path in mock.requests if "getMachineName" in path
+        ]
+        self.assertEqual(len(device_requests), 1)
+        self.assertEqual(len(machine_requests), 1)
+
+    def test_supplied_model_is_not_queried(self):
+        with MockCamera() as mock:
+            client = camera.CameraClient(
+                "127.0.0.1",
+                mock.port,
+                "admin",
+                "testpass",
+                timeout=2,
+                auth="basic",
+                model="amcrest-ip2m-842",
+            )
+            model = client.detect_model()
+        self.assertEqual(model, "amcrest-ip2m-842")
+        self.assertFalse(
+            any("getDeviceType" in path for path in mock.requests)
+        )
+
+    def test_identity_detects_model_without_argument(self):
+        with MockCamera() as mock:
+            client = camera.CameraClient(
+                "127.0.0.1", mock.port, "admin", "testpass", timeout=2, auth="basic"
+            )
+            identity = client.identity()
+        self.assertEqual(identity["magic"]["getDeviceType"]["type"], "IP2M-842")
+        self.assertEqual(client.model, "IP2M-842")
+        self.assertNotIn("getSoftwareVersion", identity["magic"])
+
+
 class BackoffTests(unittest.TestCase):
     def test_backoff_grows_after_failure_and_resets_after_success(self):
         server = HTTPServer(("127.0.0.1", 0), BaseHTTPRequestHandler)

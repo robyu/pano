@@ -7,7 +7,9 @@ the old NPAPI browser plugin for the parts pano needs: viewing a snapshot and
 Phase 1 provides browser login, an in-memory session, and snapshot proxying.
 Phase 2 adds the legacy motion-mask editor and a per-camera JSON configuration
 mirror. Phase 3 adds the Configuration tab: sanitized raw views, schema-driven
-forms, verified read-modify-write, and pre-write backups.
+forms, verified read-modify-write, and pre-write backups. Phase 4b adds
+`--noui --config {read,write}`, a non-interactive, scriptable mode that never
+writes `Network` settings.
 
 ## Requirements
 
@@ -18,8 +20,13 @@ forms, verified read-modify-write, and pre-write backups.
 
 ```bash
 cd amcrest-console
-python3 console.py --camera-ip 192.168.2.121 --name cam-01 --model amcrest-ip2m-842
+python3 console.py --ip 192.168.2.121 --name cam-01
 ```
+
+The camera model is detected from the camera after login (`magicBox.cgi`), so
+`--model` is no longer required. It remains available as an override for
+unusual firmware or when you want to force the auth/delay defaults before the
+first login.
 
 The console binds `0.0.0.0:8765` by default and prints the URLs to open:
 
@@ -42,8 +49,9 @@ Useful options:
 - `--port` — console port (default 8765)
 - `--bind` — bind address (default `0.0.0.0`; `127.0.0.1` for local only)
 - `--allow-host HOST[:PORT]` — extra accepted Host names (repeatable)
-- `--auth {auto,basic,digest}` — default `auto` (model-based, then challenge)
-- `--request-delay` — seconds between camera requests (default 1.0 for IP2M-842)
+- `--auth {auto,basic,digest}` — default `auto` (supplied/detected model, then challenge)
+- `--request-delay` — seconds between camera requests (default 1.0; 0 when a
+  non-IP2M `--model` is supplied)
 - `--timeout` — camera request timeout (default 20s)
 - `--state-dir` — mirror and log directory (default `amcrest-console/cameras/`)
 - `--state-file` — explicit mirror file for this camera
@@ -51,6 +59,14 @@ Useful options:
 - `--no-browser` — print the URL without opening a browser
 - `--log-level {DEBUG,INFO,WARNING,ERROR}` — protocol log verbosity (default `INFO`)
 - `--log-file PATH` — override the default per-camera log file
+
+See [Non-interactive mode](#non-interactive-mode) for `--noui` and its
+`--config` / `--config-file` options.
+
+`--model` is optional. After a successful login the console asks the camera for
+its device type, stores it in the mirror, and uses it for the IP2M-842 safety
+rules (skip `getSoftwareVersion`, conservative request delay). Supplying
+`--model` only pre-seeds those heuristics before login.
 
 ## Motion mask and JSON mirror
 
@@ -101,13 +117,72 @@ phrase shown in the UI. Before either write, the console reads all allowlisted
 sections and writes a complete sanitized backup under `amcrest-console/backups/`
 (mode 0600, gitignored). Network address changes can disconnect the camera; the
 console reports the write as unverified and marks the mirror stale. Restart it
-with the new `--camera-ip` if needed.
+with the new `--ip` if needed.
 
 **Download backup** writes a sanitized full JSON snapshot with
 `Content-Disposition: attachment`. If a section cannot be read live, the
 download is marked `complete: false` and may use the last mirror for that
 section. Passwords are stored as `<redacted>` in mirrors and backups; restore
 must re-enter them.
+
+## Non-interactive mode (`--noui`)
+
+`--noui` runs one configuration action and exits. It never binds a port, never
+opens a browser, and never serves HTTP, so it is safe to call from cron or a
+shell script:
+
+```bash
+# camera -> file (edit it offline)
+python3 console.py --ip 192.168.2.129 --noui --config read
+
+# file -> camera
+python3 console.py --ip 192.168.2.129 --noui --config write
+```
+
+`--config` has no default and requires `--noui`; `--config` without `--noui` is
+a usage error. `--port`, `--bind`, `--allow-host`, and `--no-browser` are
+rejected in this mode.
+
+- `--config read` — reads every allowlisted section and writes one JSON file
+  (`<state-dir>/config-<name>.json` by default, or `--config-file`). The format
+  is the same backup document produced by **Download backup**, so the two are
+  interchangeable. The per-camera mirror is refreshed too.
+- `--config write` — reads the file, compares its `Network` section against the
+  camera's, and, only if they match, applies the rest of the file.
+- `--config-file PATH` — default `<state-dir>/config-<slug>.json`.
+- `--dry-run` (`write` only) — print the planned changes without writing.
+- `--include-secrets` (`read` only) — store real secret values (for example
+  `NAS[0].Password`) instead of `<redacted>`. The file stays mode 0600.
+
+Secrets are redacted unless `--include-secrets` is given. A redacted key is
+skipped by `--config write`, so the camera keeps its current password.
+
+**Network changes are interactive only.** Compare-and-abort is deliberate: a
+wrong address, mask, gateway, or DHCP flag can make the camera unreachable. If
+the file's `Network` section differs from the camera's in any key, the run
+prints the differing keys and exits with status 7 *before* any write is sent.
+Change network settings through the browser console (Configuration tab) instead.
+
+`MotionDetect` is applied through the mask-safe writer: only `Enable` and
+`Level` are changed, and all 18 legacy `Region` rows are re-sent so the mask is
+preserved. A complete sanitized pre-write backup is written to `--backup-dir`
+before the first write, because there is no typed confirmation in this mode.
+
+Exit codes: `0` success, `2` usage, `3` camera unreachable, `4` bind failure,
+`5` credentials, `6` unusable config file, `7` Network differs, `8` write
+rejected or unverified.
+
+Credentials for `--noui` come from `--pano-config` (look up the camera by IP in
+a pano JSON config), then `$AMCREST_PASSWORD` (or `--password-env NAME`), then
+an interactive prompt when stdin is a terminal. There is no `--password` flag.
+
+```bash
+python3 console.py --ip 192.168.2.129 --noui --config read \
+  --pano-config ../pano/pano-docker.json
+
+AMCREST_PASSWORD=... python3 console.py --ip 192.168.2.129 --noui --config write \
+  --dry-run
+```
 
 ## Logging and diagnostics
 
@@ -117,8 +192,8 @@ given. The file is appended to and mode 0600. `--log-file` overrides the
 destination. For protocol debugging, raise the level:
 
 ```bash
-python3 console.py --camera-ip 192.168.2.121 --name cam-01 \
-  --model amcrest-ip2m-842 --no-browser --log-level DEBUG
+python3 console.py --ip 192.168.2.121 --name cam-01 \
+  --no-browser --log-level DEBUG
 ```
 
 `INFO` logs request/response summaries (URL, HTTP status, bytes, duration),
@@ -160,7 +235,7 @@ from another host, allow TCP 8765 in the server firewall.
 - The console speaks plain HTTP. The camera password crosses the LAN in clear
   text, so use a trusted network/VLAN. There is no TLS yet.
 - Only allowlisted camera CGI endpoints are proxied; the camera host is fixed by
-  `--camera-ip`.
+  `--ip`.
 - Camera requests are serialized and throttled; the IP2M-842 is slow and
   single-connection, and `getSoftwareVersion` crashes its web server.
 - Motion writes require the browser session, a matching stale-check revision,
@@ -168,6 +243,10 @@ from another host, allow TCP 8765 in the server firewall.
 - Mirrors and pre-write backups are written atomically, mode 0600, with
   secret-looking keys redacted. Backups are sanitized, so restore must re-enter
   passwords.
+- In `--noui` mode no port is bound and no session exists; credentials come from
+  `--pano-config` or the environment and are used only for the one run.
+  `--config write` refuses to touch `Network`, and every run writes a pre-write
+  backup before its first write.
 
 ## Troubleshooting
 
@@ -194,8 +273,13 @@ python3 -m unittest discover -s tests
 ```
 
 The suite is mock-only: every test binds an ephemeral `127.0.0.1` server. No
-test reads `--camera-ip`/`AMCREST_*` or contacts a real camera. Live writes are
+test reads `--ip`/`AMCREST_*` or contacts a real camera. Live writes are
 manual acceptance steps and need explicit approval.
+
+`tests/test_configfile.py` covers the `--noui` read/write flows against a
+duck-typed fake client; `tests/test_console.py` covers the flag contract
+(`--noui` requires `--config`, network mismatch aborts before any write) with
+`credentials.resolve_credentials` patched.
 
 ## Phase 0 discovery
 

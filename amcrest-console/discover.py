@@ -24,10 +24,10 @@ window Region values returns OK but does not persist and can reset the legacy
 mask.
 
 Examples:
-  python3 discover.py --camera-ip 192.168.2.123 --name cam-03 \\
+  python3 discover.py --ip 192.168.2.123 --name cam-03 \\
       --pano-config ../pano/pano-docker.json
 
-  AMCREST_PASSWORD=... python3 discover.py --camera-ip 192.168.2.123
+  AMCREST_PASSWORD=... python3 discover.py --ip 192.168.2.123
 
 Password precedence: --pano-config, then $AMCREST_PASSWORD, then an interactive
 getpass prompt. Passwords are never written to fixtures or printed.
@@ -36,15 +36,12 @@ getpass prompt. Passwords are never written to fixtures or printed.
 from __future__ import annotations
 
 import argparse
-import getpass
 import ipaddress
 import json
-import os
 import sys
-import urllib.parse
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from camera import (
     COLS,
@@ -62,64 +59,11 @@ from camera import (
     sanitize,
     skip_software_version,
 )
+import credentials
 
-
-def load_pano_camera(path: Path, camera_ip: str, name: Optional[str]) -> Dict[str, str]:
-    with path.open("r", encoding="utf-8") as handle:
-        config = json.load(handle)
-    candidates: List[Dict[str, Any]] = []
-    for key, value in config.items():
-        if key.startswith("@"):
-            continue
-        if key.endswith("camera_list") and isinstance(value, list):
-            for camera in value:
-                if isinstance(camera, dict):
-                    candidates.append(camera)
-    for camera in candidates:
-        if name and camera.get("name") != name:
-            continue
-        for key in ("admin_url", "live_url"):
-            url = camera.get(key) or ""
-            try:
-                host = urllib.parse.urlsplit(url).hostname
-            except ValueError:
-                host = None
-            if host == camera_ip:
-                parsed = urllib.parse.urlsplit(url)
-                if parsed.username and parsed.password:
-                    return {
-                        "name": str(camera.get("name") or name or camera_ip),
-                        "user": urllib.parse.unquote(parsed.username),
-                        "password": urllib.parse.unquote(parsed.password),
-                        "model": str(camera.get("model") or ""),
-                    }
-    raise CameraError(
-        "no camera with credentials found for ip {} in {}".format(camera_ip, path)
-    )
-
-
-def resolve_credentials(args: argparse.Namespace) -> Tuple[str, str, str, str]:
-    name = args.name or args.camera_ip
-    model = getattr(args, "model", None) or ""
-    if args.pano_config:
-        camera = load_pano_camera(Path(args.pano_config), args.camera_ip, args.name)
-        return (
-            camera["name"],
-            args.user or camera["user"],
-            camera["password"],
-            model or camera.get("model", ""),
-        )
-    password = os.environ.get(args.password_env)
-    if password:
-        return name, args.user, password, model
-    if sys.stdin.isatty():
-        password = getpass.getpass(
-            "Password for {}@{}: ".format(args.user, args.camera_ip)
-        )
-        return name, args.user, password, model
-    raise CameraError(
-        "no password: set ${} or pass --pano-config".format(args.password_env)
-    )
+# Re-exported from credentials so existing callers keep working.
+load_pano_camera = credentials.load_pano_camera
+resolve_credentials = credentials.resolve_credentials
 
 
 def verify_legacy_mask(client: CameraClient, mask: Dict[str, Any]) -> None:
@@ -176,14 +120,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(
         description="Read-only Amcrest/Dahua camera discovery (phase 0).",
     )
-    parser.add_argument("--camera-ip", required=True, help="camera IPv4/IPv6 address")
+    parser.add_argument("--ip", required=True, help="camera IPv4/IPv6 address")
     parser.add_argument("--name", help="camera label for output and pano lookup")
     parser.add_argument("--camera-port", type=int, default=80)
     parser.add_argument("--user", default="admin")
     parser.add_argument("--password-env", default="AMCREST_PASSWORD")
     parser.add_argument(
         "--pano-config",
-        help="read credentials for --camera-ip from a pano JSON config",
+        help="read credentials for --ip from a pano JSON config",
     )
     parser.add_argument("--timeout", type=float, default=15.0)
     parser.add_argument(
@@ -224,12 +168,12 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        camera_ip = str(ipaddress.ip_address(args.camera_ip))
+        camera_ip = str(ipaddress.ip_address(args.ip))
     except ValueError as error:
-        parser.error("invalid --camera-ip: {}".format(error))
+        parser.error("invalid --ip: {}".format(error))
 
     try:
-        name, user, password, model = resolve_credentials(args)
+        name, user, password, model = credentials.resolve_credentials(args)
         request_delay = args.request_delay
         if request_delay is None:
             request_delay = 1.0 if "ip2m" in model.lower() else 0.0

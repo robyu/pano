@@ -1,5 +1,5 @@
 ---
-update: 2026-11-06 PST
+update: 2026-11-08 PST
 tags: amcrest-console, camera-contact
 ---
 
@@ -8,26 +8,30 @@ tags: amcrest-console, camera-contact
 Read-only contact/probe run from chuyu-server. No camera writes were made.
 Credentials were read from `pano/pano-docker.json` and are not reproduced here.
 
-## Summary: both interfaces
+## Summary: both interfaces (probe 2026-11-01, after the auth fix)
 
-Addresses are from the camera table in `pano-log-overview.md`. "HTTP" means
-TCP port 80 plus the CGI request. `RD` (used only in the earlier pre-fix
-probes) = TCP connect succeeded but the client saw `RemoteDisconnected`.
+Camera identity (model, MACs, IPs, firmware, serial) lives in the inventory table in
+`pano-cameras.md`; this file records the dated probe results only. "HTTP" means
+TCP port 80 plus the CGI request. `RD` (used only in the earlier pre-fix probes) =
+TCP connect succeeded but the client saw `RemoteDisconnected`.
 
-| Camera | Model | Wi-Fi IP | Wi-Fi result | Wired IP | Wired result | iOS app |
-|---|---|---|---|---|---|---|
-| cam-00 | IP2M-842 | 192.168.2.120 | down | 192.168.2.130 | down | not shown |
-| cam-01 | IP2M-842 | 192.168.2.121 | up; Basic CGI OK (preemptive) | 192.168.2.131 | down | live |
-| cam-02 | IP2M-842 | 192.168.2.122 | down | 192.168.2.132 | down | not shown |
-| cam-03 | IP2M-842 | 192.168.2.123 | up; Basic CGI OK (preemptive) | 192.168.2.133 | down | live |
-| cam-04 | IP2M-842 | 192.168.2.124 | up; Basic CGI OK (preemptive) | 192.168.2.134 | up; Basic expected; retest | live |
-| cam-05 | IP2M-842 | 192.168.2.125 | up; Basic CGI OK (preemptive) | 192.168.2.135 | down | live |
-| cam-06 | IP2M-842 | 192.168.2.126 | up; Basic CGI OK (preemptive) | 192.168.2.136 | down | live |
-| cam-07 | IP3M-943B | 192.168.2.127 | up; CGI OK | 192.168.2.137 | down | live |
-| cam-08 | IP3M-943B | 192.168.2.128 | up; CGI OK | 192.168.2.138 | up; CGI OK | live |
-| cam-09 | IP3M-943B | 192.168.2.129 | up; CGI OK | 192.168.2.139 | up earlier, down at second probe | live |
-| cam-10 | IP3M? | 192.168.2.119 | down | 192.168.2.140 | down | not shown |
-| cam-11 | IP3M? | 192.168.2.118 | down | 192.168.2.141 | down | not shown |
+| Camera | Wi-Fi result | Wired result | iOS app |
+|---|---|---|---|
+| cam-00 | down | down | not shown |
+| cam-01 | up; Basic CGI OK (preemptive) | down | live |
+| cam-02 | down | down | not shown |
+| cam-03 | up; Basic CGI OK (preemptive) | down | live |
+| cam-04 | up; Basic CGI OK (preemptive) | up; Basic expected; retest | live |
+| cam-05 | up; Basic CGI OK (preemptive) | down | live |
+| cam-06 | up; Basic CGI OK (preemptive) | down | live |
+| cam-07 | up; CGI OK | down | live |
+| cam-08 | up; CGI OK | up; CGI OK | live |
+| cam-09 | up; CGI OK | up earlier, down at second probe | live |
+| cam-10 | down | down | not shown |
+| cam-11 | down | down | not shown |
+
+The 2026-11-06 motion read (below) re-verified CGI on cam-01/03/05/06/07/09 (Wi-Fi) and
+cam-04/08 (wired), which is what the `*` marks in the inventory table mean.
 
 cam-02, cam-10, and cam-11 are not in the active pano config and are not shown
 by the iOS app. The iOS app proves the IP2M-842 units are online; it uses
@@ -283,16 +287,16 @@ Observed structure:
 
 Live cell counts (2026-11-06):
 
-| Camera | Model | Host | Legacy cells | Window[0] cells | Window[1..3] cells |
-|---|---|---|---|---|---|
-| cam-01 | IP2M-842 | 192.168.2.121 | 340 | 340 | 0 / 0 / 0 |
-| cam-03 | IP2M-842 | 192.168.2.123 | 396 | 396 | 0 / 0 / 0 |
-| cam-04 | IP2M-842 | 192.168.2.134 | 383 | 383 | 0 / 0 / 0 |
-| cam-05 | IP2M-842 | 192.168.2.125 | 12-row variant (48) | 48 | 0 / 0 / 0 |
-| cam-06 | IP2M-842 | 192.168.2.126 | 341 | 341 | 0 / 0 / 0 |
-| cam-07 | IP3M-943B | 192.168.2.127 | 396 | 396 | 0 / 0 / 0 |
-| cam-08 | IP3M-943B | 192.168.2.138 | 302 | 302 | 0 / 0 / 0 |
-| cam-09 | IP3M-943B | 192.168.2.129 | 289 | 289 | 0 / 0 / 0 |
+| Camera | Host | Legacy cells | Window[0] cells | Window[1..3] cells |
+|---|---|---|---|---|
+| cam-01 | 192.168.2.121 | 340 | 340 | 0 / 0 / 0 |
+| cam-03 | 192.168.2.123 | 396 | 396 | 0 / 0 / 0 |
+| cam-04 | 192.168.2.134 | 383 | 383 | 0 / 0 / 0 |
+| cam-05 | 192.168.2.125 | 12-row variant (48) | 48 | 0 / 0 / 0 |
+| cam-06 | 192.168.2.126 | 341 | 341 | 0 / 0 / 0 |
+| cam-07 | 192.168.2.127 | 396 | 396 | 0 / 0 / 0 |
+| cam-08 | 192.168.2.138 | 302 | 302 | 0 / 0 / 0 |
+| cam-09 | 192.168.2.129 | 289 | 289 | 0 / 0 / 0 |
 
 Cam-04 is reached at its wired address; cam-08 at its wired address. Live cell
 counts differ slightly from the 2026-11-01 fixtures; the masks were edited

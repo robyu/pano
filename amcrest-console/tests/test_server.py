@@ -27,6 +27,7 @@ class MockCamera:
         self.mask_values = [0x3FFFFF] * 18
         self.motion_enable = "true"
         self.motion_level = "3"
+        self.requests = []
         self.set_configs = []
         self.rpc_set_configs = []
         self.rpc_logins = 0
@@ -313,6 +314,8 @@ class MockCamera:
                 self.end_headers()
 
             def do_GET(self):
+                with outer.lock:
+                    outer.requests.append(self.path)
                 expected = "Basic " + base64.b64encode(b"admin:testpass").decode()
                 if self.headers.get("Authorization") != expected:
                     self.send_response(401)
@@ -585,6 +588,22 @@ class LoginTests(ServerTestCase):
         self.assertEqual(info["name"], "cam-test")
         self.assertEqual(info["device_type"], "IP2M-842")
         self.assertEqual(info["auth"], "basic")
+
+    def test_login_detects_model_without_argument(self):
+        self.server.camera_config["model"] = None
+        status, _headers, cookie = self.login()
+        self.assertEqual(status, 200)
+        self.assertEqual(self.server.camera_config["model"], "IP2M-842")
+        status, _headers, body = self.request(
+            "GET", BASE + "api/camera", headers={"Cookie": cookie}
+        )
+        info = json.loads(body)
+        self.assertEqual(status, 200)
+        self.assertEqual(info["model"], "IP2M-842")
+        self.assertEqual(info["device_type"], "IP2M-842")
+        self.assertFalse(
+            any("getSoftwareVersion" in path for path in self.mock.requests)
+        )
 
     def test_second_login_invalidates_first_browser(self):
         _status, _headers, first = self.login()

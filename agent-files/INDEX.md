@@ -29,9 +29,14 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
 * agent-files/amcrest-console-plan.md - implementation plan for the plugin-free
   console: CLI (`--camera-ip`), browser login screen, Basic/Digest proxy, layout,
   HTTP/security model, phases, tests, risks
-* agent-files/amcrest-camera-contact.md - 2026-11-01 camera probe: reachable
-  IP3M-943B units, IP2M-842 Basic-auth correction, cam-01 firmware/mask/mirror,
-  ARP, next steps; plus 2026-11-06 live motion-model verification (legacy mask
+* agent-files/amcrest-config-reference.md - Configuration-tab reference for all
+  config items (General/Network/NAS/NTP/Encode/AutoMaintain/MotionDetect):
+  per-model IP2M-842 vs IP3M-943B applicability, NA/inert marking, console
+  widget types, and correlation to the camera's built-in web UI pages
+* agent-files/amcrest-camera-contact.md - dated camera probe log ONLY (identity
+  lives in pano-cameras.md): 2026-11-01 reachability per Wi-Fi/wired
+  interface, IP2M-842 Basic-auth correction, cam-01 firmware/mask/mirror, ARP,
+  next steps; plus 2026-11-06 live motion-model verification (legacy mask
   operative, only window0 populated, windows 1-3 empty/inert) and the cam-05
   12-row anomaly
 * agent-files/amcrest-rpc2-api.md - reverse-engineered RPC2 JSON API: endpoints,
@@ -45,8 +50,12 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
   record/user) extracted from pano-log.pdf images
 * agent-files/network-and-misc-from-log.md - OpenDNS, Firefox, router, motion, Pi,
   wireframe notes extracted from pano-log.pdf images (contains obsolete Shinobi-era misc)
-* agent-files/pano-log-overview.md - quick-reference from pano-log.pdf text: endpoints,
-  camera inventory table, external links, bugs/enhancements
+* agent-files/pano-cameras.md - THE camera inventory of record: cam-00..cam-11 with
+  model, location, pano description, MACs, Wi-Fi and wired IPs, per-interface status,
+  active IP, auth scheme, in-config flag, firmware and serial
+* agent-files/pano-log-overview.md - quick-reference from pano-log.pdf text
+  (endpoints, directories, external links, bugs/enhancements); camera table moved to
+  pano-cameras.md
 * agent-files/pano-log-chronology.md - condensed dated history from pano-log.pdf text
   (2024→2017; pre-pano/Zoneminder/Shinobi entries marked obsolete)
 * agent-files/pano-procedures.md - operational procedures from pano-log.pdf text
@@ -61,18 +70,27 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
   logging/diagnostics, motion-mask UI, Configuration tab/forms, backups and
   Network warnings, tests
 * amcrest-console/camera.py - shared stdlib CGI client: explicit Basic/Digest,
-  request lock, throttle/backoff, identity cache, legacy mask codec helpers,
-  RPC2 fallback with the client-set DhWebClientSessionID cookie, redacted
-  protocol logging
-* amcrest-console/console.py - phase 1 CLI: `--camera-ip`, LAN bind (`--bind`,
-  `--allow-host`), root URL, reachability check, browser launch,
-  `--state-dir`/`--state-file`, protocol logging to
-  `<state-dir>/log-<slug>.log` with `--log-level`/`--log-file`
+  request lock, throttle/backoff, identity cache, camera model auto-detection
+  (`getDeviceType`), legacy mask codec helpers, RPC2 fallback with the
+  client-set DhWebClientSessionID cookie, redacted protocol logging
+* amcrest-console/console.py - phase 1 CLI: `--ip`, optional `--model`
+  override (auto-detected at login), LAN bind (`--bind`, `--allow-host`), root
+  URL, reachability check, browser launch, `--state-dir`/`--state-file`/
+  `--backup-dir`, protocol logging to `<state-dir>/log-<slug>.log` with
+  `--log-level`/`--log-file`; phase 4b `--noui --config {read,write}`
+  with `--config-file`, `--dry-run`, `--include-secrets`, `--pano-config`,
+  `--password-env`
 * amcrest-console/server.py - LAN server: Host/Origin checks, browser login,
   single in-memory session, snapshot proxy, motion mask GET/PUT, config
   GET/POST, full backup download, state endpoint, API/protocol logging
 * amcrest-console/schemas.py - phase 3 allowlisted config sections, field
   metadata, form groups, validation and secret flags
+* amcrest-console/configfile.py - phase 4b non-interactive config read/write:
+  config-document IO, Network-section compare-and-abort guard, and the shared
+  section write/verify core used by `POST /api/config`
+* amcrest-console/credentials.py - phase 4b non-interactive credential lookup
+  (`--pano-config` -> `$AMCREST_PASSWORD` -> tty prompt) shared with
+  discover.py
 * amcrest-console/cgi_config.py - phase 3 flat CGI config parsing, revisions,
   diff/validation, and RPC2 table read-modify-write helpers
 * amcrest-console/mask.py - phase 2 legacy 18x22 mask codec, validation, revision
@@ -102,10 +120,12 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
   backup-dir forwarding, LAN URL listing
 * amcrest-console/tests/test_schemas.py - section/field metadata, secret and
   dangerous flags, validation/normalization tests
-* amcrest-console/tests/test_cgi_config.py - canonical revisions, diff/RMW,
-  rejection of non-writable/unknown fields, RPC2 table conversion tests
-* amcrest-console/cameras/ - per-camera JSON mirrors and `log-<slug>.log`
-  protocol logs (runtime; gitignored)
+ * amcrest-console/tests/test_cgi_config.py - canonical revisions, diff/RMW,
+   rejection of non-writable/unknown fields, RPC2 table conversion tests
+ * amcrest-console/tests/test_configfile.py - phase 4b config read/write,
+   Network-section mismatch guard, writable filtering, plan/verify/abort tests
+ * amcrest-console/cameras/ - per-camera JSON mirrors, `config-<slug>.json`
+   exports, and `log-<slug>.log` protocol logs (runtime; gitignored)
 * amcrest-console/backups/ - sanitized pre-write config backups
   `<slug>-<timestamp>.json` (runtime; gitignored)
 * amcrest-console/fixtures/ - local discovery output (snapshots/configs; gitignored)

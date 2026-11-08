@@ -142,11 +142,16 @@ def locked(path: Path) -> Iterator[None]:
         handle.close()
 
 
-def save(path: Path, data: Dict[str, Any]) -> None:
-    """Atomically write a sanitized mirror file."""
+def save(path: Path, data: Dict[str, Any], sanitize_values: bool = True) -> None:
+    """Atomically write a mirror file.
+
+    Values are sanitized by default so secret-looking keys never reach disk.
+    Callers that deliberately export secrets (``--config read
+    --include-secrets``, file mode 0600) pass ``sanitize_values=False``.
+    """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = sanitize(data)
+    payload = sanitize(data) if sanitize_values else data
     with locked(path):
         handle = tempfile.NamedTemporaryFile(
             mode="w",

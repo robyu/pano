@@ -1,6 +1,6 @@
 ---
-update: 2026-11-06 PST
-tags: amcrest-console, implementation-plan, motion-mask, json-mirror, config-browser, backups
+update: 2026-11-08 PST
+tags: amcrest-console, implementation-plan, motion-mask, json-mirror, config-browser, backups, non-interactive, noui
 ---
 
 # Amcrest console implementation plan
@@ -104,33 +104,16 @@ one request at a time and a long timeout.
 ....##################
 ```
 
-**Camera reachability, both interfaces (2026-11-01 15:56 PST)**
+**Camera reachability (2026-11-01 sweep)**
 
-`RD` = TCP 80 accepted then the camera closed the connection
-(`RemoteDisconnected`). Wi-Fi/wired addresses are from
-`pano-log-overview.md`; pano's config lists only one interface per camera.
+Inventory of record (model, MACs, IPs, firmware, auth, active IP, status columns):
+`pano-cameras.md`. Dated probe results, including the 2026-11-06 motion read:
+`amcrest-camera-contact.md`. The per-interface up/down table was removed from this plan
+so it has a single home.
 
-| Camera | Model | Wi-Fi IP | Wi-Fi result | Wired IP | Wired result | iOS app |
-|---|---|---|---|---|---|---|
-| cam-00 | IP2M-842 | 192.168.2.120 | down | 192.168.2.130 | down | not shown |
-| cam-01 | IP2M-842 | 192.168.2.121 | up; Basic CGI OK; slow/fragile | 192.168.2.131 | down | live |
-| cam-02 | IP2M-842 | 192.168.2.122 | down | 192.168.2.132 | down | not shown |
-| cam-03 | IP2M-842 | 192.168.2.123 | up; Basic expected; retest after auth fix | 192.168.2.133 | down | live |
-| cam-04 | IP2M-842 | 192.168.2.124 | up; Basic expected; retest after auth fix | 192.168.2.134 | up; Basic expected; retest | live |
-| cam-05 | IP2M-842 | 192.168.2.125 | up; Basic expected; retest after auth fix | 192.168.2.135 | down | live |
-| cam-06 | IP2M-842 | 192.168.2.126 | up; Basic expected; retest after auth fix | 192.168.2.136 | down | live |
-| cam-07 | IP3M-943B | 192.168.2.127 | CGI OK | 192.168.2.137 | down | live |
-| cam-08 | IP3M-943B | 192.168.2.128 | CGI OK | 192.168.2.138 | CGI OK | live |
-| cam-09 | IP3M-943B | 192.168.2.129 | CGI OK | 192.168.2.139 | up earlier, down now | live |
-| cam-10 | IP3M? | 192.168.2.119 | down | 192.168.2.140 | down | not shown |
-| cam-11 | IP3M? | 192.168.2.118 | down | 192.168.2.141 | down | not shown |
-
-Full probe details, ARP table, and next steps: `amcrest-camera-contact.md`.
-
-The iOS app reports live streaming for cam-01/03/04/05/06/07/08/09, so the
-IP2M-842 units are online. The app uses P2P/cloud and does not prove local HTTP
-reachability. Their active Wi-Fi interfaces are up; their wired interfaces are
-mostly down (cam-04 is the exception).
+Status at the time of writing: cam-01/03/04/05/06/07/08/09 are reachable over local CGI
+(Basic for the IP2M-842 units, Digest for the IP3M-943B units); cam-04 and cam-08 are
+reached on their wired addresses; cam-00/02/10/11 are down or not in the active config.
 
 The earlier "TCP accepted then closed" behavior was the **client's combined
 Digest+Basic opener**, not the camera. With explicit Basic auth, cam-01 returns
@@ -139,11 +122,6 @@ server is nevertheless slow and single-connection: rapid multi-request probes
 can still reset or refuse it. Use one request at a time, a long timeout, and
 stop the P2P stream if a request hangs. `LoginFailLockTime=300` on the tested
 IP3M-943 firmware.
-
-**Current API status (after auth fix):** cam-01 CGI works with explicit Basic;
-cam-07/08/09 work with Digest; cam-03/04/05/06 are reachable on Wi-Fi but need a
-retest with the fixed client; cam-00/02/10/11 are down or inactive. See
-`amcrest-camera-contact.md`.
 
 **Fixtures**
 
@@ -218,18 +196,30 @@ location; `cameras/` is gitignored. Protocol logs share the directory as
 ## Command-line interface
 
 ```bash
-python3 console.py --camera-ip 192.168.2.120 \
+python3 console.py --ip 192.168.2.120 \
   [--name cam-00] \
   [--user admin] \
   [--camera-port 80] \
   [--port 8765] \
   [--no-browser]
+
+# non-interactive (phase 4b): no server, no browser, run once and exit
+python3 console.py --ip 192.168.2.120 --noui --config {read,write} \
+  [--config-file FILE] [--dry-run] [--include-secrets] \
+  [--pano-config PATH] [--password-env NAME]
 ```
 
-* `--camera-ip` — **required**; validated with `ipaddress.ip_address`.
+`--camera-ip` was renamed to `--ip` in phase 4b (both `console.py` and
+`discover.py`); the README and tests were updated with it.
+
+* `--ip` — **required**; validated with `ipaddress.ip_address`.
 * `--name` — optional display/backup label; defaults to the IP.
 * `--user` — optional username prefill for the browser login screen; default
   `admin`.
+* `--model` — optional override. Without it, the first authenticated login asks
+  `magicBox.cgi?action=getDeviceType` and caches the model for the session. The
+  default request delay is 1.0 s when the model is unknown, so the IP2M-842
+  safety rules apply before detection completes.
 * `--camera-port` — camera HTTP port; default `80`.
 * `--port` — local console port; default `8765`.
 * `--no-browser` — print the URL without opening a browser.
@@ -240,6 +230,34 @@ python3 console.py --camera-ip 192.168.2.120 \
 * `--log-file` — override the default `<state-dir>/log-<slug>.log` path.
 * `--backup-dir` — pre-write backup directory; default
   `amcrest-console/backups/`.
+
+**Non-interactive mode (`--noui`, phase 4b)**
+
+* `--noui` — run one `--config` action and exit. No port is bound and no browser
+  is opened, so `--port`, `--bind`, `--allow-host`, and `--no-browser` are
+  rejected (usage error, exit 2).
+* `--config {read,write}` — **no default**; required with `--noui` and rejected
+  without it.
+  * `read` — read every allowlisted section and write one backup document to
+    `--config-file`, refreshing the mirror too. Secret values are stored as
+    `<redacted>` unless `--include-secrets` is given (the file is mode 0600).
+  * `write` — load the file, compare its `Network` section against the camera's
+    over the union of keys, and abort with exit 7 (no writes issued) if anything
+    differs: network changes must be made interactively. Otherwise write a
+    complete pre-write backup and apply the remaining sections.
+* `--config-file` — default `<state-dir>/config-<slug>.json`.
+* `--dry-run` — `write` only: print the planned changes, write nothing.
+* `--include-secrets` — `read` only: export real secret values instead of
+  `<redacted>`.
+* `--pano-config` / `--password-env` — credentials for the batch run; see below.
+
+Writes reuse the phase 3 apply core: only schema-writable keys are sent,
+`MotionDetect` goes through `write_motion_settings` (all 18 legacy rows are
+re-sent so the mask survives, and only `Enable`/`Level` are changed), and every
+section is re-read and verified. The first camera error aborts the remaining
+sections. Exit codes: `0` ok, `2` usage, `3` unreachable, `4` bind,
+`5` credentials, `6` unusable config file, `7` Network differs, `8` write
+rejected or unverified.
 
 **Credential prompt:** the console does not ask for the password on the command
 line. The first browser load shows a login screen with username (prefilled from
@@ -286,16 +304,20 @@ amcrest-console/
   mask.py               # phase 2 legacy 18x22 grid codec (implemented)
   state.py              # phase 2 mirror + phase 3 backup helpers (implemented)
   schemas.py            # phase 3 allowlisted sections/form metadata (implemented)
+  configfile.py         # phase 4b --noui config read/write, network guard, shared apply core (implemented)
+  credentials.py        # phase 4b pano-config/env/getpass credential lookup (implemented)
   cameras/              # per-camera JSON mirrors + log-<slug>.log, gitignored (runtime)
+  config-<slug>.json    # --config read output, gitignored via cameras/ (runtime)
   cameras.example.json  # optional future multi-camera example; unused by MVP
   tests/test_discover.py  # phase 0 tests (implemented)
   tests/test_camera.py    # phase 1 client tests (implemented)
   tests/test_server.py    # phase 1+2 server tests (implemented)
   tests/test_mask.py      # phase 2 mask codec tests (implemented)
   tests/test_state.py     # phase 2 mirror tests (implemented)
-  tests/test_console.py   # CLI logging/backup-dir tests (implemented)
+  tests/test_console.py   # CLI logging/backup-dir + --noui flag contract (implemented)
   tests/test_cgi_config.py # phase 3 parsing/validation/RMW tests (implemented)
   tests/test_schemas.py  # phase 3 section/field metadata tests (implemented)
+  tests/test_configfile.py # phase 4b read/write/plan/verify + network guard (implemented)
   backups/              # pre-write configurations, gitignored (runtime)
   fixtures/             # local discovery output, gitignored
   README.md             # run steps, configuration, backups, security (implemented)
@@ -410,7 +432,7 @@ No arbitrary URL proxying; the camera host is fixed by `--camera-ip`.
 * Suite: 82 passing (`test_discover` 24, `test_camera` 9, `test_server` 26,
   `test_mask` 12, `test_state` 11).
 
-**3. Config browser + forms (implemented 2026-11-06; live smoke test pending)**
+**3. Config browser + forms (done 2026-11-06; live smoke test passed)**
 * Implemented: `schemas.py` allowlist/metadata, `cgi_config.py` parsing,
   validation, revision, diff and RPC2 table RMW; `camera.get_section`,
   `set_section_changes`, `set_section_via_rpc`, `write_motion_settings`;
@@ -425,13 +447,37 @@ No arbitrary URL proxying; the camera host is fixed by `--camera-ip`.
 * Network/NAS writes require a typed phrase and a complete sanitized pre-write
   backup in `backups/`. Network address changes that disconnect the camera are
   reported as `verified: false`, `disconnected: true`, with the mirror stale.
-* Tests: 165 passing (phase 3 adds schemas/cgi_config/config server/backup
+* Tests: 172 passing (phase 3 adds schemas/cgi_config/config server/backup
   tests). No automated test contacts a real camera.
+* Live smoke test completed successfully on 2026-11-06 (user-confirmed).
 
 **4. Backup/restore + safety (0.5–1 day)**
 * Pre-write backup to `amcrest-console/backups/<name>-<timestamp>.json`.
 * Restore applies only differences, serializes writes with a short delay.
 * Abort on missing/unexpected response fields.
+
+**4b. Non-interactive mode (done 2026-11-08)**
+* `--noui --config {read,write}`; `--config` has no default and requires
+  `--noui`. No port is bound, no browser is opened.
+* `read` dumps every allowlisted section to `<state-dir>/config-<slug>.json` in
+  the existing backup-document format and refreshes the mirror. Secrets are
+  `<redacted>` unless `--include-secrets` (file stays 0600).
+* `write` compares the file's whole `Network` section against the camera's over
+  the union of keys and exits 7 with a diff table before sending any write:
+  network changes stay interactive.
+* Otherwise it writes a complete pre-write backup and applies the remaining
+  sections through the phase 3 core extracted into
+  `configfile.write_and_verify` (now shared with `POST /api/config`), routing
+  `MotionDetect` through `write_motion_settings` so the 18-row mask survives.
+* Credentials come from `--pano-config` → `$AMCREST_PASSWORD` → a tty prompt,
+  moved out of `discover.py` into `credentials.py`.
+* `--camera-ip` renamed to `--ip` in `console.py` and `discover.py`.
+* Exit codes: 0/2/3/4/5/6/7/8 (usage, unreachable, bind, credentials, config
+  file, Network differs, write failed).
+* Tests: 229 passing (39 new in `tests/test_configfile.py`, 18 new `--noui`
+  cases in `tests/test_console.py`). Mock-only; verified end-to-end against the
+  `tests/test_server.py` MockCamera HTTP server (read, network-mismatch abort
+  with zero `setConfig` calls, and a real two-section apply with backup).
 
 **5. Optional live-stream spike (0.25–0.5 day)**
 * Test `/cgi-bin/mjpg/video.cgi` in Safari. If it renders, add a separate

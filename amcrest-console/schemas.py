@@ -44,7 +44,7 @@ SECTION_WARNINGS = {
     "Network": (
         "Changing the interface, DHCP, IP address, subnet, or gateway can make "
         "the camera unreachable. A backup is written before the write. If the "
-        "camera disappears, restart the console with the new --camera-ip."
+        "camera disappears, restart the console with the new --ip."
     ),
     "NAS": (
         "The camera may stop uploading clips if the NAS/FTP target is wrong. "
