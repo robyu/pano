@@ -32,63 +32,100 @@
       </div>
       <p id="camera-info" class="muted"></p>
 
-      <div class="snapshot-wrap">
-        <img id="snapshot" alt="Camera snapshot">
-        <svg id="mask-overlay" viewBox="0 0 22 18" preserveAspectRatio="none"
-             aria-label="Legacy motion mask: red cells are motion-sensitive, unpainted cells are ignored"
-             aria-describedby="mask-legend" hidden></svg>
-        <svg id="region-overlay" viewBox="0 0 22 18" preserveAspectRatio="none"
-             aria-hidden="true" hidden></svg>
-      </div>
-      <p id="status" class="error" role="alert"></p>
-
-      <div class="tabs" role="tablist" aria-label="Motion mask views">
-        <button id="tab-legacy" type="button" role="tab" aria-selected="true"
-                aria-controls="panel-legacy" tabindex="0">Legacy mask</button>
-        <button id="tab-regions" type="button" role="tab" aria-selected="false"
-                aria-controls="panel-regions" tabindex="-1">Region masks</button>
+      <div class="tabs view-tabs" role="tablist" aria-label="Console views">
+        <button id="view-motion" type="button" role="tab" aria-selected="true"
+                aria-controls="motion-view" tabindex="0">Motion masks</button>
+        <button id="view-config" type="button" role="tab" aria-selected="false"
+                aria-controls="config-view" tabindex="-1">Configuration</button>
       </div>
 
-      <section class="panel" id="panel-legacy" role="tabpanel"
-               aria-labelledby="tab-legacy">
-        <div class="toolbar">
-          <h2>Legacy mask</h2>
-          <span id="motion-status" class="muted"></span>
+      <section id="motion-view" role="tabpanel" aria-labelledby="view-motion">
+        <div class="snapshot-wrap">
+          <img id="snapshot" alt="Camera snapshot">
+          <svg id="mask-overlay" viewBox="0 0 22 18" preserveAspectRatio="none"
+               aria-label="Legacy motion mask: red cells are motion-sensitive, unpainted cells are ignored"
+               aria-describedby="mask-legend" hidden></svg>
+          <svg id="region-overlay" viewBox="0 0 22 18" preserveAspectRatio="none"
+               aria-hidden="true" hidden></svg>
         </div>
-        <p id="mirror-info" class="muted"></p>
-        <div class="toolbar editor-toolbar">
-          <button id="motion-refresh" type="button" class="secondary">Reload mask</button>
-          <button id="mode-paint" type="button" class="secondary" aria-pressed="true">Paint</button>
-          <button id="mode-erase" type="button" class="secondary" aria-pressed="false">Erase</button>
-          <button id="mask-clear" type="button" class="secondary">Clear</button>
-          <button id="mask-invert" type="button" class="secondary">Invert</button>
-          <button id="mask-revert" type="button" class="secondary">Revert</button>
-          <span id="mask-count" class="muted"></span>
-          <button id="mask-apply" type="button" disabled>Apply mask</button>
+        <p id="status" class="error" role="alert"></p>
+
+        <div class="tabs" role="tablist" aria-label="Motion mask views">
+          <button id="tab-legacy" type="button" role="tab" aria-selected="true"
+                  aria-controls="panel-legacy" tabindex="0">Legacy mask</button>
+          <button id="tab-regions" type="button" role="tab" aria-selected="false"
+                  aria-controls="panel-regions" tabindex="-1">Region masks</button>
         </div>
-        <ul id="mask-legend" class="mask-legend">
-          <li><span class="swatch sensitive" aria-hidden="true"></span>
-              Motion-sensitive: motion here triggers detection.</li>
-          <li><span class="swatch ignored" aria-hidden="true"></span>
-              Ignored: unpainted cells do not trigger motion detection.</li>
-        </ul>
-        <p class="muted small">
-          Drag to paint motion-sensitive cells (right-click to erase). Painted
-          cells are monitored; unpainted cells are ignored. Apply sends all 18
-          legacy rows and re-reads the camera to verify.
-        </p>
-        <p id="motion-error" class="error" role="alert"></p>
+
+        <section class="panel" id="panel-legacy" role="tabpanel"
+                 aria-labelledby="tab-legacy">
+          <div class="toolbar">
+            <h2>Legacy mask</h2>
+            <span id="motion-status" class="muted"></span>
+          </div>
+          <p id="mirror-info" class="muted"></p>
+          <div class="toolbar editor-toolbar">
+            <button id="motion-refresh" type="button" class="secondary">Reload mask</button>
+            <button id="mode-paint" type="button" class="secondary" aria-pressed="true">Paint</button>
+            <button id="mode-erase" type="button" class="secondary" aria-pressed="false">Erase</button>
+            <button id="mask-clear" type="button" class="secondary">Clear</button>
+            <button id="mask-invert" type="button" class="secondary">Invert</button>
+            <button id="mask-revert" type="button" class="secondary">Revert</button>
+            <span id="mask-count" class="muted"></span>
+            <button id="mask-apply" type="button" disabled>Apply mask</button>
+          </div>
+          <ul id="mask-legend" class="mask-legend">
+            <li><span class="swatch sensitive" aria-hidden="true"></span>
+                Motion-sensitive: motion here triggers detection.</li>
+            <li><span class="swatch ignored" aria-hidden="true"></span>
+                Ignored: unpainted cells do not trigger motion detection.</li>
+          </ul>
+          <p class="muted small">
+            Drag to paint motion-sensitive cells (right-click to erase). Painted
+            cells are monitored; unpainted cells are ignored. Apply sends all 18
+            legacy rows and re-reads the camera to verify.
+          </p>
+          <p id="motion-error" class="error" role="alert"></p>
+        </section>
+
+        <section class="panel" id="panel-regions" role="tabpanel"
+                 aria-labelledby="tab-regions" hidden>
+          <div class="toolbar">
+            <h2>Region masks</h2>
+            <span id="region-status" class="muted"></span>
+          </div>
+          <p class="muted small">Region masks are read-only.</p>
+          <ul id="region-legend" class="region-legend"></ul>
+          <p id="region-error" class="error" role="alert"></p>
+        </section>
       </section>
 
-      <section class="panel" id="panel-regions" role="tabpanel"
-               aria-labelledby="tab-regions" hidden>
+      <section id="config-view" role="tabpanel" aria-labelledby="view-config" hidden>
         <div class="toolbar">
-          <h2>Region masks</h2>
-          <span id="region-status" class="muted"></span>
+          <h2>Configuration</h2>
+          <a id="backup-download" href="api/backup" download
+             class="button secondary">Download backup</a>
+          <button id="config-reload" type="button" class="secondary">Reload section</button>
         </div>
-        <p class="muted small">Region masks are read-only.</p>
-        <ul id="region-legend" class="region-legend"></ul>
-        <p id="region-error" class="error" role="alert"></p>
+        <p id="config-status" class="muted"></p>
+        <p id="config-error" class="error" role="alert"></p>
+        <div class="config-layout">
+          <nav id="config-sections" class="config-sections" aria-label="Configuration sections"></nav>
+          <div class="config-panel">
+            <h3 id="config-title">Configuration</h3>
+            <p id="config-warning" class="warning" hidden></p>
+            <p id="config-meta" class="muted"></p>
+            <form id="config-form"></form>
+            <div class="toolbar">
+              <button id="config-apply" type="submit" form="config-form" disabled>Apply changes</button>
+              <span id="config-dirty" class="muted"></span>
+            </div>
+            <details class="raw-config">
+              <summary>Raw configuration</summary>
+              <pre id="config-raw"></pre>
+            </details>
+          </div>
+        </div>
       </section>
     </section>
   </main>

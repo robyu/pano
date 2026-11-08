@@ -6,7 +6,8 @@ the old NPAPI browser plugin for the parts pano needs: viewing a snapshot and
 
 Phase 1 provides browser login, an in-memory session, and snapshot proxying.
 Phase 2 adds the legacy motion-mask editor and a per-camera JSON configuration
-mirror.
+mirror. Phase 3 adds the Configuration tab: sanitized raw views, schema-driven
+forms, verified read-modify-write, and pre-write backups.
 
 ## Requirements
 
@@ -46,6 +47,7 @@ Useful options:
 - `--timeout` — camera request timeout (default 20s)
 - `--state-dir` — mirror and log directory (default `amcrest-console/cameras/`)
 - `--state-file` — explicit mirror file for this camera
+- `--backup-dir` — pre-write backup directory (default `amcrest-console/backups/`)
 - `--no-browser` — print the URL without opening a browser
 - `--log-level {DEBUG,INFO,WARNING,ERROR}` — protocol log verbosity (default `INFO`)
 - `--log-file PATH` — override the default per-camera log file
@@ -78,6 +80,34 @@ after every successful read and every verified write. If the camera is
 unreachable, the last mirror is shown marked stale and Apply is disabled.
 Secret-looking keys are redacted before anything is written, and mirrors are
 mode 0600. `cameras/` is gitignored.
+
+## Configuration
+
+The **Configuration** view lists the allowlisted sections (`General`,
+`Network`, `NAS`, `NTP`, `Encode`, `AutoMaintain`, `MotionDetect`) and shows
+sanitized raw JSON for each. `General` is read-only. The other sections have
+schema-driven forms; only fields declared in `schemas.py` are writable. Unknown
+firmware keys remain visible in the raw viewer but cannot be changed.
+
+Apply re-reads the live section, checks the section revision, sends only changed
+keys, then re-reads and verifies every key. A stale revision returns 409; a
+verification mismatch returns 502 with expected/actual values and does not
+update the mirror. `MotionDetect` in the Configuration view edits only `Enable`
+and `Level`; the 18x22 mask is still edited in the Legacy mask tab, and window
+models remain read-only.
+
+`Network` and `NAS` are marked dangerous and require the typed confirmation
+phrase shown in the UI. Before either write, the console reads all allowlisted
+sections and writes a complete sanitized backup under `amcrest-console/backups/`
+(mode 0600, gitignored). Network address changes can disconnect the camera; the
+console reports the write as unverified and marks the mirror stale. Restart it
+with the new `--camera-ip` if needed.
+
+**Download backup** writes a sanitized full JSON snapshot with
+`Content-Disposition: attachment`. If a section cannot be read live, the
+download is marked `complete: false` and may use the last mirror for that
+section. Passwords are stored as `<redacted>` in mirrors and backups; restore
+must re-enter them.
 
 ## Logging and diagnostics
 
@@ -135,7 +165,9 @@ from another host, allow TCP 8765 in the server firewall.
   single-connection, and `getSoftwareVersion` crashes its web server.
 - Motion writes require the browser session, a matching stale-check revision,
   explicit confirmation, and a successful re-read.
-- Mirrors are written atomically, mode 0600, with secret-looking keys redacted.
+- Mirrors and pre-write backups are written atomically, mode 0600, with
+  secret-looking keys redacted. Backups are sanitized, so restore must re-enter
+  passwords.
 
 ## Troubleshooting
 
@@ -160,6 +192,10 @@ from another host, allow TCP 8765 in the server firewall.
 cd amcrest-console
 python3 -m unittest discover -s tests
 ```
+
+The suite is mock-only: every test binds an ephemeral `127.0.0.1` server. No
+test reads `--camera-ip`/`AMCREST_*` or contacts a real camera. Live writes are
+manual acceptance steps and need explicit approval.
 
 ## Phase 0 discovery
 

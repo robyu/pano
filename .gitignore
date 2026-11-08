@@ -19,3 +19,6 @@ amcrest-console/fixtures/
 
 # per-camera JSON configuration mirrors (local state)
 amcrest-console/cameras/
+
+# pre-write configuration backups (local state)
+amcrest-console/backups/

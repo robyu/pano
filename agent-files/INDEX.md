@@ -58,8 +58,8 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
 
 ## amcrest-console/
 * amcrest-console/README.md - run steps, LAN access, security model,
-  logging/diagnostics, two-tab mask UI (legacy editor + read-only region
-  overlays), tests
+  logging/diagnostics, motion-mask UI, Configuration tab/forms, backups and
+  Network warnings, tests
 * amcrest-console/camera.py - shared stdlib CGI client: explicit Basic/Digest,
   request lock, throttle/backoff, identity cache, legacy mask codec helpers,
   RPC2 fallback with the client-set DhWebClientSessionID cookie, redacted
@@ -69,8 +69,12 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
   `--state-dir`/`--state-file`, protocol logging to
   `<state-dir>/log-<slug>.log` with `--log-level`/`--log-file`
 * amcrest-console/server.py - LAN server: Host/Origin checks, browser login,
-  single in-memory session, snapshot proxy, motion mask GET/PUT, state endpoint,
-  API/protocol logging
+  single in-memory session, snapshot proxy, motion mask GET/PUT, config
+  GET/POST, full backup download, state endpoint, API/protocol logging
+* amcrest-console/schemas.py - phase 3 allowlisted config sections, field
+  metadata, form groups, validation and secret flags
+* amcrest-console/cgi_config.py - phase 3 flat CGI config parsing, revisions,
+  diff/validation, and RPC2 table read-modify-write helpers
 * amcrest-console/mask.py - phase 2 legacy 18x22 mask codec, validation, revision
 * amcrest-console/state.py - phase 2 per-camera JSON mirror: atomic writes, lock,
   redaction, corrupt-file quarantine
@@ -94,10 +98,16 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
 * amcrest-console/tests/test_state.py - mirror tests: slug/path, atomic write,
   0600, redaction, corrupt/schema quarantine
 * amcrest-console/tests/test_console.py - CLI tests: default `log-<slug>.log`,
-  IP fallback, `--log-file` override, parent creation, 0600, bind/allow-host
-  forwarding, LAN URL listing
+  IP fallback, `--log-file` override, parent creation, 0600, bind/allow-host,
+  backup-dir forwarding, LAN URL listing
+* amcrest-console/tests/test_schemas.py - section/field metadata, secret and
+  dangerous flags, validation/normalization tests
+* amcrest-console/tests/test_cgi_config.py - canonical revisions, diff/RMW,
+  rejection of non-writable/unknown fields, RPC2 table conversion tests
 * amcrest-console/cameras/ - per-camera JSON mirrors and `log-<slug>.log`
   protocol logs (runtime; gitignored)
+* amcrest-console/backups/ - sanitized pre-write config backups
+  `<slug>-<timestamp>.json` (runtime; gitignored)
 * amcrest-console/fixtures/ - local discovery output (snapshots/configs; gitignored)
 
 ## docker-vsftpd/

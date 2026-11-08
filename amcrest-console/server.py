@@ -27,12 +27,20 @@ from http import HTTPStatus
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
-from urllib.parse import urlsplit
+from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import parse_qs, urlsplit
 
+import cgi_config
 import mask
+import schemas
 import state
-from camera import AuthError, CameraClient, CameraError, redact_text
+from camera import (
+    AuthError,
+    CameraClient,
+    CameraError,
+    redact_text,
+    sanitize,
+)
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 STATIC_FILES = {
@@ -41,7 +49,7 @@ STATIC_FILES = {
     "style.css": "text/css; charset=utf-8",
 }
 COOKIE_NAME = "amcrest_session"
-MAX_BODY = 4096
+MAX_BODY = 65536
 
 LOG = logging.getLogger("amcrest.server")
 
@@ -121,6 +129,11 @@ def build_allowed_hosts(
     return hosts
 
 
+def _dangerous_field(name: str, key: str) -> bool:
+    spec = schemas.field_spec(name, key)
+    return bool(spec and spec.get("dangerous"))
+
+
 class ConsoleServer(ThreadingHTTPServer):
     daemon_threads = True
 
@@ -131,11 +144,15 @@ class ConsoleServer(ThreadingHTTPServer):
         name: Optional[str] = None,
         state_path: Optional[Path] = None,
         allow_hosts: Optional[list] = None,
+        backup_dir: Optional[Path] = None,
     ) -> None:
         super().__init__(address, ConsoleHandler)
         self.camera_config = camera_config
         self.name = name or str(camera_config.get("host") or "camera")
         self.state_path = Path(state_path) if state_path else None
+        self.backup_dir = (
+            Path(backup_dir) if backup_dir else state.DEFAULT_BACKUP_DIR
+        )
         self.session: Optional[Dict[str, Any]] = None
         self.session_lock = threading.Lock()
         self.login_failures: Dict[str, int] = {}
@@ -144,13 +161,14 @@ class ConsoleServer(ThreadingHTTPServer):
         self.allowed_hosts = build_allowed_hosts(host, port, allow_hosts)
         LOG.info(
             "console server ready name=%s camera=%s:%s model=%s auth=%s "
-            "mirror=%s listen=%s:%s allowed_hosts=%s",
+            "mirror=%s backups=%s listen=%s:%s allowed_hosts=%s",
             self.name,
             self.camera_config.get("host"),
             self.camera_config.get("port", 80),
             self.camera_config.get("model") or "unknown",
             self.camera_config.get("auth", "auto"),
             self.state_path,
+            self.backup_dir,
             host,
             port,
             ",".join(sorted(self.allowed_hosts)),
@@ -283,6 +301,126 @@ class ConsoleServer(ThreadingHTTPServer):
             state.save(self.state_path, doc)
         return doc
 
+    @staticmethod
+    def configuration_key(name: str) -> str:
+        if name == "MotionDetect":
+            return "MotionDetectConfig"
+        return name
+
+    def config_section(
+        self,
+        name: str,
+        values: Dict[str, str],
+        duplicates: Optional[List[str]] = None,
+        stale: bool = False,
+    ) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {
+            "name": name,
+            "title": schemas.SECTION_TITLES.get(name, name),
+            "writable": name != "General",
+            "dangerous": name in schemas.DANGEROUS_SECTIONS,
+            "confirm_text": schemas.CONFIRM_PHRASES.get(name),
+            "values": sanitize(values),
+            "fields": schemas.fields_for(name, values),
+            "redacted": schemas.redacted_keys(name, values),
+            "revision": cgi_config.revision(values),
+            "duplicates": list(duplicates or []),
+            "warning": schemas.SECTION_WARNINGS.get(name),
+        }
+        if stale:
+            payload["stale"] = True
+        return payload
+
+    def save_config_section(
+        self,
+        name: str,
+        values: Dict[str, str],
+        duplicates: Optional[List[str]] = None,
+        verified: bool = True,
+        last_apply: Optional[str] = None,
+        stale: bool = False,
+    ) -> Dict[str, Any]:
+        existing = self.load_mirror() or {}
+        configuration = dict(existing.get("configuration") or {})
+        configuration[self.configuration_key(name)] = self.config_section(
+            name, values, duplicates=duplicates, stale=stale
+        )
+        doc = state.new_mirror(
+            self.camera_meta(),
+            configuration,
+            stale=stale,
+            verified=verified,
+            last_apply=last_apply,
+        )
+        if self.state_path is not None:
+            state.save(self.state_path, doc)
+        return doc
+
+    def read_sections(
+        self, client: CameraClient
+    ) -> Tuple[Dict[str, Any], List[Dict[str, str]]]:
+        sections: Dict[str, Any] = {}
+        errors: List[Dict[str, str]] = []
+        for name in schemas.SECTIONS:
+            try:
+                section = client.get_section(name)
+            except CameraError as error:
+                LOG.warning("configuration read failed name=%s: %s", name, error)
+                errors.append({"section": name, "error": str(error)})
+                continue
+            sections[name] = self.config_section(
+                name, section["values"], duplicates=section["duplicates"]
+            )
+        return sections, errors
+
+    def backup_document(
+        self, client: CameraClient, use_mirror: bool = True
+    ) -> Tuple[Dict[str, Any], List[Dict[str, str]]]:
+        sections, errors = self.read_sections(client)
+        if use_mirror and errors:
+            existing = self.load_mirror() or {}
+            configuration = existing.get("configuration") or {}
+            for item in errors:
+                name = item["section"]
+                stored = configuration.get(self.configuration_key(name))
+                if stored:
+                    sections[name] = stored
+        doc = state.new_backup(
+            self.camera_meta(),
+            sections,
+            complete=not errors,
+            stale=bool(errors),
+        )
+        if errors:
+            doc["errors"] = errors
+        return doc, errors
+
+    def write_backup(
+        self, client: CameraClient
+    ) -> Tuple[Path, Dict[str, Any]]:
+        doc, errors = self.backup_document(client, use_mirror=False)
+        if errors:
+            detail = "; ".join(
+                "{}: {}".format(item["section"], item["error"])
+                for item in errors
+            )
+            raise CameraError(
+                "cannot create a complete pre-write backup: {}".format(detail)
+            )
+        path = state.backup_path(
+            self.backup_dir,
+            self.name,
+            str(self.camera_config.get("host") or ""),
+        )
+        try:
+            state.save(path, doc)
+        except OSError as error:
+            raise CameraError(
+                "cannot write pre-write backup {}: {}".format(path, error)
+            )
+        LOG.info("pre-write backup written path=%s", path)
+        return path, doc
+
     def mirror_meta(
         self, doc: Optional[Dict[str, Any]] = None, stale: bool = False
     ) -> Dict[str, Any]:
@@ -387,6 +525,10 @@ class ConsoleHandler(BaseHTTPRequestHandler):
             self._api_motion_get()
         elif route == "/api/state":
             self._api_state()
+        elif route == "/api/config":
+            self._api_config_get()
+        elif route == "/api/backup":
+            self._api_backup_get()
         else:
             self._send_json(HTTPStatus.NOT_FOUND, {"error": "not found"})
 
@@ -395,6 +537,8 @@ class ConsoleHandler(BaseHTTPRequestHandler):
             self._api_login()
         elif route == "/api/logout":
             self._api_logout()
+        elif route == "/api/config":
+            self._api_config_post()
         else:
             self._send_json(HTTPStatus.NOT_FOUND, {"error": "not found"})
 
@@ -587,6 +731,346 @@ class ConsoleHandler(BaseHTTPRequestHandler):
             },
         )
 
+    def _query_value(self, name: str) -> str:
+        query = parse_qs(urlsplit(self.path).query)
+        return (query.get(name) or [""])[0]
+
+    def _api_config_get(self) -> None:
+        client = self._require_session()
+        if client is None:
+            return
+        name = self._query_value("name")
+        if not name:
+            doc = self.server.load_mirror()
+            stale = bool((doc or {}).get("mirror", {}).get("stale"))
+            self._send_json(
+                HTTPStatus.OK,
+                {
+                    "sections": schemas.all_sections(),
+                    "mirror": self.server.mirror_meta(doc, stale=stale),
+                },
+            )
+            return
+        if name not in schemas.SECTIONS:
+            self._send_json(
+                HTTPStatus.NOT_FOUND, {"error": "unknown configuration section"}
+            )
+            return
+        LOG.info("config read requested name=%s", name)
+        try:
+            section = client.get_section(name)
+        except AuthError:
+            raise
+        except CameraError as error:
+            LOG.warning(
+                "config read failed name=%s; serving stale mirror if available: %s",
+                name,
+                error,
+            )
+            doc = self.server.load_mirror()
+            stored = ((doc or {}).get("configuration") or {}).get(
+                self.server.configuration_key(name)
+            )
+            if not stored:
+                raise
+            payload = dict(stored)
+            payload["stale"] = True
+            if "fields" not in payload:
+                payload["fields"] = schemas.fields_for(
+                    name, payload.get("values") or {}
+                )
+            self._send_json(
+                HTTPStatus.OK,
+                {
+                    "section": payload,
+                    "mirror": self.server.mirror_meta(doc, stale=True),
+                },
+            )
+            return
+        doc = self.server.save_config_section(
+            name, section["values"], duplicates=section["duplicates"]
+        )
+        payload = doc["configuration"][self.server.configuration_key(name)]
+        LOG.info(
+            "config read ok name=%s keys=%d duplicates=%d revision=%s",
+            name,
+            len(section["values"]),
+            len(section["duplicates"]),
+            section["revision"],
+        )
+        self._send_json(
+            HTTPStatus.OK,
+            {
+                "section": payload,
+                "mirror": self.server.mirror_meta(doc),
+            },
+        )
+
+    def _api_backup_get(self) -> None:
+        client = self._require_session()
+        if client is None:
+            return
+        LOG.info("configuration backup download requested")
+        doc, errors = self.server.backup_document(client)
+        filename = "{}-backup-{}.json".format(
+            state.slugify(self.server.name), time.strftime("%Y%m%d-%H%M%S")
+        )
+        LOG.info(
+            "configuration backup download complete=%s sections=%d errors=%d",
+            doc.get("complete"),
+            len(doc.get("sections") or {}),
+            len(errors),
+        )
+        self._send_json(
+            HTTPStatus.OK,
+            doc,
+            headers={
+                "Content-Disposition": 'attachment; filename="{}"'.format(
+                    filename
+                )
+            },
+        )
+
+    def _api_config_post(self) -> None:
+        body = self._read_json()
+        if body is None:
+            return
+        unknown = set(body) - {
+            "name",
+            "changes",
+            "revision",
+            "confirm",
+            "confirm_text",
+        }
+        if unknown:
+            self._send_json(
+                HTTPStatus.BAD_REQUEST,
+                {"error": "unexpected fields: {}".format(", ".join(sorted(unknown)))},
+            )
+            return
+        name = body.get("name")
+        if name not in schemas.SECTIONS:
+            self._send_json(
+                HTTPStatus.BAD_REQUEST, {"error": "unknown configuration section"}
+            )
+            return
+        if name == "General":
+            self._send_json(
+                HTTPStatus.BAD_REQUEST, {"error": "General is read-only"}
+            )
+            return
+        changes = body.get("changes")
+        if not isinstance(changes, dict) or not changes:
+            self._send_json(
+                HTTPStatus.BAD_REQUEST, {"error": "changes are required"}
+            )
+            return
+        if body.get("confirm") is not True:
+            self._send_json(
+                HTTPStatus.BAD_REQUEST, {"error": "confirmation required"}
+            )
+            return
+        phrase = schemas.CONFIRM_PHRASES.get(name)
+        if phrase and body.get("confirm_text") != phrase:
+            self._send_json(
+                HTTPStatus.BAD_REQUEST,
+                {"error": "confirmation text must be: {}".format(phrase)},
+            )
+            return
+        revision = body.get("revision")
+        if not isinstance(revision, str) or not revision:
+            self._send_json(
+                HTTPStatus.BAD_REQUEST, {"error": "revision required"}
+            )
+            return
+        client = self._require_session()
+        if client is None:
+            return
+
+        section = client.get_section(name)
+        if section["duplicates"]:
+            self._send_json(
+                HTTPStatus.CONFLICT,
+                {
+                    "error": "camera returned duplicate config keys; refusing write",
+                    "duplicates": section["duplicates"],
+                },
+            )
+            return
+        if revision != section["revision"]:
+            LOG.warning(
+                "config apply rejected: stale revision name=%s expected=%s current=%s",
+                name,
+                revision,
+                section["revision"],
+            )
+            doc = self.server.save_config_section(
+                name, section["values"], duplicates=section["duplicates"]
+            )
+            self._send_json(
+                HTTPStatus.CONFLICT,
+                {
+                    "error": "camera config changed; reload before applying",
+                    "section": doc["configuration"][
+                        self.server.configuration_key(name)
+                    ],
+                    "mirror": self.server.mirror_meta(doc),
+                },
+            )
+            return
+        try:
+            normalized = cgi_config.diff_changes(
+                name, section["values"], changes
+            )
+        except cgi_config.ConfigError as error:
+            self._send_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return
+
+        if not normalized:
+            LOG.info("config apply no-op name=%s", name)
+            doc = self.server.save_config_section(
+                name, section["values"], duplicates=section["duplicates"]
+            )
+            self._send_json(
+                HTTPStatus.OK,
+                {
+                    "changed": False,
+                    "verified": True,
+                    "section": doc["configuration"][
+                        self.server.configuration_key(name)
+                    ],
+                    "mirror": self.server.mirror_meta(doc),
+                },
+            )
+            return
+
+        backup_file: Optional[Path] = None
+        if name in schemas.DANGEROUS_SECTIONS:
+            backup_file, _backup = self.server.write_backup(client)
+
+        network_danger = name == "Network" and any(
+            _dangerous_field(name, key) for key in normalized
+        )
+        LOG.info(
+            "config apply requested name=%s keys=%d changed=%s backup=%s",
+            name,
+            len(normalized),
+            sorted(normalized),
+            backup_file,
+        )
+        if name == "MotionDetect":
+            response = client.write_motion_settings(normalized)
+        else:
+            response = client.set_section_changes(name, normalized)
+        LOG.info(
+            "config write response name=%s response=%r",
+            name,
+            redact_text(response)[:200],
+        )
+        if "ErrorID" in response or "error" in response.lower():
+            raise CameraError(
+                "camera rejected config write: {}".format(
+                    redact_text(response)[:300]
+                )
+            )
+
+        expected = cgi_config.apply_changes(
+            name, section["values"], normalized
+        )
+        try:
+            after = client.get_section(name)
+        except CameraError as error:
+            if network_danger:
+                doc = self.server.save_config_section(
+                    name,
+                    expected,
+                    duplicates=section["duplicates"],
+                    verified=False,
+                    last_apply=state.now_iso(),
+                    stale=True,
+                )
+                LOG.warning(
+                    "network write may have disconnected the camera name=%s: %s",
+                    name,
+                    error,
+                )
+                self._send_json(
+                    HTTPStatus.OK,
+                    {
+                        "changed": True,
+                        "verified": False,
+                        "disconnected": True,
+                        "error": str(error),
+                        "backup": str(backup_file) if backup_file else None,
+                        "section": doc["configuration"][
+                            self.server.configuration_key(name)
+                        ],
+                        "mirror": self.server.mirror_meta(doc, stale=True),
+                    },
+                )
+                return
+            raise
+
+        actual = after["values"]
+        mismatches: Dict[str, Dict[str, Optional[str]]] = {}
+        for key in sorted(set(expected) | set(actual)):
+            if expected.get(key) != actual.get(key):
+                spec = schemas.field_spec(name, key)
+                if spec and spec.get("secret"):
+                    mismatches[key] = {
+                        "expected": "<redacted>",
+                        "actual": "<redacted>",
+                    }
+                else:
+                    mismatches[key] = {
+                        "expected": expected.get(key),
+                        "actual": actual.get(key),
+                    }
+        if mismatches:
+            LOG.error(
+                "config write verification failed name=%s fields=%s",
+                name,
+                sorted(mismatches),
+            )
+            self._send_json(
+                HTTPStatus.BAD_GATEWAY,
+                {
+                    "error": "config write verification failed",
+                    "verified": False,
+                    "changed": True,
+                    "backup": str(backup_file) if backup_file else None,
+                    "mismatches": mismatches,
+                    "mirror": self.server.mirror_meta(
+                        self.server.load_mirror()
+                    ),
+                },
+            )
+            return
+
+        doc = self.server.save_config_section(
+            name,
+            actual,
+            duplicates=after["duplicates"],
+            verified=True,
+            last_apply=state.now_iso(),
+        )
+        payload = doc["configuration"][self.server.configuration_key(name)]
+        LOG.info(
+            "config apply verified name=%s revision=%s",
+            name,
+            payload.get("revision"),
+        )
+        self._send_json(
+            HTTPStatus.OK,
+            {
+                "changed": True,
+                "verified": True,
+                "backup": str(backup_file) if backup_file else None,
+                "section": payload,
+                "mirror": self.server.mirror_meta(doc),
+            },
+        )
+
     def _api_motion_put(self) -> None:
         body = self._read_json()
         if body is None:
@@ -766,12 +1250,15 @@ class ConsoleHandler(BaseHTTPRequestHandler):
         value: Dict[str, Any],
         cookie: Optional[str] = None,
         expire_cookie: bool = False,
+        headers: Optional[Dict[str, str]] = None,
     ) -> None:
         body = json.dumps(value).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        for name, header_value in (headers or {}).items():
+            self.send_header(name, header_value)
         if cookie is not None:
             if expire_cookie:
                 self.send_header(

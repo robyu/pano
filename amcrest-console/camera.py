@@ -32,6 +32,8 @@ import urllib.parse
 import urllib.request
 from typing import Any, Dict, List, Optional, Tuple
 
+import cgi_config
+
 ROWS = 18
 COLS = 22
 SECTIONS = [
@@ -522,6 +524,89 @@ class CameraClient:
                 "CGI config %s has duplicate keys=%s", name, duplicates[:10]
             )
         return values, duplicates, text
+
+    def get_section(self, name: str) -> Dict[str, Any]:
+        values, duplicates, text = self.get_config(name)
+        return {
+            "name": name,
+            "values": values,
+            "duplicates": duplicates,
+            "raw": text,
+            "revision": cgi_config.revision(values),
+        }
+
+    def set_section_changes(self, name: str, changes: Dict[str, str]) -> str:
+        if not changes:
+            return "OK (no changes)"
+        params = cgi_config.params_for_cgi(changes)
+        self.log.info(
+            "CGI section write name=%s keys=%d changed=%s",
+            name,
+            len(changes),
+            sorted(changes),
+        )
+        response = self.cgi_text("/cgi-bin/configManager.cgi", params).strip()
+        self.log.info(
+            "CGI section write response name=%s response=%r",
+            name,
+            redact_text(response)[:300],
+        )
+        if not cgi_response_is_error(response):
+            return response
+        self.log.warning(
+            "CGI section write rejected name=%s; falling back to RPC2", name
+        )
+        return self.set_section_via_rpc(name, changes)
+
+    def set_section_via_rpc(self, name: str, changes: Dict[str, str]) -> str:
+        table = self.rpc_get_config(name)
+        if not isinstance(table, (dict, list)):
+            raise CameraError(
+                "camera returned no {} table for RPC2 write".format(name)
+            )
+        for key, value in changes.items():
+            try:
+                cgi_config.set_table_value(table, name, key, value)
+            except cgi_config.ConfigError as error:
+                raise CameraError(str(error))
+        self.rpc_set_config(name, table)
+        self.log.info(
+            "RPC2 section write completed name=%s keys=%d",
+            name,
+            len(changes),
+        )
+        return "OK (RPC2)"
+
+    def write_motion_settings(self, changes: Dict[str, str]) -> str:
+        values, _duplicates, _text = self.get_config("MotionDetect")
+        regions: List[str] = []
+        for row in range(ROWS):
+            key = "MotionDetect[0].Region[{}]".format(row)
+            if key not in values:
+                raise CameraError(
+                    "camera did not return all 18 legacy motion rows; "
+                    "refusing to change motion settings"
+                )
+            regions.append(values[key])
+        params: Dict[str, str] = {"action": "setConfig"}
+        for row, value in enumerate(regions):
+            params["MotionDetect[0].Region[{}]".format(row)] = value
+        params.update(changes)
+        self.log.info(
+            "CGI motion settings write keys=%d changed=%s",
+            len(changes),
+            sorted(changes),
+        )
+        response = self.cgi_text("/cgi-bin/configManager.cgi", params).strip()
+        self.log.info(
+            "CGI motion settings response=%r", redact_text(response)[:300]
+        )
+        if not cgi_response_is_error(response):
+            return response
+        self.log.warning(
+            "CGI motion settings rejected; falling back to RPC2"
+        )
+        return self.set_section_via_rpc("MotionDetect", changes)
 
     def get_motion(self, channel: int = 0) -> Dict[str, Any]:
         values, _duplicates, _text = self.get_config("MotionDetect")

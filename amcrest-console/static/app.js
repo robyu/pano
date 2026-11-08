@@ -17,6 +17,22 @@
   var snapshot = document.getElementById("snapshot");
   var status = document.getElementById("status");
 
+  var viewMotion = document.getElementById("view-motion");
+  var viewConfig = document.getElementById("view-config");
+  var motionView = document.getElementById("motion-view");
+  var configView = document.getElementById("config-view");
+  var configSectionsEl = document.getElementById("config-sections");
+  var configTitle = document.getElementById("config-title");
+  var configWarning = document.getElementById("config-warning");
+  var configMeta = document.getElementById("config-meta");
+  var configForm = document.getElementById("config-form");
+  var configApply = document.getElementById("config-apply");
+  var configDirty = document.getElementById("config-dirty");
+  var configStatus = document.getElementById("config-status");
+  var configError = document.getElementById("config-error");
+  var configRaw = document.getElementById("config-raw");
+  var configReload = document.getElementById("config-reload");
+
   var overlay = document.getElementById("mask-overlay");
   var motionStatus = document.getElementById("motion-status");
   var motionError = document.getElementById("motion-error");
@@ -36,6 +52,14 @@
   var clearButton = document.getElementById("mask-clear");
   var invertButton = document.getElementById("mask-invert");
   var revertButton = document.getElementById("mask-revert");
+
+  var configSections = [];
+  var configLoaded = false;
+  var configSection = null;
+  var configFields = [];
+  var configInputs = {};
+  var configRevision = null;
+  var configStale = false;
 
   var maskRows = null;
   var baseRows = null;
@@ -68,6 +92,15 @@
     loginView.hidden = false;
     consoleView.hidden = true;
     loginPassword.value = "";
+    configLoaded = false;
+    configSection = null;
+    configSections = [];
+    configStatus.textContent = "";
+    configError.textContent = "";
+    configForm.textContent = "";
+    configRaw.textContent = "";
+    configSectionsEl.textContent = "";
+    selectView("motion");
     loginPassword.focus();
   }
 
@@ -475,6 +508,342 @@
     });
   });
 
+  function selectView(name, focus) {
+    var motion = name === "motion";
+    viewMotion.setAttribute("aria-selected", String(motion));
+    viewConfig.setAttribute("aria-selected", String(!motion));
+    viewMotion.setAttribute("tabindex", motion ? "0" : "-1");
+    viewConfig.setAttribute("tabindex", motion ? "-1" : "0");
+    motionView.hidden = !motion;
+    configView.hidden = motion;
+    if (focus) {
+      (motion ? viewMotion : viewConfig).focus();
+    }
+    if (motion) {
+      syncOverlays();
+    } else if (!configLoaded) {
+      loadConfigSections();
+    }
+  }
+
+  function configSectionInfo(name) {
+    for (var index = 0; index < configSections.length; index += 1) {
+      if (configSections[index].name === name) {
+        return configSections[index];
+      }
+    }
+    return null;
+  }
+
+  function loadConfigSections() {
+    configStatus.textContent = "Loading configuration sections...";
+    configError.textContent = "";
+    api("api/config").then(function (data) {
+      configSections = data.sections || [];
+      configLoaded = true;
+      while (configSectionsEl.firstChild) {
+        configSectionsEl.removeChild(configSectionsEl.firstChild);
+      }
+      configSections.forEach(function (section) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "config-section";
+        button.textContent = section.title || section.name;
+        button.setAttribute("data-section", section.name);
+        if (section.dangerous) {
+          button.classList.add("dangerous");
+        }
+        button.addEventListener("click", function () {
+          selectConfigSection(section.name);
+        });
+        configSectionsEl.appendChild(button);
+      });
+      var preferred = null;
+      for (var index = 0; index < configSections.length; index += 1) {
+        if (configSections[index].name === "Network") {
+          preferred = "Network";
+          break;
+        }
+      }
+      if (!preferred && configSections.length) {
+        preferred = configSections[0].name;
+      }
+      if (preferred) {
+        selectConfigSection(preferred);
+      } else {
+        configStatus.textContent = "No configuration sections available.";
+      }
+    }).catch(function (error) {
+      configStatus.textContent = "";
+      configError.textContent = error.message;
+    });
+  }
+
+  function markActiveSection(name) {
+    var buttons = configSectionsEl.querySelectorAll(".config-section");
+    for (var index = 0; index < buttons.length; index += 1) {
+      var active = buttons[index].getAttribute("data-section") === name;
+      buttons[index].classList.toggle("active", active);
+      if (active) {
+        buttons[index].setAttribute("aria-current", "true");
+      } else {
+        buttons[index].removeAttribute("aria-current");
+      }
+    }
+  }
+
+  function selectConfigSection(name) {
+    configStatus.textContent = "Loading " + name + "...";
+    configError.textContent = "";
+    markActiveSection(name);
+    api("api/config?name=" + encodeURIComponent(name)).then(function (data) {
+      renderConfig(data.section, data.mirror);
+    }).catch(function (error) {
+      configStatus.textContent = "";
+      configError.textContent = error.message;
+    });
+  }
+
+  function formatMirror(meta) {
+    if (!meta) { return ""; }
+    var parts = [];
+    if (meta.path) { parts.push("Mirror: " + meta.path); }
+    if (meta.updated) { parts.push("updated " + meta.updated); }
+    if (meta.last_apply) { parts.push("last apply " + meta.last_apply); }
+    if (meta.stale) { parts.push("STALE"); }
+    return parts.join(" \u00b7 ");
+  }
+
+  function createConfigInput(field) {
+    var input;
+    if (field.type === "boolean" || field.type === "select") {
+      input = document.createElement("select");
+      var choices = field.type === "boolean"
+        ? ["true", "false"]
+        : (field.choices || []);
+      choices.forEach(function (choice) {
+        var option = document.createElement("option");
+        option.value = choice;
+        option.textContent = choice;
+        input.appendChild(option);
+      });
+      if (field.type === "select" && field.value &&
+          choices.indexOf(field.value) === -1) {
+        var extra = document.createElement("option");
+        extra.value = field.value;
+        extra.textContent = field.value;
+        input.appendChild(extra);
+      }
+      input.value = field.value || (choices.length ? choices[0] : "");
+      input.addEventListener("change", updateConfigDirty);
+    } else {
+      input = document.createElement("input");
+      if (field.type === "number") {
+        input.type = "number";
+        if (field.min !== null && field.min !== undefined) {
+          input.min = String(field.min);
+        }
+        if (field.max !== null && field.max !== undefined) {
+          input.max = String(field.max);
+        }
+      } else if (field.type === "password") {
+        input.type = "password";
+        input.autocomplete = "new-password";
+      } else {
+        input.type = "text";
+      }
+      if (field.secret) {
+        input.value = "";
+        input.placeholder = field.has_value
+          ? "unchanged (current value set)"
+          : "not set";
+      } else {
+        input.value = field.value === null || field.value === undefined
+          ? "" : String(field.value);
+      }
+      input.addEventListener("input", updateConfigDirty);
+      input.addEventListener("change", updateConfigDirty);
+    }
+    input.setAttribute("data-key", field.key);
+    input.disabled = configStale;
+    return input;
+  }
+
+  function renderConfig(section, mirror) {
+    configSection = section;
+    configFields = section.fields || [];
+    configInputs = {};
+    configRevision = section.revision;
+    configStale = Boolean(
+      section.stale || (mirror && mirror.stale)
+    );
+    configTitle.textContent = section.title || section.name || "Configuration";
+    configWarning.hidden = !section.warning;
+    configWarning.textContent = section.warning || "";
+    configStatus.textContent = configStale ? "stale mirror (read-only)" : "";
+    configMeta.textContent = formatMirror(mirror);
+    configRaw.textContent = JSON.stringify(section.values || {}, null, 2);
+    while (configForm.firstChild) {
+      configForm.removeChild(configForm.firstChild);
+    }
+    var groups = {};
+    var groupOrder = [];
+    configFields.forEach(function (field) {
+      var group = field.group || "Settings";
+      if (!groups[group]) {
+        groups[group] = [];
+        groupOrder.push(group);
+      }
+      groups[group].push(field);
+    });
+    groupOrder.forEach(function (group) {
+      var fieldset = document.createElement("fieldset");
+      var legend = document.createElement("legend");
+      legend.textContent = group;
+      fieldset.appendChild(legend);
+      groups[group].forEach(function (field) {
+        var label = document.createElement("label");
+        label.className = "config-field";
+        var name = document.createElement("span");
+        name.textContent = field.label || field.key;
+        label.appendChild(name);
+        var input = createConfigInput(field);
+        configInputs[field.key] = input;
+        label.appendChild(input);
+        if (field.help) {
+          var help = document.createElement("small");
+          help.className = "muted";
+          help.textContent = field.help;
+          label.appendChild(help);
+        }
+        fieldset.appendChild(label);
+      });
+      configForm.appendChild(fieldset);
+    });
+    if (!configFields.length) {
+      var note = document.createElement("p");
+      note.className = "muted";
+      note.textContent = "This section is read-only. Use the raw configuration below.";
+      configForm.appendChild(note);
+    }
+    updateConfigDirty();
+  }
+
+  function collectConfigChanges() {
+    var changes = {};
+    configFields.forEach(function (field) {
+      var input = configInputs[field.key];
+      if (!input) { return; }
+      var value = input.value;
+      if (field.secret) {
+        if (value) { changes[field.key] = value; }
+        return;
+      }
+      var original = field.value === null || field.value === undefined
+        ? "" : String(field.value);
+      if (String(value) !== original) {
+        changes[field.key] = value;
+      }
+    });
+    return changes;
+  }
+
+  function updateConfigDirty() {
+    if (!configSection) {
+      configApply.disabled = true;
+      configDirty.textContent = "";
+      return;
+    }
+    var changes = collectConfigChanges();
+    var count = Object.keys(changes).length;
+    var info = configSectionInfo(configSection.name);
+    var writable = info ? info.writable : !configSection.stale;
+    if (configStale) {
+      configDirty.textContent = "stale mirror (read-only)";
+    } else if (count) {
+      configDirty.textContent = count + " unsaved change" +
+        (count === 1 ? "" : "s");
+    } else {
+      configDirty.textContent = "";
+    }
+    configApply.disabled = configStale || !writable || !count;
+  }
+
+  viewMotion.addEventListener("click", function () { selectView("motion"); });
+  viewConfig.addEventListener("click", function () { selectView("config"); });
+  configReload.addEventListener("click", function () {
+    if (configSection) { selectConfigSection(configSection.name); }
+  });
+
+  configForm.addEventListener("submit", function (event) {
+    event.preventDefault();
+    if (!configSection || configStale) { return; }
+    var changes = collectConfigChanges();
+    if (!Object.keys(changes).length) { return; }
+    if (!window.confirm(
+      "Apply " + Object.keys(changes).length + " change(s) to " +
+      (configSection.title || configSection.name) + " and verify them?"
+    )) {
+      return;
+    }
+    var confirmText = null;
+    var phrase = configSection.confirm_text;
+    if (phrase) {
+      confirmText = window.prompt(
+        "This change can disconnect or disrupt the camera.\n" +
+        "Type " + phrase + " to continue."
+      );
+      if (confirmText !== phrase) {
+        configError.textContent = "Confirmation text did not match.";
+        return;
+      }
+    }
+    configApply.disabled = true;
+    configError.textContent = "";
+    api("api/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: configSection.name,
+        changes: changes,
+        revision: configRevision,
+        confirm: true,
+        confirm_text: confirmText
+      })
+    }).then(function (result) {
+      if (result.section) {
+        renderConfig(result.section, result.mirror);
+      }
+      if (result.disconnected) {
+        configStatus.textContent =
+          "Write sent, but the camera could not be re-read. If you changed " +
+          "the address, restart the console with the new --camera-ip.";
+      } else {
+        configStatus.textContent = "Applied and verified.";
+      }
+      if (result.backup) {
+        configStatus.textContent += " Backup: " + result.backup;
+      }
+    }).catch(function (error) {
+      if (error.status === 409 && error.body && error.body.section) {
+        renderConfig(error.body.section, error.body.mirror);
+        configError.textContent =
+          "Camera config changed; reloaded the current values. Review and apply again.";
+        return;
+      }
+      var message = error.message;
+      if (error.body && error.body.mismatches) {
+        message += " " + JSON.stringify(error.body.mismatches);
+      }
+      if (error.body && error.body.backup) {
+        message += " Backup: " + error.body.backup;
+      }
+      configError.textContent = message;
+    }).then(function () {
+      updateConfigDirty();
+    });
+  });
+
   loginForm.addEventListener("submit", function (event) {
     event.preventDefault();
     loginError.textContent = "";
@@ -499,6 +868,7 @@
   });
 
   selectTab("legacy");
+  selectView("motion");
 
   api("api/session").then(function (session) {
     if (session.authenticated) {

@@ -1,13 +1,16 @@
 import base64
+import copy
 import hashlib
 import http.client
 import json
+import re
 import sys
 import tempfile
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
+from unittest import mock
 from urllib.parse import parse_qs, urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -22,55 +25,149 @@ BASE = "/"
 class MockCamera:
     def __init__(self):
         self.mask_values = [0x3FFFFF] * 18
+        self.motion_enable = "true"
+        self.motion_level = "3"
         self.set_configs = []
         self.rpc_set_configs = []
         self.rpc_logins = 0
         self.ignore_writes = False
+        self.reject_cgi_sections = set()
         self.rpc_realm = "Login to TestCam"
         self.rpc_random = "1234567"
         self.rpc_session = 98765
         self.rpc_unauthorized = 0
         self.lock = threading.Lock()
+        self.sections = {
+            "General": {
+                "General.LocalNo": "8",
+                "General.MachineName": "AMC00270_3X76D1",
+            },
+            "Network": {
+                "Network.DefaultInterface": "eth0",
+                "Network.Domain": "IPC",
+                "Network.Hostname": "cam-test",
+                "Network.eth0.DhcpEnable": "false",
+                "Network.eth0.IPAddress": "192.168.2.10",
+                "Network.eth0.SubnetMask": "255.255.255.0",
+                "Network.eth0.DefaultGateway": "192.168.2.1",
+                "Network.eth0.MTU": "1500",
+                "Network.eth0.DnsServers[0]": "192.168.2.1",
+                "Network.eth0.DnsServers[1]": "0.0.0.0",
+            },
+            "NAS": {
+                "NAS[0].Address": "192.168.2.8",
+                "NAS[0].Port": "21",
+                "NAS[0].Protocol": "FTP",
+                "NAS[0].Enable": "true",
+                "NAS[0].Directory": "cam-test",
+                "NAS[0].UserName": "upload",
+                "NAS[0].Password": "ftppass",
+                "NAS[0].CharacterEncoding": "UTF-8",
+                "NAS[0].TimeOut": "0",
+            },
+            "NTP": {
+                "NTP.Address": "clock.isc.org",
+                "NTP.Enable": "true",
+                "NTP.Port": "123",
+                "NTP.TimeZone": "28",
+                "NTP.UpdatePeriod": "10",
+            },
+            "Encode": {
+                "Encode[0].MainFormat[0].Video.FPS": "20",
+                "Encode[0].MainFormat[0].Video.resolution": "1920x1080",
+                "Encode[0].MainFormat[0].Video.Width": "1920",
+                "Encode[0].MainFormat[0].Video.Height": "1080",
+            },
+            "AutoMaintain": {
+                "AutoMaintain.AutoRebootEnable": "true",
+                "AutoMaintain.AutoRebootDay": "7",
+                "AutoMaintain.AutoRebootHour": "7",
+                "AutoMaintain.AutoRebootMinute": "20",
+            },
+        }
+        self.rpc_tables = {
+            "Network": {
+                "DefaultInterface": "eth0",
+                "Domain": "IPC",
+                "Hostname": "cam-test",
+                "eth0": {
+                    "DhcpEnable": False,
+                    "IPAddress": "192.168.2.10",
+                    "SubnetMask": "255.255.255.0",
+                    "DefaultGateway": "192.168.2.1",
+                    "MTU": 1500,
+                },
+            },
+            "NTP": {
+                "Address": "clock.isc.org",
+                "Enable": True,
+                "Port": 123,
+                "TimeZone": 28,
+                "UpdatePeriod": 10,
+            },
+        }
         outer = self
 
         class Handler(BaseHTTPRequestHandler):
             def log_message(self, *args):
                 pass
 
-            def motion_body(self):
-                lines = [
-                    "table.MotionDetect[0].Enable=true",
-                    "table.MotionDetect[0].Level=3",
-                ]
+            def values_for(self, name):
+                if name == "MotionDetect":
+                    with outer.lock:
+                        values = list(outer.mask_values)
+                        enable = outer.motion_enable
+                        level = outer.motion_level
+                    result = {
+                        "MotionDetect[0].Enable": enable,
+                        "MotionDetect[0].Level": level,
+                    }
+                    for row, value in enumerate(values):
+                        result[
+                            "MotionDetect[0].Region[{}]".format(row)
+                        ] = str(value)
+                    result[
+                        "MotionDetect[0].MotionDetectWindow[0].Id"
+                    ] = "0"
+                    result[
+                        "MotionDetect[0].MotionDetectWindow[0].Name"
+                    ] = "Region0"
+                    result[
+                        "MotionDetect[0].MotionDetectWindow[0].Sensitive"
+                    ] = "60"
+                    result[
+                        "MotionDetect[0].MotionDetectWindow[0].Threshold"
+                    ] = "5"
+                    for row, value in enumerate(values):
+                        result[
+                            "MotionDetect[0].MotionDetectWindow[0].Region[{}]".format(
+                                row
+                            )
+                        ] = str(value)
+                    return result
                 with outer.lock:
-                    values = list(outer.mask_values)
-                for row, value in enumerate(values):
-                    lines.append(
-                        "table.MotionDetect[0].Region[{}]={}".format(row, value)
-                    )
-                lines.extend(
-                    [
-                        "table.MotionDetect[0].MotionDetectWindow[0].Id=0",
-                        "table.MotionDetect[0].MotionDetectWindow[0].Name=Region0",
-                        "table.MotionDetect[0].MotionDetectWindow[0].Sensitive=60",
-                        "table.MotionDetect[0].MotionDetectWindow[0].Threshold=5",
-                    ]
-                )
-                for row in range(18):
-                    lines.append(
-                        "table.MotionDetect[0].MotionDetectWindow[0].Region[{}]={}".format(
-                            row, values[row]
-                        )
-                    )
+                    return dict(outer.sections.get(name, {}))
+
+            def config_body(self, name):
+                values = self.values_for(name)
+                lines = [
+                    "table.{}={}".format(key, value)
+                    for key, value in values.items()
+                ]
                 return ("\n".join(lines) + "\n").encode()
+
+            def motion_body(self):
+                return self.config_body("MotionDetect")
 
             def rpc_table(self):
                 with outer.lock:
                     values = list(outer.mask_values)
+                    enable = outer.motion_enable == "true"
+                    level = int(outer.motion_level)
                 return [
                     {
-                        "Enable": True,
-                        "Level": 3,
+                        "Enable": enable,
+                        "Level": level,
                         "Region": values,
                         "MotionDetectWindow": [
                             {
@@ -83,6 +180,12 @@ class MockCamera:
                         ],
                     }
                 ]
+
+            def rpc_table_for(self, name):
+                if name == "MotionDetect":
+                    return self.rpc_table()
+                with outer.lock:
+                    return copy.deepcopy(outer.rpc_tables.get(name))
 
             def send_json(self, value, headers=None):
                 body = json.dumps(value).encode()
@@ -164,24 +267,40 @@ class MockCamera:
                     method = payload.get("method")
                     params = payload.get("params") or {}
                     if method == "configManager.getConfig":
+                        name = params.get("name")
+                        table = self.rpc_table_for(name)
+                        if table is None:
+                            table = {}
                         self.send_json(
                             {
                                 "id": payload.get("id"),
                                 "result": True,
-                                "params": {"table": self.rpc_table()},
+                                "params": {"table": table},
                             }
                         )
                         return
                     if method == "configManager.setConfig":
+                        name = params.get("name")
                         table = params.get("table") or []
                         with outer.lock:
                             outer.rpc_set_configs.append(params)
                             if not outer.ignore_writes and table:
-                                region = table[0].get("Region")
-                                if isinstance(region, list) and len(region) == 18:
-                                    outer.mask_values = [
-                                        int(value) for value in region
-                                    ]
+                                if name == "MotionDetect" and isinstance(table, list):
+                                    region = table[0].get("Region")
+                                    if isinstance(region, list) and len(region) == 18:
+                                        outer.mask_values = [
+                                            int(value) for value in region
+                                        ]
+                                    enable = table[0].get("Enable")
+                                    if isinstance(enable, bool):
+                                        outer.motion_enable = (
+                                            "true" if enable else "false"
+                                        )
+                                    level = table[0].get("Level")
+                                    if isinstance(level, int):
+                                        outer.motion_level = str(level)
+                                elif name in outer.rpc_tables:
+                                    outer.rpc_tables[name] = copy.deepcopy(table)
                         self.send_json(
                             {
                                 "id": payload.get("id"),
@@ -208,11 +327,42 @@ class MockCamera:
                     body = b"table.type=IP2M-842\n"
                 elif action == "getConfig":
                     name = (query.get("name") or [""])[0]
-                    body = self.motion_body() if name == "MotionDetect" else b"table.ok=1\n"
+                    if name == "MotionDetect":
+                        body = self.motion_body()
+                    elif name in outer.sections:
+                        body = self.config_body(name)
+                    else:
+                        body = b"table.ok=1\n"
                 elif action == "setConfig":
                     with outer.lock:
                         outer.set_configs.append(query)
-                    body = b"Error\n"
+                    keys = [key for key in query if key != "action"]
+                    section = ""
+                    if keys:
+                        section = re.split(r"[.\[]", keys[0], 1)[0]
+                    if section == "MotionDetect":
+                        if not outer.ignore_writes:
+                            for row in range(18):
+                                key = "MotionDetect[0].Region[{}]".format(row)
+                                if key in query:
+                                    outer.mask_values[row] = int(query[key][0])
+                            if "MotionDetect[0].Enable" in query:
+                                outer.motion_enable = query[
+                                    "MotionDetect[0].Enable"
+                                ][0]
+                            if "MotionDetect[0].Level" in query:
+                                outer.motion_level = query[
+                                    "MotionDetect[0].Level"
+                                ][0]
+                        body = b"Error\n"
+                    elif section in outer.reject_cgi_sections:
+                        body = b"Error\n"
+                    else:
+                        if not outer.ignore_writes:
+                            target = outer.sections.setdefault(section, {})
+                            for key in keys:
+                                target[key] = query[key][0]
+                        body = b"OK\n"
                 elif self.path.startswith("/cgi-bin/snapshot.cgi"):
                     body = b"\xff\xd8\xff\xd9"
                 else:
@@ -254,11 +404,13 @@ class ServerTestCase(unittest.TestCase):
         }
         self.temp = tempfile.TemporaryDirectory()
         self.state_path = Path(self.temp.name) / "cam-test.json"
+        self.backup_dir = Path(self.temp.name) / "backups"
         self.server = server.ConsoleServer(
             ("127.0.0.1", 0),
             config,
             name="cam-test",
             state_path=self.state_path,
+            backup_dir=self.backup_dir,
         )
         self.thread = threading.Thread(target=self.server.serve_forever)
         self.thread.daemon = True
@@ -308,6 +460,25 @@ class ServerTestCase(unittest.TestCase):
             "GET", BASE + "api/motion", headers={"Cookie": cookie}
         )
         return status, json.loads(body)
+
+    def get_json(self, path, cookie=None):
+        headers = {}
+        if cookie:
+            headers["Cookie"] = cookie
+        status, response_headers, body = self.request(
+            "GET", BASE + path, headers=headers
+        )
+        return status, response_headers, json.loads(body)
+
+    def post_json(self, path, value, cookie=None, origin=None):
+        headers = {"Content-Type": "application/json"}
+        if cookie:
+            headers["Cookie"] = cookie
+        if origin is not None:
+            headers["Origin"] = origin
+        return self.request(
+            "POST", BASE + path, body=json.dumps(value), headers=headers
+        )
 
 
 class SecurityTests(ServerTestCase):
@@ -640,10 +811,445 @@ class StaticTests(ServerTestCase):
         self.assertIn(b"Region masks", body)
         self.assertIn(b"Region masks are read-only", body)
         self.assertIn(b"region-overlay", body)
+        self.assertIn(b"Configuration", body)
+        self.assertIn(b"config-form", body)
+        self.assertIn(b"Download backup", body)
+        self.assertIn(b"Raw configuration", body)
 
     def test_unknown_static_is_not_found(self):
         status, _headers, _body = self.request("GET", BASE + "static/../server.py")
         self.assertEqual(status, 404)
+
+
+
+class ConfigTests(ServerTestCase):
+    def setUp(self):
+        super().setUp()
+        _status, _headers, self.cookie = self.login()
+        self.origin = "http://127.0.0.1:{}".format(self.server.server_address[1])
+
+    def get_config(self, name, cookie=None):
+        status, _headers, body = self.get_json(
+            "api/config?name={}".format(name), cookie=cookie or self.cookie
+        )
+        return status, body
+
+    def post_config(self, value):
+        return self.post_json(
+            "api/config", value, cookie=self.cookie, origin=self.origin
+        )
+
+    def test_config_requires_login(self):
+        status, _headers, _body = self.request("GET", BASE + "api/config")
+        self.assertEqual(status, 401)
+
+    def test_config_index_lists_allowlisted_sections(self):
+        status, _headers, body = self.get_json(
+            "api/config", cookie=self.cookie
+        )
+        self.assertEqual(status, 200)
+        names = [section["name"] for section in body["sections"]]
+        self.assertEqual(
+            names,
+            ["General", "Network", "NAS", "NTP", "Encode", "AutoMaintain",
+             "MotionDetect"],
+        )
+        network = [s for s in body["sections"] if s["name"] == "Network"][0]
+        self.assertTrue(network["dangerous"])
+        self.assertEqual(network["confirm_text"], "APPLY NETWORK")
+
+    def test_config_get_sanitizes_secrets(self):
+        status, body = self.get_config("NAS")
+        self.assertEqual(status, 200)
+        section = body["section"]
+        self.assertEqual(section["values"]["NAS[0].Password"], "<redacted>")
+        self.assertIn("NAS[0].Password", section["redacted"])
+        password = [
+            field for field in section["fields"]
+            if field["key"] == "NAS[0].Password"
+        ][0]
+        self.assertTrue(password["secret"])
+        self.assertIsNone(password["value"])
+        self.assertTrue(password["has_value"])
+
+    def test_config_get_creates_mirror(self):
+        status, body = self.get_config("NTP")
+        self.assertEqual(status, 200)
+        saved = state.load(self.state_path)
+        entry = saved["configuration"]["NTP"]
+        self.assertEqual(entry["values"]["NTP.Address"], "clock.isc.org")
+        self.assertEqual(entry["revision"], body["section"]["revision"])
+
+    def test_config_get_unknown_section_is_not_found(self):
+        status, _body = self.get_config("FTP")
+        self.assertEqual(status, 404)
+
+    def test_config_get_falls_back_to_stale_mirror(self):
+        self.get_config("NTP")
+        closed = HTTPServer(("127.0.0.1", 0), BaseHTTPRequestHandler)
+        closed_port = closed.server_address[1]
+        closed.server_close()
+        client = self.server.get_session()["client"]
+        client.port = closed_port
+        client.base = "http://127.0.0.1:{}".format(closed_port)
+        status, body = self.get_config("NTP")
+        self.assertEqual(status, 200)
+        self.assertTrue(body["section"]["stale"])
+        self.assertTrue(body["mirror"]["stale"])
+
+    def test_config_apply_rejects_unknown_fields(self):
+        _status, body = self.get_config("NTP")
+        status, _headers, _body = self.post_config(
+            {
+                "name": "NTP",
+                "changes": {"NTP.Address": "pool.ntp.org"},
+                "revision": body["section"]["revision"],
+                "confirm": True,
+                "extra": True,
+            }
+        )
+        self.assertEqual(status, 400)
+
+    def test_config_apply_requires_confirm_and_revision(self):
+        _status, body = self.get_config("NTP")
+        status, _headers, _body = self.post_config(
+            {
+                "name": "NTP",
+                "changes": {"NTP.Address": "pool.ntp.org"},
+                "revision": body["section"]["revision"],
+            }
+        )
+        self.assertEqual(status, 400)
+        status, _headers, _body = self.post_config(
+            {
+                "name": "NTP",
+                "changes": {"NTP.Address": "pool.ntp.org"},
+                "confirm": True,
+            }
+        )
+        self.assertEqual(status, 400)
+
+    def test_config_apply_rejects_general_and_unknown(self):
+        status, _headers, _body = self.post_config(
+            {"name": "General", "changes": {"General.LocalNo": "9"},
+             "revision": "x", "confirm": True}
+        )
+        self.assertEqual(status, 400)
+        status, _headers, _body = self.post_config(
+            {"name": "System", "changes": {"System.X": "1"},
+             "revision": "x", "confirm": True}
+        )
+        self.assertEqual(status, 400)
+
+    def test_config_apply_rejects_non_writable_field(self):
+        _status, body = self.get_config("MotionDetect")
+        status, _headers, _body = self.post_config(
+            {
+                "name": "MotionDetect",
+                "changes": {"MotionDetect[0].Region[0]": "0"},
+                "revision": body["section"]["revision"],
+                "confirm": True,
+            }
+        )
+        self.assertEqual(status, 400)
+
+    def test_config_apply_stale_revision_conflicts(self):
+        self.get_config("NTP")
+        status, _headers, _body = self.post_config(
+            {
+                "name": "NTP",
+                "changes": {"NTP.Address": "pool.ntp.org"},
+                "revision": "0" * 64,
+                "confirm": True,
+            }
+        )
+        self.assertEqual(status, 409)
+        self.assertEqual(self.mock.set_configs, [])
+
+    def test_config_apply_ntp_verifies_and_updates_mirror(self):
+        _status, body = self.get_config("NTP")
+        status, _headers, raw = self.post_config(
+            {
+                "name": "NTP",
+                "changes": {"NTP.Address": "pool.ntp.org"},
+                "revision": body["section"]["revision"],
+                "confirm": True,
+            }
+        )
+        result = json.loads(raw)
+        self.assertEqual(status, 200)
+        self.assertTrue(result["changed"])
+        self.assertTrue(result["verified"])
+        self.assertEqual(self.mock.sections["NTP"]["NTP.Address"], "pool.ntp.org")
+        saved = state.load(self.state_path)
+        self.assertEqual(
+            saved["configuration"]["NTP"]["values"]["NTP.Address"],
+            "pool.ntp.org",
+        )
+
+    def test_config_apply_noop_does_not_write(self):
+        _status, body = self.get_config("NTP")
+        status, _headers, raw = self.post_config(
+            {
+                "name": "NTP",
+                "changes": {"NTP.Address": "clock.isc.org"},
+                "revision": body["section"]["revision"],
+                "confirm": True,
+            }
+        )
+        result = json.loads(raw)
+        self.assertEqual(status, 200)
+        self.assertFalse(result["changed"])
+        self.assertEqual(self.mock.set_configs, [])
+
+    def test_config_apply_bad_value_is_rejected(self):
+        _status, body = self.get_config("NTP")
+        status, _headers, _body = self.post_config(
+            {
+                "name": "NTP",
+                "changes": {"NTP.Port": "not-a-port"},
+                "revision": body["section"]["revision"],
+                "confirm": True,
+            }
+        )
+        self.assertEqual(status, 400)
+
+    def test_config_apply_nas_preserves_blank_secret(self):
+        _status, body = self.get_config("NAS")
+        status, _headers, raw = self.post_config(
+            {
+                "name": "NAS",
+                "changes": {"NAS[0].UserName": "upload2"},
+                "revision": body["section"]["revision"],
+                "confirm": True,
+                "confirm_text": "APPLY NAS",
+            }
+        )
+        result = json.loads(raw)
+        self.assertEqual(status, 200)
+        self.assertTrue(result["verified"])
+        self.assertEqual(
+            self.mock.sections["NAS"]["NAS[0].Password"], "ftppass"
+        )
+        self.assertEqual(
+            result["section"]["values"]["NAS[0].Password"], "<redacted>"
+        )
+        saved = state.load(self.state_path)
+        self.assertEqual(
+            saved["configuration"]["NAS"]["values"]["NAS[0].Password"],
+            "<redacted>",
+        )
+
+    def test_config_secret_verification_failure_is_redacted(self):
+        _status, body = self.get_config("NAS")
+        self.mock.ignore_writes = True
+        status, _headers, raw = self.post_config(
+            {
+                "name": "NAS",
+                "changes": {"NAS[0].Password": "new-secret"},
+                "revision": body["section"]["revision"],
+                "confirm": True,
+                "confirm_text": "APPLY NAS",
+            }
+        )
+        text = raw.decode("utf-8")
+        self.assertEqual(status, 502)
+        self.assertNotIn("new-secret", text)
+        self.assertNotIn("ftppass", text)
+        result = json.loads(text)
+        self.assertEqual(
+            result["mismatches"]["NAS[0].Password"],
+            {"expected": "<redacted>", "actual": "<redacted>"},
+        )
+
+    def test_config_apply_network_requires_phrase(self):
+        _status, body = self.get_config("Network")
+        payload = {
+            "name": "Network",
+            "changes": {"Network.Hostname": "cam-new"},
+            "revision": body["section"]["revision"],
+            "confirm": True,
+        }
+        status, _headers, _body = self.post_config(payload)
+        self.assertEqual(status, 400)
+        payload["confirm_text"] = "WRONG"
+        status, _headers, _body = self.post_config(payload)
+        self.assertEqual(status, 400)
+
+    def test_config_apply_network_backs_up_and_verifies(self):
+        _status, body = self.get_config("Network")
+        status, _headers, raw = self.post_config(
+            {
+                "name": "Network",
+                "changes": {"Network.Hostname": "cam-new"},
+                "revision": body["section"]["revision"],
+                "confirm": True,
+                "confirm_text": "APPLY NETWORK",
+            }
+        )
+        result = json.loads(raw)
+        self.assertEqual(status, 200)
+        self.assertTrue(result["verified"])
+        self.assertTrue(result["backup"])
+        self.assertTrue(Path(result["backup"]).exists())
+        backups = list(self.backup_dir.glob("cam-test-*.json"))
+        self.assertEqual(len(backups), 1)
+        saved = state.load(self.state_path)
+        self.assertEqual(
+            saved["configuration"]["Network"]["values"]["Network.Hostname"],
+            "cam-new",
+        )
+
+    def test_config_apply_network_disconnect_reports_unverified(self):
+        _status, body = self.get_config("Network")
+        client = self.server.get_session()["client"]
+        closed = HTTPServer(("127.0.0.1", 0), BaseHTTPRequestHandler)
+        closed_port = closed.server_address[1]
+        closed.server_close()
+        original = client.set_section_changes
+
+        def write_and_disconnect(name, changes):
+            result = original(name, changes)
+            client.port = closed_port
+            client.base = "http://127.0.0.1:{}".format(closed_port)
+            return result
+
+        with mock.patch.object(
+            client, "set_section_changes", side_effect=write_and_disconnect
+        ):
+            status, _headers, raw = self.post_config(
+                {
+                    "name": "Network",
+                    "changes": {"Network.eth0.IPAddress": "192.168.2.99"},
+                    "revision": body["section"]["revision"],
+                    "confirm": True,
+                    "confirm_text": "APPLY NETWORK",
+                }
+            )
+        result = json.loads(raw)
+        self.assertEqual(status, 200)
+        self.assertFalse(result["verified"])
+        self.assertTrue(result["disconnected"])
+        self.assertTrue(result["backup"])
+        self.assertTrue(result["mirror"]["stale"])
+
+    def test_config_apply_verification_failure_returns_502(self):
+        _status, body = self.get_config("NTP")
+        self.mock.ignore_writes = True
+        status, _headers, raw = self.post_config(
+            {
+                "name": "NTP",
+                "changes": {"NTP.Address": "pool.ntp.org"},
+                "revision": body["section"]["revision"],
+                "confirm": True,
+            }
+        )
+        result = json.loads(raw)
+        self.assertEqual(status, 502)
+        self.assertFalse(result["verified"])
+        self.assertIn("NTP.Address", result["mismatches"])
+        saved = state.load(self.state_path)
+        self.assertEqual(
+            saved["configuration"]["NTP"]["values"]["NTP.Address"],
+            "clock.isc.org",
+        )
+
+    def test_config_apply_motion_enable_and_level(self):
+        _status, body = self.get_config("MotionDetect")
+        status, _headers, raw = self.post_config(
+            {
+                "name": "MotionDetect",
+                "changes": {
+                    "MotionDetect[0].Enable": "false",
+                    "MotionDetect[0].Level": "5",
+                },
+                "revision": body["section"]["revision"],
+                "confirm": True,
+            }
+        )
+        result = json.loads(raw)
+        self.assertEqual(status, 200)
+        self.assertTrue(result["verified"])
+        self.assertEqual(self.mock.motion_enable, "false")
+        self.assertEqual(self.mock.motion_level, "5")
+        saved = state.load(self.state_path)
+        entry = saved["configuration"]["MotionDetectConfig"]
+        self.assertEqual(entry["values"]["MotionDetect[0].Level"], "5")
+
+    def test_config_apply_backup_failure_aborts_write(self):
+        _status, body = self.get_config("Network")
+        with mock.patch.object(
+            self.server,
+            "write_backup",
+            side_effect=server.CameraError("backup failed"),
+        ):
+            status, _headers, _body = self.post_config(
+                {
+                    "name": "Network",
+                    "changes": {"Network.Hostname": "cam-new"},
+                    "revision": body["section"]["revision"],
+                    "confirm": True,
+                    "confirm_text": "APPLY NETWORK",
+                }
+            )
+        self.assertEqual(status, 502)
+        self.assertEqual(self.mock.set_configs, [])
+
+    def test_config_apply_duplicate_keys_refused(self):
+        client = self.server.get_session()["client"]
+        duplicate = {
+            "name": "NTP",
+            "values": {"NTP.Address": "clock.isc.org"},
+            "duplicates": ["NTP.Address"],
+            "raw": "",
+            "revision": "a" * 64,
+        }
+        with mock.patch.object(client, "get_section", return_value=duplicate):
+            status, _headers, _body = self.post_config(
+                {
+                    "name": "NTP",
+                    "changes": {"NTP.Address": "pool.ntp.org"},
+                    "revision": "a" * 64,
+                    "confirm": True,
+                }
+            )
+        self.assertEqual(status, 409)
+
+    def test_backup_download(self):
+        status, headers, body = self.get_json(
+            "api/backup", cookie=self.cookie
+        )
+        self.assertEqual(status, 200)
+        self.assertIn("attachment", headers.get("Content-Disposition", ""))
+        self.assertEqual(body["kind"], state.BACKUP_KIND)
+        self.assertTrue(body["complete"])
+        self.assertEqual(len(body["sections"]), 7)
+        self.assertEqual(
+            body["sections"]["NAS"]["values"]["NAS[0].Password"],
+            "<redacted>",
+        )
+
+    def test_backup_requires_login(self):
+        status, _headers, _body = self.request("GET", BASE + "api/backup")
+        self.assertEqual(status, 401)
+
+    def test_backup_incomplete_marks_stale(self):
+        self.get_config("NTP")
+        client = self.server.get_session()["client"]
+        with mock.patch.object(
+            client,
+            "get_section",
+            side_effect=server.CameraError("camera offline"),
+        ):
+            status, headers, body = self.get_json(
+                "api/backup", cookie=self.cookie
+            )
+        self.assertEqual(status, 200)
+        self.assertIn("attachment", headers.get("Content-Disposition", ""))
+        self.assertFalse(body["complete"])
+        self.assertTrue(body["stale"])
+        self.assertIn("NTP", body["sections"])
+        self.assertTrue(body["errors"])
 
 
 if __name__ == "__main__":

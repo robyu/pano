@@ -104,5 +104,56 @@ class SaveLoadTests(StateTestCase):
         self.assertTrue((self.dir / "cam-01.json.lock").exists())
 
 
+class BackupTests(StateTestCase):
+    def sample(self):
+        return state.new_backup(
+            {"name": "cam-01", "host": "192.168.2.121", "model": "IP2M-842"},
+            {
+                "NTP": {"values": {"NTP.Address": "clock.isc.org"}, "revision": "a"},
+                "NAS": {
+                    "values": {"NAS[0].Password": "hunter2"},
+                    "revision": "b",
+                },
+            },
+        )
+
+    def test_backup_path_uses_slug_and_timestamp(self):
+        path = state.backup_path(
+            self.dir, "cam-01", "192.168.2.121", stamp="20261106-120000"
+        )
+        self.assertEqual(path.parent, self.dir)
+        self.assertEqual(path.name, "cam-01-20261106-120000.json")
+
+    def test_backup_path_falls_back_to_host(self):
+        path = state.backup_path(
+            self.dir, None, "192.168.2.121", stamp="20261106-120000"
+        )
+        self.assertEqual(path.name, "192.168.2.121-20261106-120000.json")
+
+    def test_backup_metadata_and_redaction(self):
+        path = state.backup_path(
+            self.dir, "cam-01", "192.168.2.121", stamp="20261106-120000"
+        )
+        state.save(path, self.sample())
+        text = path.read_text(encoding="utf-8")
+        self.assertNotIn("hunter2", text)
+        data = json.loads(text)
+        self.assertEqual(data["kind"], state.BACKUP_KIND)
+        self.assertTrue(data["complete"])
+        self.assertFalse(data["stale"])
+        self.assertEqual(data["camera"]["name"], "cam-01")
+        self.assertEqual(
+            data["sections"]["NAS"]["values"]["NAS[0].Password"], "<redacted>"
+        )
+
+    def test_backup_mode_is_private(self):
+        path = state.backup_path(
+            self.dir, "cam-01", "192.168.2.121", stamp="20261106-120000"
+        )
+        state.save(path, self.sample())
+        mode = stat.S_IMODE(os.stat(str(path)).st_mode)
+        self.assertEqual(mode, 0o600)
+
+
 if __name__ == "__main__":
     unittest.main()

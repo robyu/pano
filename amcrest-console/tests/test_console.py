@@ -155,6 +155,29 @@ class MainLogDestinationTests(LoggingTestCase):
             constructor.call_args[1]["allow_hosts"], ["cam.local:8765"]
         )
 
+    def test_backup_dir_is_forwarded(self):
+        fake_server = mock.MagicMock()
+        fake_server.server_address = ("127.0.0.1", 8765)
+        with tempfile.TemporaryDirectory() as tmp, mock.patch(
+            "console.check_reachable", return_value=None
+        ), mock.patch(
+            "console.ConsoleServer", return_value=fake_server
+        ) as constructor:
+            backup_dir = Path(tmp) / "backups"
+            rc = console.main(
+                [
+                    "--camera-ip",
+                    "192.168.2.121",
+                    "--state-dir",
+                    tmp,
+                    "--backup-dir",
+                    str(backup_dir),
+                    "--no-browser",
+                ]
+            )
+        self.assertEqual(rc, 0)
+        self.assertEqual(constructor.call_args[1]["backup_dir"], backup_dir)
+
 
 class ConsoleUrlTests(LoggingTestCase):
     def test_specific_bind(self):

@@ -6,6 +6,7 @@ import time
 import unittest
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
+from unittest import mock
 from urllib.parse import parse_qs, urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -223,6 +224,124 @@ class SerializationTests(unittest.TestCase):
             for thread in threads:
                 thread.join()
         self.assertEqual(mock.max_active, 1)
+
+
+class SectionConfigTests(unittest.TestCase):
+    def client(self):
+        return camera.CameraClient(
+            "127.0.0.1", 80, "admin", "testpass", timeout=2, auth="basic"
+        )
+
+    def test_get_section_returns_revision(self):
+        client = self.client()
+        values = {"NTP.Enable": "true", "NTP.Address": "clock.isc.org"}
+        with mock.patch.object(
+            client, "get_config", return_value=(values, [], "raw")
+        ):
+            section = client.get_section("NTP")
+        self.assertEqual(section["name"], "NTP")
+        self.assertEqual(section["values"], values)
+        self.assertEqual(section["raw"], "raw")
+        self.assertEqual(len(section["revision"]), 64)
+
+    def test_set_section_changes_uses_cgi_when_accepted(self):
+        client = self.client()
+        with mock.patch.object(
+            client, "cgi_text", return_value="OK"
+        ) as cgi_text:
+            with mock.patch.object(client, "rpc_get_config") as rpc_get:
+                result = client.set_section_changes(
+                    "NTP", {"NTP.Address": "pool.ntp.org"}
+                )
+        self.assertEqual(result, "OK")
+        params = cgi_text.call_args[0][1]
+        self.assertEqual(params["action"], "setConfig")
+        self.assertEqual(params["NTP.Address"], "pool.ntp.org")
+        rpc_get.assert_not_called()
+
+    def test_set_section_changes_falls_back_to_rpc2(self):
+        client = self.client()
+        table = {"eth0": {"IPAddress": "192.168.2.10", "MTU": 1500}}
+        with mock.patch.object(client, "cgi_text", return_value="Error"):
+            with mock.patch.object(
+                client, "rpc_get_config", return_value=table
+            ):
+                with mock.patch.object(client, "rpc_set_config") as rpc_set:
+                    result = client.set_section_changes(
+                        "Network", {"Network.eth0.IPAddress": "192.168.2.20"}
+                    )
+        self.assertEqual(result, "OK (RPC2)")
+        self.assertEqual(table["eth0"]["IPAddress"], "192.168.2.20")
+        self.assertEqual(table["eth0"]["MTU"], 1500)
+        rpc_set.assert_called_once_with("Network", table)
+
+    def test_motion_settings_send_all_rows(self):
+        client = self.client()
+        values = {"MotionDetect[0].Enable": "true", "MotionDetect[0].Level": "3"}
+        for row in range(18):
+            values["MotionDetect[0].Region[{}]".format(row)] = str(row)
+        with mock.patch.object(
+            client, "get_config", return_value=(values, [], "raw")
+        ):
+            with mock.patch.object(
+                client, "cgi_text", return_value="OK"
+            ) as cgi_text:
+                result = client.write_motion_settings(
+                    {"MotionDetect[0].Level": "5"}
+                )
+        self.assertEqual(result, "OK")
+        params = cgi_text.call_args[0][1]
+        self.assertEqual(params["MotionDetect[0].Level"], "5")
+        region_keys = [
+            key for key in params
+            if key.startswith("MotionDetect[0].Region[")
+        ]
+        self.assertEqual(len(region_keys), 18)
+
+    def test_motion_settings_refuse_incomplete_rows(self):
+        client = self.client()
+        values = {"MotionDetect[0].Enable": "true"}
+        for row in range(12):
+            values["MotionDetect[0].Region[{}]".format(row)] = str(row)
+        with mock.patch.object(
+            client, "get_config", return_value=(values, [], "raw")
+        ):
+            with self.assertRaises(camera.CameraError):
+                client.write_motion_settings(
+                    {"MotionDetect[0].Level": "5"}
+                )
+
+    def test_motion_settings_fallback_preserves_regions(self):
+        client = self.client()
+        values = {"MotionDetect[0].Enable": "true", "MotionDetect[0].Level": "3"}
+        for row in range(18):
+            values["MotionDetect[0].Region[{}]".format(row)] = str(row)
+        table = [
+            {
+                "Enable": True,
+                "Level": 3,
+                "Region": list(range(18)),
+                "MotionDetectWindow": [{"Sensitive": 60}],
+            }
+        ]
+        with mock.patch.object(
+            client, "get_config", return_value=(values, [], "raw")
+        ):
+            with mock.patch.object(client, "cgi_text", return_value="Error"):
+                with mock.patch.object(
+                    client, "rpc_get_config", return_value=table
+                ):
+                    with mock.patch.object(
+                        client, "rpc_set_config"
+                    ) as rpc_set:
+                        result = client.write_motion_settings(
+                            {"MotionDetect[0].Level": "5"}
+                        )
+        self.assertEqual(result, "OK (RPC2)")
+        self.assertEqual(table[0]["Level"], 5)
+        self.assertEqual(table[0]["Region"], list(range(18)))
+        self.assertEqual(table[0]["MotionDetectWindow"][0]["Sensitive"], 60)
+        rpc_set.assert_called_once_with("MotionDetect", table)
 
 
 if __name__ == "__main__":

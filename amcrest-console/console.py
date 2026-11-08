@@ -71,6 +71,10 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         help="explicit mirror file for this camera (overrides --state-dir)",
     )
     parser.add_argument(
+        "--backup-dir",
+        help="directory for pre-write configuration backups (default: amcrest-console/backups/)",
+    )
+    parser.add_argument(
         "--no-browser", action="store_true", help="print the URL without opening a browser"
     )
     parser.add_argument(
@@ -159,6 +163,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         state_path = Path(args.state_file)
     else:
         state_path = state.mirror_path(state_dir, args.name, camera_ip)
+    backup_dir = Path(args.backup_dir) if args.backup_dir else state.DEFAULT_BACKUP_DIR
 
     log_path = (
         Path(args.log_file)
@@ -200,6 +205,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             name=args.name,
             state_path=state_path,
             allow_hosts=args.allow_host,
+            backup_dir=backup_dir,
         )
     except OSError as error:
         print(
@@ -212,6 +218,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     print("Amcrest console for {} ({})".format(args.name or camera_ip, camera_ip))
     print("Listening on {}:{} (login required).".format(args.bind, server.server_address[1]))
     print("Mirror: {}".format(state_path))
+    print("Backups: {}".format(backup_dir))
     for url in urls:
         print("Open: {}".format(url))
     print("Log: {} ({})".format(log_path, args.log_level.upper()))

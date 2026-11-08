@@ -1,6 +1,6 @@
 ---
 update: 2026-11-06 PST
-tags: amcrest-console, implementation-plan, motion-mask, json-mirror
+tags: amcrest-console, implementation-plan, motion-mask, json-mirror, config-browser, backups
 ---
 
 # Amcrest console implementation plan
@@ -194,10 +194,13 @@ location; `cameras/` is gitignored. Protocol logs share the directory as
 
 * `schema_version: 1` so later sections can be added under `configuration`
   without breaking old files.
-* `camera` holds name/host/port/model/firmware; `configuration` currently holds
-  `MotionDetect` (legacy `region_values`, decoded `rows`, `revision`, plus the
-  read-only windows); `mirror` holds `updated`, `last_apply`, `verified`, and
-  `stale`.
+* `camera` holds name/host/port/model/firmware; `configuration` holds each
+  allowlisted section (phase 3): `General`, `Network`, `NAS`, `NTP`, `Encode`,
+  `AutoMaintain`, plus `MotionDetect` (legacy `region_values`, decoded `rows`,
+  `revision`, and read-only windows) and `MotionDetectConfig` (flat Enable/Level
+  view). Each phase-3 section entry has sanitized `values`, `revision`,
+  `redacted`, and `updated`; `mirror` holds `updated`, `last_apply`, `verified`,
+  and `stale`.
 * The camera is the source of truth. The mirror is written after every
   successful read and every verified write, never updated when verification
   fails, and served marked `stale: true` (Apply disabled) when the camera is
@@ -208,6 +211,9 @@ location; `cameras/` is gitignored. Protocol logs share the directory as
   stored.
 * A corrupt or unsupported mirror is renamed to `<file>.bad-<timestamp>` and
   rebuilt from the camera rather than crashing.
+* Pre-write backups live in `amcrest-console/backups/<slug>-<timestamp>.json`
+  (mode 0600, sanitized, gitignored). Phase 3 writes them before Network/NAS
+  applies; phase 4 extends backup/restore to every write.
 
 ## Command-line interface
 
@@ -232,6 +238,8 @@ python3 console.py --camera-ip 192.168.2.120 \
   derived per-camera path.
 * `--log-level` — `DEBUG`, `INFO`, `WARNING`, or `ERROR`; default `INFO`.
 * `--log-file` — override the default `<state-dir>/log-<slug>.log` path.
+* `--backup-dir` — pre-write backup directory; default
+  `amcrest-console/backups/`.
 
 **Credential prompt:** the console does not ask for the password on the command
 line. The first browser load shows a login screen with username (prefilled from
@@ -274,10 +282,10 @@ amcrest-console/
   static/index.html     # login, snapshot, motion editor UI (implemented)
   static/app.js         # login/snapshot/motion frontend logic (implemented)
   static/style.css      # styles (implemented)
-  cgi_config.py         # phase 3 getConfig/setConfig parsing + read-modify-write
+  cgi_config.py         # phase 3 getConfig/setConfig parsing + RMW (implemented)
   mask.py               # phase 2 legacy 18x22 grid codec (implemented)
-  state.py              # phase 2 per-camera JSON mirror (implemented)
-  schemas.py            # phase 3 allowlisted config sections and form metadata
+  state.py              # phase 2 mirror + phase 3 backup helpers (implemented)
+  schemas.py            # phase 3 allowlisted sections/form metadata (implemented)
   cameras/              # per-camera JSON mirrors + log-<slug>.log, gitignored (runtime)
   cameras.example.json  # optional future multi-camera example; unused by MVP
   tests/test_discover.py  # phase 0 tests (implemented)
@@ -285,9 +293,12 @@ amcrest-console/
   tests/test_server.py    # phase 1+2 server tests (implemented)
   tests/test_mask.py      # phase 2 mask codec tests (implemented)
   tests/test_state.py     # phase 2 mirror tests (implemented)
-  tests/test_console.py   # CLI logging destination tests (implemented)
+  tests/test_console.py   # CLI logging/backup-dir tests (implemented)
+  tests/test_cgi_config.py # phase 3 parsing/validation/RMW tests (implemented)
+  tests/test_schemas.py  # phase 3 section/field metadata tests (implemented)
+  backups/              # pre-write configurations, gitignored (runtime)
   fixtures/             # local discovery output, gitignored
-  README.md             # run steps, LAN access, security model (implemented)
+  README.md             # run steps, configuration, backups, security (implemented)
 ```
 
 ## HTTP surface
@@ -399,12 +410,23 @@ No arbitrary URL proxying; the camera host is fixed by `--camera-ip`.
 * Suite: 82 passing (`test_discover` 24, `test_camera` 9, `test_server` 26,
   `test_mask` 12, `test_state` 11).
 
-**3. Config browser + forms (1–1.5 days)**
-* Read-only raw viewer for each allowlisted section, then full JSON backup.
+**3. Config browser + forms (implemented 2026-11-06; live smoke test pending)**
+* Implemented: `schemas.py` allowlist/metadata, `cgi_config.py` parsing,
+  validation, revision, diff and RPC2 table RMW; `camera.get_section`,
+  `set_section_changes`, `set_section_via_rpc`, `write_motion_settings`;
+  `GET /api/config`, `POST /api/config`, `GET /api/backup`; Configuration tab
+  with section navigation, forms, dirty tracking, raw sanitized JSON, typed
+  confirmation for Network/NAS, and backup download.
+* Read-only raw viewer for each allowlisted section; `General` is read-only.
 * Schema-driven forms for Network, NAS (FTP), Encode, NTP, AutoMaintain,
-  MotionDetect.
-* Apply changes only touched keys; re-fetch and verify.
-* Extra warning and automatic backup before Network/NAS writes.
+  MotionDetect (Enable/Level only; mask remains in the Legacy mask tab).
+* Apply sends only touched keys, re-reads and verifies every key; 409 on stale
+  revision, 502 on mismatch without updating the mirror.
+* Network/NAS writes require a typed phrase and a complete sanitized pre-write
+  backup in `backups/`. Network address changes that disconnect the camera are
+  reported as `verified: false`, `disconnected: true`, with the mirror stale.
+* Tests: 165 passing (phase 3 adds schemas/cgi_config/config server/backup
+  tests). No automated test contacts a real camera.
 
 **4. Backup/restore + safety (0.5–1 day)**
 * Pre-write backup to `amcrest-console/backups/<name>-<timestamp>.json`.
@@ -437,6 +459,9 @@ Total: about 4–6 days without live streaming, plus discovery.
 * Host/Origin rejection tests, single-session replacement, and cookie path.
 * One manual smoke test per release: snapshot, read config, toggle one mask
   cell, re-read, restore backup.
+* Automated tests are loopback mock-only. No test reads `--camera-ip` or
+  `AMCREST_*`, and no test contacts a real camera. Live writes are manual and
+  require explicit approval.
 
 ## Acceptance criteria
 

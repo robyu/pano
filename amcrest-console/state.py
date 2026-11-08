@@ -31,8 +31,10 @@ except ImportError:  # pragma: no cover - non-POSIX fallback
 
 SCHEMA_VERSION = 1
 DEFAULT_STATE_DIR = Path(__file__).resolve().parent / "cameras"
+DEFAULT_BACKUP_DIR = Path(__file__).resolve().parent / "backups"
 SLUG_RE = re.compile(r"[^a-z0-9._-]+")
 MAX_SLUG = 80
+BACKUP_KIND = "amcrest-console-backup"
 
 
 def now_iso() -> str:
@@ -51,6 +53,40 @@ def mirror_path(state_dir: Path, name: Optional[str], host: str) -> Path:
     """Return the per-camera mirror path (one file per camera)."""
     label = name or host
     return Path(state_dir) / "{}.json".format(slugify(label))
+
+
+def backup_path(
+    backup_dir: Path,
+    name: Optional[str],
+    host: str,
+    stamp: Optional[str] = None,
+) -> Path:
+    label = name or host
+    stamp = stamp or datetime.now().strftime("%Y%m%d-%H%M%S")
+    return Path(backup_dir) / "{}-{}.json".format(slugify(label), stamp)
+
+
+def new_backup(
+    camera: Dict[str, Any],
+    sections: Dict[str, Any],
+    complete: bool = True,
+    stale: bool = False,
+) -> Dict[str, Any]:
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "kind": BACKUP_KIND,
+        "created": now_iso(),
+        "camera": {
+            "name": camera.get("name"),
+            "host": camera.get("host"),
+            "port": camera.get("port", 80),
+            "model": camera.get("model"),
+            "firmware": camera.get("firmware"),
+        },
+        "complete": bool(complete),
+        "stale": bool(stale),
+        "sections": sections,
+    }
 
 
 def _quarantine(path: Path) -> Optional[Path]:
