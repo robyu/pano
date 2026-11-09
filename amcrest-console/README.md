@@ -127,9 +127,9 @@ must re-enter them.
 
 ## Non-interactive mode (`--noui`)
 
-`--noui` runs one configuration action and exits. It never binds a port, never
-opens a browser, and never serves HTTP, so it is safe to call from cron or a
-shell script:
+`--noui` runs one action and exits. It never binds a port, never opens a
+browser, and never serves HTTP, so it is safe to call from cron or a shell
+script:
 
 ```bash
 # camera -> file (edit it offline)
@@ -137,11 +137,16 @@ python3 console.py --ip 192.168.2.129 --noui --config read
 
 # file -> camera
 python3 console.py --ip 192.168.2.129 --noui --config write
+
+# firmware version (safe on every model)
+python3 console.py --ip 192.168.2.121 --name cam-01 \
+  --model amcrest-ip2m-842 --noui --firmware
 ```
 
-`--config` has no default and requires `--noui`; `--config` without `--noui` is
-a usage error. `--port`, `--bind`, `--allow-host`, and `--no-browser` are
-rejected in this mode.
+Either `--config {read,write}` or `--firmware` is required with `--noui`; bare
+`--noui` is a usage error, as is `--config` or `--firmware` without `--noui`,
+or combining the two. `--port`, `--bind`, `--allow-host`, and `--no-browser`
+are rejected in this mode.
 
 - `--config read` — reads every allowlisted section and writes one JSON file
   (`<state-dir>/config-<name>.json` by default, or `--config-file`). The format
@@ -183,6 +188,38 @@ python3 console.py --ip 192.168.2.129 --noui --config read \
 AMCREST_PASSWORD=... python3 console.py --ip 192.168.2.129 --noui --config write \
   --dry-run
 ```
+
+### Firmware version (`--noui --firmware`)
+
+Prints the camera's firmware version, build date, WEB version and serial:
+
+```bash
+AMCREST_PASSWORD=... python3 console.py --ip 192.168.2.121 --name cam-01 \
+  --model amcrest-ip2m-842 --noui --firmware
+```
+
+```text
+Camera: cam-01 (192.168.2.121)
+Model: amcrest-ip2m-842
+Firmware: 2.212.0000.2.R
+Build: 2016-08-11
+WEB: 3.2.1.273284
+Serial: AMC002A34HATK2G7HH
+Source: RPC2 magicBox.getProductDefinition
+```
+
+This deliberately avoids the ``getSoftwareVersion`` CGI, which crashes/restarts
+the IP2M-842 web server. Instead it logs in over RPC2 and reads
+``magicBox.getProductDefinition`` for `MajorVersion`, `MinorVersion`,
+`OEMVersion`, `Revision`, `BuildDate`, `WebVersion`, `TypeVersion` and
+`VendorAbbr` plus ``magicBox.getSerialNo`` -- batched into a single
+``system.multicall`` (falling back to individual calls if the firmware does not
+support it). The version is assembled the same way the camera's own "Edition
+Info" page does; see `camera.format_product_version`.
+
+The console's interactive `identity()` path also refuses `getSoftwareVersion` on
+IP2M units (`camera.skip_software_version`), so the browser UI shows
+`(unknown)` firmware for those cameras. Use `--noui --firmware` to read it.
 
 ## Logging and diagnostics
 

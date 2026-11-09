@@ -7,11 +7,16 @@ it and the proxy keeps it in memory only. By default the server binds 0.0.0.0
 and serves routes at the root URL; use ``--bind 127.0.0.1`` to restrict access
 to the local machine.
 
-``--noui --config {read,write}`` is the scriptable mode: it never binds a port
-and never opens a browser. ``read`` dumps every allowlisted section to a JSON
-file for offline editing; ``write`` pushes that file back -- except for the
-``Network`` section, which must match the camera exactly or the run aborts
+``--noui --config {read,write}`` is the scriptable configuration mode: it never
+binds a port and never opens a browser. ``read`` dumps every allowlisted section
+to a JSON file for offline editing; ``write`` pushes that file back -- except for
+the ``Network`` section, which must match the camera exactly or the run aborts
 before any write, because network changes have to be made interactively.
+
+``--noui --firmware`` is the scriptable firmware query. It never calls the
+``getSoftwareVersion`` CGI, which crashes/restarts the IP2M-842 web server; it
+reads ``magicBox.getProductDefinition`` and ``magicBox.getSerialNo`` over RPC2
+instead -- the same calls the camera's own "Edition Info" page makes.
 """
 
 from __future__ import annotations
@@ -23,7 +28,7 @@ import socket
 import sys
 import webbrowser
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import configfile
 import credentials
@@ -61,9 +66,13 @@ examples:
          --name cam-01 --noui --config write \\
          --config-file cameras/config-cam-01.json
 
-     preview the same run without writing anything:
-       python3 console.py --ip 192.168.2.121 --name cam-01 \\
-         --noui --config write --dry-run
+      preview the same run without writing anything:
+        python3 console.py --ip 192.168.2.121 --name cam-01 \\
+          --noui --config write --dry-run
+
+  4. firmware version, safe on every model:
+        AMCREST_PASSWORD=... python3 console.py --ip 192.168.2.121 \\
+          --name cam-01 --model amcrest-ip2m-842 --noui --firmware
 
 credentials for --noui: --pano-config, then $AMCREST_PASSWORD (see
 --password-env), then an interactive prompt when stdin is a terminal.
@@ -153,6 +162,15 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--firmware",
+        action="store_true",
+        help=(
+            "with --noui: print the firmware version, build date, WEB version "
+            "and serial (read via RPC2 getProductDefinition; the "
+            "getSoftwareVersion CGI crashes IP2M-842 units)"
+        ),
+    )
+    parser.add_argument(
         "--config-file",
         help=(
             "configuration file for --config (default: "
@@ -190,12 +208,23 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
 
 def validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
     """Enforce the --noui contract; parser.error exits with status 2."""
-    if args.noui and args.config is None:
-        parser.error("--noui requires --config {read,write}")
+    if args.noui and args.config is None and not args.firmware:
+        parser.error("--noui requires --config {read,write} or --firmware")
     if args.config and not args.noui:
         parser.error("--config requires --noui")
+    if args.firmware and not args.noui:
+        parser.error("--firmware requires --noui")
+    if args.firmware and args.config:
+        parser.error("--firmware cannot be combined with --config")
     if not args.noui:
         return
+    if args.firmware:
+        if args.include_secrets:
+            parser.error("--include-secrets requires --config read")
+        if args.dry_run:
+            parser.error("--dry-run requires --config write")
+        if args.config_file:
+            parser.error("--config-file requires --config")
     if args.port != DEFAULT_PORT:
         parser.error("--port has no effect with --noui")
     if args.bind != DEFAULT_BIND:
@@ -530,21 +559,15 @@ def batch_config_write(
     return EXIT_OK
 
 
-def run_batch(
-    args: argparse.Namespace,
-    camera_ip: str,
-    camera_config: Dict[str, Any],
-    name: str,
-    state_path: Optional[Path],
-    backup_dir: Path,
-    config_path: Path,
-    logger: logging.Logger,
-) -> int:
+def build_client(
+    args: argparse.Namespace, camera_config: Dict[str, Any]
+) -> Tuple[Optional[CameraClient], Optional[int]]:
+    """Resolve credentials and build the client for a --noui run."""
     try:
         _name, user, password, model = credentials.resolve_credentials(args)
     except CameraError as error:
         print("cannot resolve credentials: {}".format(error), file=sys.stderr)
-        return EXIT_CREDENTIALS
+        return None, EXIT_CREDENTIALS
     if model and not camera_config.get("model"):
         camera_config["model"] = model
 
@@ -559,6 +582,13 @@ def run_batch(
         request_delay=float(camera_config.get("request_delay", 0.0)),
         logger=logging.getLogger("amcrest.camera"),
     )
+    return client, None
+
+
+def login_client(
+    client: CameraClient, camera_config: Dict[str, Any]
+) -> Optional[int]:
+    """Verify credentials and detect the model; return an exit code or None."""
     try:
         client.verify_credentials()
     except AuthError as error:
@@ -570,6 +600,78 @@ def run_batch(
     detected = client.detect_model()
     if detected and not camera_config.get("model"):
         camera_config["model"] = detected
+    return None
+
+
+def firmware_version(
+    client: CameraClient,
+    camera_config: Dict[str, Any],
+    name: str,
+    state_path: Optional[Path],
+) -> int:
+    """Print the firmware version without touching the getSoftwareVersion CGI."""
+    try:
+        version = client.rpc_product_version()
+    except CameraError as error:
+        print(
+            "cannot read the firmware version: {}".format(error), file=sys.stderr
+        )
+        return EXIT_UNREACHABLE
+
+    print("Camera: {} ({})".format(name, camera_config.get("host")))
+    print("Model: {}".format(camera_config.get("model") or "(unknown)"))
+    print("Firmware: {}".format(version.get("software") or "(unknown)"))
+    if version.get("build"):
+        print("Build: {}".format(version["build"]))
+    if version.get("web"):
+        print("WEB: {}".format(version["web"]))
+    if version.get("serial"):
+        print("Serial: {}".format(version["serial"]))
+    print("Source: RPC2 magicBox.getProductDefinition")
+    if state_path and merge_mirror_firmware(
+        state_path, camera_config, name, version
+    ):
+        print("Mirror: {}".format(state_path))
+    return EXIT_OK
+
+
+def merge_mirror_firmware(
+    state_path: Path,
+    camera_config: Dict[str, Any],
+    name: str,
+    version: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
+    """Record the firmware version in an existing per-camera mirror."""
+    mirror = state.load(state_path)
+    if mirror is None:
+        return None
+    camera = mirror.get("camera") or {}
+    camera["name"] = camera.get("name") or name
+    camera["host"] = camera.get("host") or camera_config.get("host")
+    camera["port"] = int(camera_config.get("port", 80))
+    camera["model"] = camera.get("model") or camera_config.get("model")
+    camera["firmware"] = version.get("software")
+    mirror["camera"] = camera
+    state.save(state_path, mirror)
+    return mirror
+
+
+def run_batch(
+    args: argparse.Namespace,
+    camera_ip: str,
+    camera_config: Dict[str, Any],
+    name: str,
+    state_path: Optional[Path],
+    backup_dir: Path,
+    config_path: Path,
+    logger: logging.Logger,
+) -> int:
+    client, error = build_client(args, camera_config)
+    if error is not None:
+        return error
+    error = login_client(client, camera_config)
+    if error is not None:
+        return error
 
     meta = camera_meta(camera_config, name, state_path, client)
     logger.info(
@@ -586,6 +688,28 @@ def run_batch(
     return batch_config_write(
         client, meta, config_path, state_path, backup_dir, args.dry_run
     )
+
+
+def run_firmware(
+    args: argparse.Namespace,
+    camera_ip: str,
+    camera_config: Dict[str, Any],
+    name: str,
+    state_path: Optional[Path],
+    logger: logging.Logger,
+) -> int:
+    client, error = build_client(args, camera_config)
+    if error is not None:
+        return error
+    error = login_client(client, camera_config)
+    if error is not None:
+        return error
+    logger.info(
+        "firmware query camera=%s model=%s",
+        camera_ip,
+        camera_config.get("model") or "unknown",
+    )
+    return firmware_version(client, camera_config, name, state_path)
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -654,6 +778,15 @@ def main(argv: Optional[List[str]] = None) -> int:
     }
 
     if args.noui:
+        if args.firmware:
+            return run_firmware(
+                args,
+                camera_ip,
+                camera_config,
+                args.name or camera_ip,
+                state_path,
+                logger,
+            )
         return run_batch(
             args,
             camera_ip,

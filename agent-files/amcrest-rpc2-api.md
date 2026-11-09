@@ -98,6 +98,42 @@ Configuration methods used by the UI:
 The camera's UI also uses `configManager.getDefault`, `system.listService`,
 `global.getCurrentTime`, etc. (`jsCore/rpcCore.js`, `js/set.js`).
 
+### `magicBox.getProductDefinition`
+
+Reads one field of the product definition. The built-in "Edition Info" page
+(`/html/versionConfig.htm`, filled by `js/versionConfig.js`) uses this and **not**
+`getSoftwareVersion`, so it is the safe way to read firmware on the IP2M-842 — whose
+web server the `getSoftwareVersion` CGI crashes/restarts (see 2026-11-01 entry in
+`amcrest-camera-contact.md`).
+
+| Param | Type | Required | Description |
+|---|---|---|---|
+| name | string | yes | `MajorVersion`, `MinorVersion`, `OEMVersion`, `Revision`, `BuildDate`, `WebVersion`, `TypeVersion` or `VendorAbbr` |
+
+Response — the value is in the **inner** `params.definition`:
+
+```json
+{"id": 100, "params": {"name": "MinorVersion", "definition": 212}, "result": true}
+```
+
+`camera.rpc_product_version` batches all eight fields plus `magicBox.getSerialNo`
+into one `system.multicall` and reassembles them with
+``camera.format_product_version``:
+
+```text
+MajorVersion + "." + pad3(MinorVersion) + "." + VendorAbbr + pad2(OEMVersion)
+  + "." + Revision + "." + TypeVersion      (BuildDate reported separately)
+```
+
+Verified 2026-11-08 against two independent sources (cam-01's web page capture from
+2026-11-01, and the cam-07/08/09 CGI fixtures from 2026-11-01).
+
+### `magicBox.getSerialNo`
+
+Returns `params.sn` **and** `params.no` (same value). `magicBox.getMachineName` returns
+the same base serial with some characters masked (`AMC002A3_K2G7HH` on cam-01), so
+prefer `getSerialNo` for inventory.
+
 ## CGI vs RPC2 on the IP2M-842
 
 * CGI reads work: `GET /cgi-bin/configManager.cgi?action=getConfig&name=MotionDetect`.

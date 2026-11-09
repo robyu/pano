@@ -122,6 +122,15 @@ class FakeClient:
     def identity(self):
         return {"magic": {}, "errors": []}
 
+    def rpc_product_version(self):
+        return {
+            "software": "2.212.0000.2.R",
+            "build": "2016-08-11",
+            "web": "3.2.1.273284",
+            "serial": "AMC002A34HATK2G7HH",
+            "definitions": {},
+        }
+
 
 def document(sections=None, **overrides):
     doc = state.new_backup(

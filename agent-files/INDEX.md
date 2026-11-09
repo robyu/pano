@@ -79,7 +79,9 @@ lighttpd web frontend, a vsFTPd server, and the pano python application (`pano/`
   `--backup-dir`, protocol logging to `<state-dir>/log-<slug>.log` with
   `--log-level`/`--log-file`; phase 4b `--noui --config {read,write}`
   with `--config-file`, `--dry-run`, `--include-secrets`, `--pano-config`,
-  `--password-env`
+  `--password-env`; firmware query `--noui --firmware` (RPC2
+  `magicBox.getProductDefinition`, never the crash-prone
+  `getSoftwareVersion` CGI)
 * amcrest-console/server.py - LAN server: Host/Origin checks, browser login,
   single in-memory session, snapshot proxy, motion mask GET/PUT, config
   GET/POST, full backup download, state endpoint, API/protocol logging

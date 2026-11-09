@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import json
 import sys
 import threading
 import time
@@ -257,6 +258,181 @@ class BackoffTests(unittest.TestCase):
             client.base = "http://127.0.0.1:{}".format(mock.port)
             client.get("/cgi-bin/test")
         self.assertEqual(client._backoff, 0.0)
+
+
+class ProductVersionFormatTests(unittest.TestCase):
+    """Version assembly, checked against the values the cameras report."""
+
+    IP2M = {
+        "MajorVersion": 2,
+        "MinorVersion": 212,
+        "OEMVersion": 0,
+        "Revision": 2,
+        "BuildDate": "2016-08-11",
+        "WebVersion": "3.2.1.273284",
+        "TypeVersion": "R",
+        "VendorAbbr": "00",
+    }
+    IP3M = {
+        "MajorVersion": 2,
+        "MinorVersion": 400,
+        "OEMVersion": 2,
+        "Revision": 15,
+        "BuildDate": "2017-07-31",
+        "WebVersion": "3.2.1.422026",
+        "TypeVersion": "R",
+        "VendorAbbr": "AC",
+    }
+
+    def test_ip2m_842_version(self):
+        self.assertEqual(
+            camera.format_product_version(self.IP2M), "2.212.0000.2.R"
+        )
+
+    def test_ip3m_943b_version(self):
+        self.assertEqual(
+            camera.format_product_version(self.IP3M), "2.400.AC02.15.R"
+        )
+
+    def test_build_date_is_not_part_of_the_version(self):
+        self.assertNotIn(
+            "2016-08-11", camera.format_product_version(self.IP2M)
+        )
+
+    def test_zero_pads_short_fields(self):
+        values = dict(
+            self.IP2M,
+            MajorVersion=1,
+            MinorVersion=7,
+            VendorAbbr="AB",
+            OEMVersion=5,
+            Revision=1,
+        )
+        self.assertEqual(camera.format_product_version(values), "1.007.AB05.1.R")
+
+    def test_missing_field_returns_none(self):
+        reported_separately = ("BuildDate", "WebVersion")
+        for field in camera.PRODUCT_DEFINITION_FIELDS:
+            if field in reported_separately:
+                continue
+            values = dict(self.IP2M)
+            del values[field]
+            self.assertIsNone(camera.format_product_version(values), field)
+
+    def test_missing_build_date_still_reports_a_version(self):
+        values = dict(self.IP2M)
+        del values["BuildDate"]
+        self.assertEqual(camera.format_product_version(values), "2.212.0000.2.R")
+
+    def test_empty_definitions_return_none(self):
+        self.assertIsNone(camera.format_product_version({}))
+
+    def test_non_numeric_values_are_not_padded(self):
+        values = dict(self.IP2M, MinorVersion="2X")
+        self.assertEqual(
+            camera.format_product_version(values), "2.2X.0000.2.R"
+        )
+
+
+class ProductVersionClientTests(unittest.TestCase):
+    """rpc_product_version(): one multicall, never getSoftwareVersion."""
+
+    def client(self):
+        return camera.CameraClient(
+            "127.0.0.1",
+            80,
+            "admin",
+            "pw",
+            timeout=2,
+            auth="basic",
+            model="amcrest-ip2m-842",
+        )
+
+    def envelope(self, values):
+        entries = []
+        for index, name in enumerate(camera.PRODUCT_DEFINITION_FIELDS):
+            entries.append(
+                {
+                    "id": 100 + index,
+                    "result": True,
+                    "params": {"name": name, "definition": values[index]},
+                }
+            )
+        entries.append(
+            {
+                "id": 199,
+                "result": True,
+                "params": {"sn": "AMC002A34HATK2G7HH", "no": "AMC002A34HATK2G7HH"},
+            }
+        )
+        return {"id": 1, "result": True, "session": "1", "params": entries}
+
+    def test_reports_version_build_web_and_serial(self):
+        client = self.client()
+        values = [2, 212, 0, 2, "2016-08-11", "3.2.1.273284", "R", "00"]
+        with mock.patch.object(client, "rpc_login", return_value="sess"), mock.patch.object(
+            client, "_rpc_post", return_value=self.envelope(values)
+        ) as post:
+            version = client.rpc_product_version()
+        self.assertEqual(version["software"], "2.212.0000.2.R")
+        self.assertEqual(version["build"], "2016-08-11")
+        self.assertEqual(version["web"], "3.2.1.273284")
+        self.assertEqual(version["serial"], "AMC002A34HATK2G7HH")
+        body = post.call_args[0][1]
+        self.assertEqual(body["method"], "system.multicall")
+        self.assertEqual(len(body["params"]), 9)
+        for index, name in enumerate(camera.PRODUCT_DEFINITION_FIELDS):
+            self.assertEqual(
+                body["params"][index],
+                {
+                    "method": "magicBox.getProductDefinition",
+                    "params": {"name": name},
+                    "id": 100 + index,
+                },
+            )
+        self.assertNotIn("getSoftwareVersion", json.dumps(post.call_args[0][1]))
+
+    def test_batches_into_one_request(self):
+        client = self.client()
+        values = [2, 212, 0, 2, "2016-08-11", "3.2.1.273284", "R", "00"]
+        with mock.patch.object(client, "rpc_login", return_value="sess"), mock.patch.object(
+            client, "_rpc_post", return_value=self.envelope(values)
+        ) as post:
+            client.rpc_product_version()
+        self.assertEqual(post.call_count, 1)
+
+    def test_falls_back_to_single_calls(self):
+        client = self.client()
+        values = [2, 212, 0, 2, "2016-08-11", "3.2.1.273284", "R", "00"]
+        envelopes = self.envelope(values)["params"]
+        seen = []
+
+        def fake_post(path, payload):
+            seen.append(payload["method"])
+            if payload.get("method") == "system.multicall":
+                raise camera.CameraError("Method not allowed")
+            for entry in envelopes:
+                if entry["id"] == payload.get("id"):
+                    return entry
+            raise CameraError("no such id")
+
+        with mock.patch.object(client, "rpc_login", return_value="sess"), mock.patch.object(
+            client, "_rpc_post", side_effect=fake_post
+        ):
+            version = client.rpc_product_version()
+        self.assertEqual(version["software"], "2.212.0000.2.R")
+        self.assertEqual(seen.count("system.multicall"), 1)
+        self.assertEqual(seen.count("magicBox.getProductDefinition"), 8)
+        self.assertEqual(seen.count("magicBox.getSerialNo"), 1)
+
+    def test_rpc_request_tolerates_list_params(self):
+        client = self.client()
+        payload = {"method": "system.multicall", "params": [], "id": 1, "session": "s"}
+        with mock.patch.object(client, "_rpc_post", return_value=self.envelope(
+            [2, 212, 0, 2, "2016-08-11", "3.2.1.273284", "R", "00"]
+        )):
+            result = client._rpc_request("/RPC2", payload)
+        self.assertTrue(result["result"])
 
 
 class SerializationTests(unittest.TestCase):

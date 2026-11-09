@@ -1,5 +1,5 @@
 ---
-update: 2026-11-08 PST
+update: 2026-11-08 13:22 PST
 tags: amcrest-console, camera-contact
 ---
 
@@ -327,3 +327,74 @@ is editable.
 * Per-window sensitivity is not settable through the console, and window-model
   writes are unreliable (non-persistent; `Window` writes can reset the legacy
   mask). See `amcrest-console-plan.md`.
+
+## Firmware sweep — all eight active cameras (2026-11-08 13:15-13:35 PST)
+
+Read-only, one camera at a time, credentials from `$AMCREST_PASSWORD`:
+
+```sh
+python3 console.py --ip <active IP> --name cam-XX --model <pano slug> \
+  --noui --firmware --timeout 20
+```
+
+No configuration was written. Results:
+
+| Camera | Host (iface) | Model | Firmware | Build | WEB | Serial |
+|---|---|---|---|---|---|---|
+| cam-01 | 192.168.2.121 (wifi) | IP2M-842 | 2.212.0000.2.R | 2016-08-11 | 3.2.1.273284 | AMC002A34HATK2G7HH |
+| cam-03 | 192.168.2.123 (wifi) | IP2M-842 | 2.212.0000.2.R | 2016-08-11 | 3.2.1.273284 | AMC0027049Z93X76D1 |
+| cam-04 | 192.168.2.134 (wired) | IP2M-842 | 2.212.0000.2.R | 2016-08-11 | 3.2.1.273284 | AMC002A47KTRBGDT10 |
+| cam-05 | 192.168.2.125 (wifi) | IP2M-842 | 2.212.0000.2.R | 2016-08-11 | 3.2.1.273284 | AMC0021AFXD4837U12 |
+| cam-06 | 192.168.2.126 (wifi) | IP2M-842 | 2.212.0000.2.R | 2016-08-11 ¶ | 3.2.1.273284 | AMC002U5127780784R |
+| cam-07 | 192.168.2.127 (wifi) | IP3M-943B | 2.400.AC02.15.R | 2017-07-31 | 3.2.1.422026 | AMC0184DBA85F01N44 |
+| cam-08 | 192.168.2.138 (wired) | IP3M-943B | 2.400.AC02.15.R | 2017-07-31 | 3.2.1.422026 | AMC018T127Y2F424P2 |
+| cam-09 | 192.168.2.129 (wifi) | IP3M-943B | 2.400.AC02.15.R | 2017-07-31 | 3.2.1.422026 | AMC01861PG72172R3Q |
+
+cam-00, cam-02, cam-10, cam-11 were not swept: they are down and not in the active
+config.
+
+Findings:
+
+* All eight runs exited 0. No login lockouts and no web-server restarts: four
+  requests per camera (`getMachineName`, the two `/RPC2_Login` handshake calls, and
+  one `/RPC2` multicall).
+* **The built-in web page cannot be scraped.** `GET /` returns a 91,011-byte login
+  shell containing no version string at all (searched for `Software`, `Firmware`,
+  `version`, `build`, `S/N`, `2.212`, `273284` — zero hits; only `?version=2.210`
+  CSS cache-busters). The Version page is a session-gated fragment: `js/set.js`
+  maps `l_version` ("Edition Info") to `data-filename="versionConfig"`, and
+  `/html/versionConfig.htm` returns a 1,692-byte **empty template**; the values are
+  filled by `js/versionConfig.js`, which calls `MagicBox.getProductDefinition` and
+  `MagicBox.getSerialNo`. Scraping yields nothing even with a session — the RPC2
+  call is the real source.
+* Assembly (from `js/versionConfig.js`, mirrored by
+  `camera.format_product_version`): `MajorVersion + "." + pad3(MinorVersion) + "." +
+  VendorAbbr + pad2(OEMVersion) + "." + Revision + "." + TypeVersion`, with the UI
+  appending `, build : BuildDate`. **Validated both ways:** cam-01 reassembles to the
+  `2.212.0000.2.R` / build `2016-08-11` / WEB `3.2.1.273284` captured from its web
+  page on 2026-11-01, and cam-07/08/09 match the 2026-11-01 CGI fixtures exactly —
+  no camera has been upgraded since.
+* **cam-06 ran an older build** of the same version string — `2016-01-24` versus
+  `2016-08-11` on cam-01/03/04/05. This was the only firmware oddity in the
+  fleet. **Resolved 2026-11-08:** cam-06's firmware was updated and re-read.
+  It now reports the same `2.212.0000.2.R`, build `2016-08-11`, WEB
+  `3.2.1.273284` as its siblings — i.e. **only `BuildDate` changed, not the
+  version string or WEB version**, consistent with reflashing the same release
+  line with a newer build. Serial `AMC002U5127780784R` confirmed unchanged, so
+  the unit is the same device. `¶` in the table marks the post-update read.
+* **cam-04 wired (192.168.2.134) confirmed.** It answered `verify_credentials`,
+  `getDeviceType` and a full config read over preemptive Basic, closing the "up; Basic
+  expected; retest" item from 2026-11-01.
+* `--pano-config pano/pano-docker.json` cannot resolve cam-04: its only
+  credential-bearing URL is `live_url` (rtsp, 192.168.2.124) and lookup is by the IP you
+  pass. Use `$AMCREST_PASSWORD` for cam-04, or for the whole sweep.
+* Pass `--model` (the `camera_list` slug) instead of relying on auto-detection: it fixes
+  auth scheme (Basic vs Digest) and throttle before the first request, and it decides
+  whether `getSoftwareVersion` runs at all.
+* Artifacts (gitignored): updated mirrors `cameras/cam-XX.json` (`camera.firmware`
+  set for all eight; the earlier `--config read` run also refreshed
+  `cameras/config-cam-XX.json`, 0600 with secrets redacted), plus
+  `cameras/log-cam-XX.log`.
+* Fixed while here: `camera._rpc_request` assumed RPC2 `params` was a dict, so any
+  `system.multicall` response (a list) raised `AttributeError`. It now tolerates
+  both.

@@ -1,8 +1,10 @@
+import io
 import json
 import logging
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 from unittest import mock
 
@@ -269,6 +271,25 @@ class BatchModeTests(LoggingTestCase):
             console.main(self.base_argv(["--config", "read", "--no-browser"]))
         self.assertEqual(caught.exception.code, 2)
 
+    def test_firmware_requires_noui(self):
+        with self.assertRaises(SystemExit) as caught:
+            console.main(self.base_argv(["--firmware", "--no-browser"]))
+        self.assertEqual(caught.exception.code, 2)
+
+    def test_firmware_rejects_config(self):
+        for extra in (["--config", "read"], ["--config", "write"]):
+            with self.assertRaises(SystemExit) as caught:
+                console.main(
+                    self.base_argv(["--noui", "--firmware"] + extra)
+                )
+            self.assertEqual(caught.exception.code, 2)
+
+    def test_firmware_rejects_config_options(self):
+        for extra in (["--include-secrets"], ["--dry-run"], ["--config-file", "x.json"]):
+            with self.assertRaises(SystemExit) as caught:
+                console.main(self.base_argv(["--noui", "--firmware"] + extra))
+            self.assertEqual(caught.exception.code, 2)
+
     def test_noui_rejects_server_options(self):
         for extra in (["--port", "9000"], ["--bind", "127.0.0.1"]):
             with self.assertRaises(SystemExit) as caught:
@@ -431,6 +452,17 @@ class BatchModeTests(LoggingTestCase):
         self.assertEqual(rc, 0)
         self.assertEqual(self.client.writes, [])
         self.assertEqual(self.client.motion_writes, [])
+
+    def test_firmware_prints_the_version_and_binds_nothing(self):
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            rc, server_constructor = self.run_console(["--noui", "--firmware"])
+        self.assertEqual(rc, 0)
+        server_constructor.assert_not_called()
+        printed = buffer.getvalue()
+        self.assertIn("Firmware: 2.212.0000.2.R", printed)
+        self.assertIn("Serial: AMC002A34HATK2G7HH", printed)
+        self.assertIn("magicBox.getProductDefinition", printed)
 
     def test_write_reports_failure_when_the_camera_rejects(self):
         sections = test_configfile.base_sections()

@@ -117,6 +117,59 @@ def skip_software_version(model: Optional[str], device_type: Optional[str]) -> b
     return (not known_type) or ("ip2m" in known_type)
 
 
+PRODUCT_DEFINITION_FIELDS = (
+    "MajorVersion",
+    "MinorVersion",
+    "OEMVersion",
+    "Revision",
+    "BuildDate",
+    "WebVersion",
+    "TypeVersion",
+    "VendorAbbr",
+)
+
+
+def zero_pad(value: Any, width: int) -> str:
+    """Zero-pad an integer-ish value the way the camera's web UI does."""
+    text = str(value)
+    try:
+        number = int(text)
+    except (TypeError, ValueError):
+        return text
+    return str(number).zfill(width)
+
+
+def format_product_version(definitions: Dict[str, Any]) -> Optional[str]:
+    """Assemble the firmware string the camera's own UI shows.
+
+    ``magicBox.cgi?action=getSoftwareVersion`` crashes the IP2M-842 web
+    server, so the version is built from ``magicBox.getProductDefinition``
+    instead -- exactly what the camera's built-in "Edition Info" page calls.
+    The order is the UI's: ``Major + "." + pad3(Minor) + "." + VendorAbbr +
+    pad2(OEM) + "." + Revision + "." + TypeVersion``. ``BuildDate`` is not
+    part of this string; it is reported separately. Returns None when any
+    field is missing.
+    """
+    fields = [
+        definitions.get("MajorVersion"),
+        definitions.get("MinorVersion"),
+        definitions.get("VendorAbbr"),
+        definitions.get("OEMVersion"),
+        definitions.get("Revision"),
+        definitions.get("TypeVersion"),
+    ]
+    if any(value is None or value == "" for value in fields):
+        return None
+    return "{}.{}.{}{}.{}.{}".format(
+        fields[0],
+        zero_pad(fields[1], 3),
+        fields[2],
+        zero_pad(fields[3], 2),
+        fields[4],
+        fields[5],
+    )
+
+
 def loggable(value: Any, limit: int = 1200) -> str:
     """Return a redacted, truncated string safe for protocol logs."""
     try:
@@ -233,6 +286,16 @@ def rpc_default_password(
     return hashlib.md5(
         "{}:{}:{}".format(user, random_value, digest).encode("utf-8")
     ).hexdigest().upper()
+
+
+def _entry_params(entries: Any, index: int) -> Any:
+    """Return the inner ``params`` of one ``system.multicall`` sub-result."""
+    if not isinstance(entries, list) or index >= len(entries):
+        return {}
+    entry = entries[index]
+    if not isinstance(entry, dict):
+        return {}
+    return entry.get("params") or {}
 
 
 class CameraClient:
@@ -731,8 +794,9 @@ class CameraClient:
                 self._note_failure()
                 raise
             else:
+                raw_params = result.get("params")
                 error = result.get("error") or {}
-                params = result.get("params") or {}
+                params = raw_params if isinstance(raw_params, dict) else {}
                 self.log.info(
                     "RPC2 response %s method=%s result=%s error_code=%s "
                     "error=%s params_error=%s in %.3fs",
@@ -889,6 +953,71 @@ class CameraClient:
             "RPC2 getConfig %s table_type=%s", name, type(table).__name__
         )
         return table
+
+    def rpc_product_version(self) -> Dict[str, Any]:
+        """Return the firmware version, build date, WEB version and serial.
+
+        ``magicBox.cgi?action=getSoftwareVersion`` crashes the IP2M-842 web
+        server, so this reads ``magicBox.getProductDefinition`` and
+        ``magicBox.getSerialNo`` over RPC2 instead -- the same calls the
+        camera's built-in "Edition Info" page makes. All fields are fetched
+        in one ``system.multicall`` request, with single-call fallback.
+        """
+        session = self.rpc_login()
+        fields = list(PRODUCT_DEFINITION_FIELDS)
+        calls: List[Dict[str, Any]] = [
+            {
+                "method": "magicBox.getProductDefinition",
+                "params": {"name": name},
+                "id": 100 + index,
+            }
+            for index, name in enumerate(fields)
+        ]
+        calls.append({"method": "magicBox.getSerialNo", "params": "", "id": 199})
+        payload = {
+            "method": "system.multicall",
+            "params": calls,
+            "id": 1,
+            "session": session,
+        }
+        try:
+            result = self._rpc_request("/RPC2", payload)
+            entries = result.get("params")
+            if not isinstance(entries, list) or len(entries) != len(calls):
+                raise CameraError("unexpected system.multicall response")
+        except CameraError:
+            self.log.warning(
+                "system.multicall unsupported; reading product "
+                "definitions one call at a time"
+            )
+            entries = [
+                self._rpc_request(
+                    "/RPC2",
+                    {
+                        "method": call["method"],
+                        "params": call["params"],
+                        "id": call["id"],
+                        "session": session,
+                    },
+                )
+                for call in calls
+            ]
+        definitions: Dict[str, Any] = {}
+        for index, name in enumerate(fields):
+            inner = _entry_params(entries, index)
+            if isinstance(inner, dict) and "definition" in inner:
+                definitions[name] = inner.get("definition")
+        inner = _entry_params(entries, len(fields))
+        serial = None
+        if isinstance(inner, dict):
+            serial = inner.get("sn") or inner.get("no")
+        return {
+            "software": format_product_version(definitions),
+            "build": definitions.get("BuildDate"),
+            "web": definitions.get("WebVersion"),
+            "serial": serial,
+            "definitions": definitions,
+        }
 
     def rpc_set_config(self, name: str, table: Any) -> None:
         self.log.info(
